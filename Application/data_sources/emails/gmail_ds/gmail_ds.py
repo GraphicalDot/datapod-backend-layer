@@ -14,7 +14,7 @@ from errors_module.errors import APIBadRequest
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
-GMAIL_BP = Blueprint("gmail", url_prefix="gmail")
+GMAIL_BP = Blueprint("gmail", url_prefix="/gmail")
 
 
 def validate_fields(required_fields, request_json):

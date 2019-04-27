@@ -4,7 +4,7 @@
 #-*- coding:utf-8 -*- 
 
 from sanic import Blueprint
-from .gmail_ds import GMAIL_BP
+from .emails  import EMAILS_BP
 
-DATASOURCES_BP = Blueprint.group(GMAIL_BP, 
+DATASOURCES_BP = Blueprint.group(EMAILS_BP, 
                             url_prefix="/datasources")
