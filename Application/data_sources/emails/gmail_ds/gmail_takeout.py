@@ -9,53 +9,72 @@ import os, sys
 import base64
 import re
 from dateutil import parser
-path = os.path.dirname(os.path.realpath(os.getcwd()))
-import bleach
-print (path)
-
-sys.path.append(path)
+# path = os.path.dirname(os.path.realpath(os.getcwd()))
+# print (path)
+import datetime
 from  analysis.bank_statements import BankStatements
 from  analysis.cab_service import CabService
-
+import bleach
 
 
 # import coloredlogs, verboselogs, logging
 # verboselogs.install()
 # coloredlogs.install()
 # logger = logging.getLogger(__name__)
-
+from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key
 DEBUG=False
+from asyncinit import asyncinit
+import pytz
+import coloredlogs, verboselogs, logging
+verboselogs.install()
+coloredlogs.install()
+logger = logging.getLogger(__file__)
 
-
-from custom_logger import init_logger
-
-logger = init_logger(__name__, testing_mode=False)
+def indian_time_stamp(naive_timestamp=None):
+    tz_kolkata = pytz.timezone('Asia/Kolkata')
+    time_format = "%Y-%m-%d %H:%M:%S"
+    if naive_timestamp:
+        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp/1000.0))
+    else:
+        naive_timestamp = datetime.datetime.now()
+        aware_timestamp = tz_kolkata.localize(naive_timestamp)
+    return aware_timestamp.strftime(time_format + " %Z%z")
 
 
 
 class GmailsEMTakeout(object):
 
-    def __init__(self, gmail_takeout_path):
+    def __init__(self, gmail_takeout_path, user_data_path, db_dir_path):
+        self.db_dir_path = db_dir_path
         self.email_mbox = mailbox.mbox(gmail_takeout_path) 
-        self.email_dir_txt = os.path.join(os.path.dirname(os.getcwd()), "user_data/mails/gmail/emails_txt")
+        self.email_dir_txt = os.path.join(user_data_path, "mails/gmail/emails_txt")
         
         if not os.path.exists(self.email_dir_txt):
+            logger.warning(f"Path doesnt exists creating {self.email_dir_txt}")
             os.makedirs(self.email_dir_txt) 
 
-        self.email_dir_html = os.path.join(os.path.dirname(os.getcwd()), "user_data/mails/gmail/email_html")
+
+        self.email_dir_html = os.path.join(user_data_path, "mails/gmail/email_html")
         if not os.path.exists(self.email_dir_html):
+            logger.warning(f"Path doesnt exists creating {self.email_dir_html}")
             os.makedirs(self.email_dir_html)
 
-        self.image_dir = os.path.join(os.path.dirname(os.getcwd()), "user_data/mails/gmail/images")
+
+        self.image_dir = os.path.join(user_data_path, "mails/gmail/images")
         if not os.path.exists(self.image_dir):
+            logger.warning(f"Path doesnt exists creating {self.image_dir}")
             os.makedirs(self.image_dir) 
 
-        self.pdf_dir = os.path.join(os.path.dirname(os.getcwd()), "user_data/mails/gmail/pdfs")
+
+        self.pdf_dir = os.path.join(user_data_path, "mails/gmail/pdfs")
         if not os.path.exists(self.pdf_dir):
+            logger.warning(f"Path doesnt exists creating {self.pdf_dir}")
             os.makedirs(self.pdf_dir) 
 
-        self.extra_dir = os.path.join(os.path.dirname(os.getcwd()), "user_data/mails/gmail/extra")
+
+        self.extra_dir = os.path.join(user_data_path, "mails/gmail/extra")
         if not os.path.exists(self.extra_dir):
+            logger.warning(f"Path doesnt exists creating {self.extra_dir}")
             os.makedirs(self.extra_dir) 
         logger.info("App intiation been done")
 
@@ -75,6 +94,8 @@ class GmailsEMTakeout(object):
               dsdsdsas 
 
         """
+
+        """
         i = 0
         for message in self.email_mbox: 
             #email_uid = self.emails[0].split()[x]
@@ -85,6 +106,20 @@ class GmailsEMTakeout(object):
             if i%100 == 0:
                 logger.info(f"NUmber of emails saved {i}")
         logger.info(f"\n\nTotal number of emails {i}\n\n")
+        """
+        db_instance = create_db_instance(self.db_dir_path)
+        stored_value = get_key("logs", db_instance)
+
+        value = [{"date": indian_time_stamp(), 
+                "status": "success", 
+                "message": "Gmail takeout has been parsed successfully"}]
+        
+        if stored_value:
+            value = value+stored_value  
+    
+        logger.info(f"value stored against logs is {value}")
+        insert_key("logs", value, db_instance)
+        close_db_instance(db_instance)
         return 
 
 

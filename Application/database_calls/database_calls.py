@@ -2,9 +2,11 @@
 
 import plyvel
 import json
-from kivy.logger import Logger
     
-
+import coloredlogs, verboselogs, logging
+verboselogs.install()
+coloredlogs.install()
+logger = logging.getLogger(__file__)
 
 def instagram_batch_insert(posts):
 
@@ -22,17 +24,17 @@ def instagram_batch_insert(posts):
     db.close()
     return 
 
-def create_db_instance():
-    return plyvel.DB("./database", create_if_missing=True)
+def create_db_instance(db_path):
+    return plyvel.DB(db_path, create_if_missing=True)
 
 def close_db_instance(db):
     db.close()
-    Logger.info("DB instance closed")
+    logger.info("DB instance closed")
     return 
 
 
-def insert(key, value, db_instance=None):
-    Logger.info(f"Inserting Key {key}")
+def insert_key(key, value, db_instance):
+    logger.info(f"Inserting Key {key}")
     if isinstance(key, str):
         key = key.encode()
     
@@ -43,30 +45,27 @@ def insert(key, value, db_instance=None):
         value = json.dumps(value).encode()
     
 
-    if not db_instance:
-        db_instance = plyvel.DB("./database", create_if_missing=True)
     try:
         db_instance.put(key, value)
     except Exception as e:
-        Logger.error(e)
+        logger.error(e)
     if not db_instance:
         db_instance.close()
-    Logger.info(f"Inserting Key Completed {key}")
+    logger.info(f"Inserting Key Completed {key}")
 
     return 
 
-def get(key):
-    Logger.info(f"Get Key {key}")
+def get_key(key, db_instance):
+    logger.info(f"Get Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
 
-    db = plyvel.DB("./database", create_if_missing=True)
-    value = db.get(key)
+    #db = plyvel.DB("./database", create_if_missing=True)
+    value = db_instance.get(key)
     if not value:
         return None
 
-    db.close()
 
     try:
         
@@ -79,7 +78,7 @@ def get(key):
 
 
 def delete(key):
-    Logger.info(f"Delete Key {key}")
+    logger.info(f"Delete Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
@@ -87,7 +86,7 @@ def delete(key):
     db = plyvel.DB("./database", create_if_missing=True)
     value = db.get(key)
     if not value:
-        Logger.error(f"Key is not present {key}")
+        logger.error(f"Key is not present {key}")
         return None
 
     db.delete(key)

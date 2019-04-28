@@ -1,3 +1,4 @@
+
 #-*- coding:utf-8 -*- 
 
 
@@ -9,13 +10,13 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .gmail_takeout import GmailsEMTakeout
+from .database_calls import create_db_instance, close_db_instance, get_key, insert_key
 
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
-GMAIL_BP = Blueprint("gmail", url_prefix="/gmail")
+DATABASE_BP = Blueprint("database", url_prefix="/database")
 
 
 def validate_fields(required_fields, request_json):
@@ -29,19 +30,6 @@ def validate_fields(required_fields, request_json):
 
 
 
-@GMAIL_BP.post('/credentials')
-async def gmail_login(request):
-    """
-    To get all the assets created by the requester
-    """
-    required_fields = ["username", "password"]
-    validate_fields(required_fields, request.json)
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        })
 
 async def periodic(app, gmail_takeout_path):
     ##add this if this has to executed periodically
@@ -54,26 +42,23 @@ async def periodic(app, gmail_takeout_path):
     logger.info('Periodic task has finished execution')
     return 
 
-@GMAIL_BP.post('/takeout')
-async def gmail_takeout(request):
+@DATABASE_BP.get('/logs')
+async def get_logs(request):
     """
     To get all the assets created by the requester
     """
-    required_fields = ["path"]
-    validate_fields(required_fields, request.json)
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    stored_value = get_key("logs", db_instance)
 
-    if not request.json["path"].endswith("mbox"):
-        raise APIBadRequest("This path is not a valid mbox file")
+    if not stored_value:
+        stored_value = []
+    close_db_instance(db_instance)
 
 
-    logger.info(f"THe request was successful with path {request.json['path']}")
     
-    request.app.add_task(periodic(request.app, request.json["path"]))
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": "Dude some empty data"
+        "data": stored_value
         })
