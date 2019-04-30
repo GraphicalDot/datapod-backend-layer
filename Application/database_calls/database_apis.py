@@ -81,7 +81,7 @@ async def get_all_stats(request):
 
     ]
 
-
+    
     return response.json(
         {
         'error': False,
@@ -108,6 +108,34 @@ async def get_insta_images(request):
         file_path = f"file:/{image['path']}"
         image.update({"file_path": file_path})
 
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": stored_value
+        })
+
+@DATABASE_BP.get('/images/facebook')
+async def get_facebook_images(request):
+    """
+    """
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    stored_value = get_key("facebook_images", db_instance)
+
+    if not stored_value:
+        stored_value = []
+    close_db_instance(db_instance)
+
+    
+    for e in stored_value:
+        number = e.get("comments") 
+        if number:
+            e.update({"comments": len(number)})
+        else:
+            e.update({"comments": 0})
+        e.pop("media_metadata")
+        e.pop("title")
 
     return response.json(
         {

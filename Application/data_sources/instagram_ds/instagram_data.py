@@ -55,7 +55,7 @@ def indian_time_stamp(naive_timestamp=None):
     tz_kolkata = pytz.timezone('Asia/Kolkata')
     time_format = "%Y-%m-%d %H:%M:%S"
     if naive_timestamp:
-        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp/1000.0))
+        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp))
     else:
         naive_timestamp = datetime.datetime.now()
         aware_timestamp = tz_kolkata.localize(naive_timestamp)
