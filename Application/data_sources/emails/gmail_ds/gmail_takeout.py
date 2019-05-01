@@ -16,6 +16,44 @@ from  analysis.bank_statements import BankStatements
 from  analysis.cab_service import CabService
 import bleach
 
+    db_instance = create_db_instance(app.config.db_dir_path)
+    stored_value = get_key("logs", db_instance)
+
+    value = [{"date": indian_time_stamp(), 
+            "status": "success", 
+            "message": "Facebook data has been parsed successfully"}]
+    
+    if stored_value:
+        value = value+stored_value  
+
+    #logger.info(f"value stored against logs is {value}")
+    insert_key("logs", value, db_instance)
+
+    insert_key("facebook_images", images, db_instance)
+
+
+    stored_value = get_key("services", db_instance)
+    logger.info("Stored value against services %s"%stored_value)
+
+    #delete_key("services", db_instance)
+    value = [{"time": indian_time_stamp(), 
+            "service": "facebook", 
+            "message": f"{len(images)} images present"}]
+    
+    if stored_value:
+        
+        for entry in stored_value:
+            if entry.get("service") == "facebook":
+                break
+        stored_value.remove(entry)
+        stored_value.extend(value)
+    else:
+        stored_value = value
+
+    insert_key("services", stored_value, db_instance)
+
+    close_db_instance(db_instance)
+
 
 # import coloredlogs, verboselogs, logging
 # verboselogs.install()
@@ -201,6 +239,13 @@ class GmailsEMTakeout(object):
         body = ""
         html_body = ""
         attachments = "\n"
+        sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
+
+        file_path_text = os.path.join(sender_sub_dir_txt, file_name_text)
+        
+        
+        sender_sub_dir_html = os.path.join(f"{self.email_dir_html}/{sender_dir_name}", sender_sub_dir_name)
+        file_path_html = os.path.join(sender_sub_dir_html, file_name_html)
         if email_message.is_multipart():
             for part in email_message.walk():
                 ctype = part.get_content_type()
@@ -270,13 +315,7 @@ class GmailsEMTakeout(object):
             #logger.error(f"email with Plaintext found, Which is rare {email_message.is_multipart()} email from {email_from}")
 
 
-        sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
 
-        file_path_text = os.path.join(sender_sub_dir_txt, file_name_text)
-        
-        
-        sender_sub_dir_html = os.path.join(f"{self.email_dir_html}/{sender_dir_name}", sender_sub_dir_name)
-        file_path_html = os.path.join(sender_sub_dir_html, file_name_html)
 
         nl = "\r\n"
 

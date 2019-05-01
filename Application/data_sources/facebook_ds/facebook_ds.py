@@ -17,7 +17,7 @@ parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())
 
 sys.path.append(parent_module_path)
 
-from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key
+from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
 
 
 def indian_time_stamp(naive_timestamp=None):
@@ -44,10 +44,9 @@ async def data_parse(app, path):
             entry.update({"uri": uri, "creation_timestamp": timestamp})
         return json_data["photos"]
 
-    path = "/home/feynman/Programs/datapod-backend-layer/Application/userdata/facebook/"
+    #path = "/home/feynman/Programs/datapod-backend-layer/Application/userdata/facebook/"
     facebook_images = f"{path}/photos_and_videos/album/"
 
-    prefix_path = os.path.join(path, "photos_and_videos")
     json_files= [(os.path.join(facebook_images, file)) for file in os.listdir(facebook_images)]
 
     images = []
@@ -55,7 +54,7 @@ async def data_parse(app, path):
     for _file in json_files:
         with open(_file, "r") as json_file:   
             data = json.load(json_file)
-            images.extend(await change_uri(data, prefix_path))
+            images.extend(await change_uri(data, path))
 
     logger.info(images)
 
@@ -79,6 +78,7 @@ async def data_parse(app, path):
     stored_value = get_key("services", db_instance)
     logger.info("Stored value against services %s"%stored_value)
 
+    #delete_key("services", db_instance)
     value = [{"time": indian_time_stamp(), 
             "service": "facebook", 
             "message": f"{len(images)} images present"}]
@@ -89,7 +89,7 @@ async def data_parse(app, path):
             if entry.get("service") == "facebook":
                 break
         stored_value.remove(entry)
-        stored_value.append(value)
+        stored_value.extend(value)
     else:
         stored_value = value
 

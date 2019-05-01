@@ -77,19 +77,18 @@ def get_key(key, db_instance):
     return 
 
 
-def delete(key):
+def delete_key(key, db_instance):
     logger.info(f"Delete Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
 
-    db = plyvel.DB("./database", create_if_missing=True)
-    value = db.get(key)
+    value = db_instance.get(key)
     if not value:
         logger.error(f"Key is not present {key}")
         return None
 
-    db.delete(key)
-    db.close()
+    db_instance.delete(key)
+    db_instance.close()
 
     return 

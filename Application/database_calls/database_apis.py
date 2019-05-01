@@ -116,6 +116,8 @@ async def get_insta_images(request):
         "data": stored_value
         })
 
+import base64
+
 @DATABASE_BP.get('/images/facebook')
 async def get_facebook_images(request):
     """
@@ -129,14 +131,25 @@ async def get_facebook_images(request):
 
     
     for e in stored_value:
+        ext = e["uri"].split(".")[-1]
+        with open(e["uri"], "rb") as f:
+            _img = base64.b64encode(f.read())
+            img_source = 'data:image/%s;base64,'%ext+_img.decode()
+        
         number = e.get("comments") 
         if number:
             e.update({"comments": len(number)})
         else:
             e.update({"comments": 0})
+        e.update({"uri": img_source})
         e.pop("media_metadata")
         e.pop("title")
 
+
+    # var _img = fs.readFileSync(img).toString('base64')
+    # this.img_source = 'data:image/png;base64,'+_img
+
+    logger.info(stored_value)
     return response.json(
         {
         'error': False,
