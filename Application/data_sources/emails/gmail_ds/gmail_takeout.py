@@ -16,43 +16,6 @@ from  analysis.bank_statements import BankStatements
 from  analysis.cab_service import CabService
 import bleach
 
-    db_instance = create_db_instance(app.config.db_dir_path)
-    stored_value = get_key("logs", db_instance)
-
-    value = [{"date": indian_time_stamp(), 
-            "status": "success", 
-            "message": "Facebook data has been parsed successfully"}]
-    
-    if stored_value:
-        value = value+stored_value  
-
-    #logger.info(f"value stored against logs is {value}")
-    insert_key("logs", value, db_instance)
-
-    insert_key("facebook_images", images, db_instance)
-
-
-    stored_value = get_key("services", db_instance)
-    logger.info("Stored value against services %s"%stored_value)
-
-    #delete_key("services", db_instance)
-    value = [{"time": indian_time_stamp(), 
-            "service": "facebook", 
-            "message": f"{len(images)} images present"}]
-    
-    if stored_value:
-        
-        for entry in stored_value:
-            if entry.get("service") == "facebook":
-                break
-        stored_value.remove(entry)
-        stored_value.extend(value)
-    else:
-        stored_value = value
-
-    insert_key("services", stored_value, db_instance)
-
-    close_db_instance(db_instance)
 
 
 # import coloredlogs, verboselogs, logging
@@ -133,7 +96,6 @@ class GmailsEMTakeout(object):
 
         """
 
-        """
         i = 0
         for message in self.email_mbox: 
             #email_uid = self.emails[0].split()[x]
@@ -144,8 +106,12 @@ class GmailsEMTakeout(object):
             if i%100 == 0:
                 logger.info(f"NUmber of emails saved {i}")
         logger.info(f"\n\nTotal number of emails {i}\n\n")
-        """
+
+
         db_instance = create_db_instance(self.db_dir_path)
+
+
+        ########### logs update for gmail #######
         stored_value = get_key("logs", db_instance)
 
         value = [{"date": indian_time_stamp(), 
@@ -157,6 +123,26 @@ class GmailsEMTakeout(object):
     
         logger.info(f"value stored against logs is {value}")
         insert_key("logs", value, db_instance)
+
+        ########### services update for gmail #######
+        value = [{"time": indian_time_stamp(), 
+            "service": "gmail", 
+            "message": f"{i} emails present"}]
+    
+        stored_value = get_key("services", db_instance)
+        logger.info("Stored value against services %s"%stored_value)
+        
+        if stored_value:
+            
+            for entry in stored_value:
+                if entry.get("service") == "gmail":
+                    break
+            stored_value.remove(entry)
+            stored_value.extend(value)
+        else:
+            stored_value = value
+
+        insert_key("services", stored_value, db_instance)
         close_db_instance(db_instance)
         return 
 
@@ -228,6 +214,8 @@ class GmailsEMTakeout(object):
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
         # Body details
         #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
+        db_instance = create_db_instance(self.db_dir_path)
+
         sender_dir_name, sender_sub_dir_name = self.extract_email_from(email_from)
         self.ensure_directory(sender_dir_name, sender_sub_dir_name)
 
@@ -278,6 +266,7 @@ class GmailsEMTakeout(object):
                     ##type except the attachment part 
 
                     if part.get_filename():
+
                         #attachment_name = part.get_filename() + "__"+ str(email_uid)
                         ##prefix attachment with TAGS like BANK, CAB, 
                         _attachment_name = f"{sender_dir_name}_{sender_sub_dir_name}_{epoch}_{part.get_filename()}"
@@ -285,16 +274,25 @@ class GmailsEMTakeout(object):
 
 
                         if ctype.startswith("image"):
-                            with open(os.path.join(self.image_dir, attachment_name), "wb") as f:
+                            image_path = os.path.join(self.image_dir, attachment_name)
+                            with open(image_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
+                                insert_key("google_images", {"path": image_path, "email_html": file_path_html, "email_text": file_path_text }, db_instance)
+                        
                         elif ctype == "application/pdf" or ctype =="application/octet-stream":
-                            with open(os.path.join(self.pdf_dir, attachment_name), "wb") as f:
+                            pdf_path = os.path.join(self.pdf_dir, attachment_name)
+                            with open(pdf_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
+                                insert_key("google_pdf", {"path": pdf_path, "email_html": file_path_html, "email_text": file_path_text}, db_instance)
+
 
                         else:
                             logger.error(f" MIME type {ctype} with a file_name {attachment_name}")
-                            with open(os.path.join(self.extra_dir, attachment_name), "wb") as f:
+                            extra_path = os.path.join(self.extra_dir, attachment_name)
+                            with open(extra_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
+                                
+                                insert_key("google_extra_mime", {"path": extra_path, "email_html": file_path_html, "email_text": file_path_text}, db_instance)
 
                         #logger.info(f"Attachment with name {attachment_name} and content_type {ctype} found")            
 
@@ -340,7 +338,7 @@ class GmailsEMTakeout(object):
                 logger.info(f"HTML BODY {data}")
             f.write(data.encode())
 
-
+        close_db_instance(db_instance)
         return 
 
 

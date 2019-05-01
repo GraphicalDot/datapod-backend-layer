@@ -51,6 +51,9 @@ async def periodic(app, gmail_takeout_path):
     await asyncio.sleep(10)
     instance = GmailsEMTakeout(gmail_takeout_path, app.config.user_data_path, app.config.db_dir_path)
     instance.download_emails()
+
+
+
     logger.info('Periodic task has finished execution')
     return 
 

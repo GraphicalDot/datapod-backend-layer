@@ -29,12 +29,12 @@ def create_db_instance(db_path):
 
 def close_db_instance(db):
     db.close()
-    logger.info("DB instance closed")
+    print("DB instance closed")
     return 
 
 
 def insert_key(key, value, db_instance):
-    logger.info(f"Inserting Key {key}")
+    print(f"Inserting Key {key}")
     if isinstance(key, str):
         key = key.encode()
     
@@ -48,15 +48,15 @@ def insert_key(key, value, db_instance):
     try:
         db_instance.put(key, value)
     except Exception as e:
-        logger.error(e)
+        print(e)
     if not db_instance:
         db_instance.close()
-    logger.info(f"Inserting Key Completed {key}")
+    print(f"Inserting Key Completed {key}")
 
     return 
 
 def get_key(key, db_instance):
-    logger.info(f"Get Key {key}")
+    print(f"Get Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
@@ -77,8 +77,71 @@ def get_key(key, db_instance):
     return 
 
 
+
+
+def store_google_images(image_data, db_instance):
+    """
+    First lets create a key calles as google, and lets store different keys in it
+    gmail: {"gmail_images_png": [1, 2, 3, ...], 
+            gmail_images_rest": [1, 2, 3, ...],
+            "gmail_pdf": [1, 2, 3, ...], 
+            "gmail_extra": [1, 2, 3, ....]} 
+
+    every index in each list represent 30 elements for example, 
+    gmail_images has 1, 2, 3 elements then the leveldb must have 
+    three databases gmail_images_1, email_images_2, ...
+    """
+
+    extension = image_data["path"].split(".")[-1]
+    
+    gmail = get_key("gmail", db_instance)
+    print(f"Data for gmail key {gmail}")
+
+    ##DEciding on the basis of image extension
+    if extension == "png":
+        sub_key = "gmail_images_png"
+    else:
+        sub_key = "gmail_images_rest"
+
+    ##if the sub_key doesnt exists create one under gmail key and 
+    ##corresponding to this sub_key, make a list with key 1 
+    if not gmail:
+        gmail = {}
+
+    if not gmail.get(sub_key):
+        key =  "%s_1"%sub_key
+        gmail.update({sub_key: [1]})
+        insert_key("gmail", gmail, db_instance)
+        last_index = 0
+        print(f"sub key doesnt exists {sub_key} and the db key will be {key}")
+
+    else:
+        ##if the sub key already exists, ge tthe last idex and 
+        #the new key present in the database
+        last_index = gmail.get(sub_key)[-1]
+        key = "%s_%s"%(sub_key, last_index)
+        print(f"sub key exists {sub_key} and the db key will be {key}")
+
+
+    ## Get the key corresponding to the key
+    google_images = get_key(key, db_instance)
+    print (f"data for google_images is {google_images}")
+    if not google_images or len(google_images) >=5:
+        data = [image_data]
+        last_index+=1
+        key = "%s_%s"%(sub_key, last_index)
+        print(f"New key is being created because of image arr length is more than 5 {key}")
+    else:
+        print(f"Length of google images {len(google_images)} must be appended to existsking key {key}")
+        data = google_images.append(image_data)
+        print (data)
+
+
+    insert_key(key, data, db_instance)
+    return
+
 def delete_key(key, db_instance):
-    logger.info(f"Delete Key {key}")
+    print(f"Delete Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
