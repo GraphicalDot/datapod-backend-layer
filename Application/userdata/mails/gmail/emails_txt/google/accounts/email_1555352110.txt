@@ -1,0 +1,9 @@
+From: Google <no-reply@accounts.google.com>
+To: dummy.houzier.saurav@gmail.com
+Date: Mon, 15 Apr 2019 18:15:10 +0000 (UTC)
+Attachments:
+
+Subject: Critical security alert
+
+Body: 
+Sign-in attempt was blockeddummy.houzier.saurav@gmail.comSomeone just used your password to try to sign in to your account from anon-Google app. Google blocked them, but you should check what happened.Review your account activity to make sure no one else has access.Check activityYou received this email to let you know about important changes to yourGoogle Account and services.© 2019 Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA

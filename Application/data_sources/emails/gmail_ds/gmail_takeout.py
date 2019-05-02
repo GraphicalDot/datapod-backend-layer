@@ -22,7 +22,7 @@ import bleach
 # verboselogs.install()
 # coloredlogs.install()
 # logger = logging.getLogger(__name__)
-from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key
+from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 DEBUG=False
 from asyncinit import asyncinit
 import pytz
@@ -95,20 +95,20 @@ class GmailsEMTakeout(object):
               dsdsdsas 
 
         """
+        db_instance = create_db_instance(self.db_dir_path)
 
         i = 0
         for message in self.email_mbox: 
             #email_uid = self.emails[0].split()[x]
             email_from, email_to, subject, local_message_date, email_message = message["From"], \
                     message["To"], message["Subject"], message["Date"], message
-            self.save_email(email_from, email_to, subject, local_message_date, email_message)
+            self.save_email(email_from, email_to, subject, local_message_date, email_message, db_instance)
             i += 1
             if i%100 == 0:
                 logger.info(f"NUmber of emails saved {i}")
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
 
-        db_instance = create_db_instance(self.db_dir_path)
 
 
         ########### logs update for gmail #######
@@ -211,10 +211,9 @@ class GmailsEMTakeout(object):
         return re.sub('[^\w\-_\. ]', '_', filename).replace(" ", "")
 
 
-    def save_email(self, email_from, email_to, subject, local_message_date, email_message):
+    def save_email(self, email_from, email_to, subject, local_message_date, email_message, db_instance):
         # Body details
         #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
-        db_instance = create_db_instance(self.db_dir_path)
 
         sender_dir_name, sender_sub_dir_name = self.extract_email_from(email_from)
         self.ensure_directory(sender_dir_name, sender_sub_dir_name)
@@ -277,13 +276,18 @@ class GmailsEMTakeout(object):
                             image_path = os.path.join(self.image_dir, attachment_name)
                             with open(image_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
-                                insert_key("google_images", {"path": image_path, "email_html": file_path_html, "email_text": file_path_text }, db_instance)
+                                image_data = {"path": image_path, "email_html": file_path_html, "email_text": file_path_text}
+                                ins = StoreInChunks("gmail",  image_data, db_instance)
+                                ins.insert()
                         
                         elif ctype == "application/pdf" or ctype =="application/octet-stream":
                             pdf_path = os.path.join(self.pdf_dir, attachment_name)
                             with open(pdf_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
-                                insert_key("google_pdf", {"path": pdf_path, "email_html": file_path_html, "email_text": file_path_text}, db_instance)
+                                data = {"path": pdf_path, "email_html": file_path_html, "email_text": file_path_text}
+                                ins = StoreInChunks("gmail",  data, db_instance, "gmail_pdf")
+                                ins.insert()
+                        
 
 
                         else:
@@ -291,9 +295,9 @@ class GmailsEMTakeout(object):
                             extra_path = os.path.join(self.extra_dir, attachment_name)
                             with open(extra_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
-                                
-                                insert_key("google_extra_mime", {"path": extra_path, "email_html": file_path_html, "email_text": file_path_text}, db_instance)
-
+                                data = {"path": extra_path, "email_html": file_path_html, "email_text": file_path_text}
+                                ins = StoreInChunks("gmail",  data, db_instance, "gmail_extra")
+                                ins.insert()
                         #logger.info(f"Attachment with name {attachment_name} and content_type {ctype} found")            
 
                         attachments += f"{attachment_name}\n"
@@ -338,7 +342,6 @@ class GmailsEMTakeout(object):
                 logger.info(f"HTML BODY {data}")
             f.write(data.encode())
 
-        close_db_instance(db_instance)
         return 
 
 
