@@ -114,10 +114,21 @@ class StoreInChunks(object):
         if not self.sub_key:
             self.image_path = data["path"]
             self.image_name = os.path.basename(self.image_path)
+            
+           
+
             self.image_path_dir = os.path.dirname(os.path.dirname(self.image_path))
 
             #extension = imghdr.what(data["path"])
             try:
+                 ##somefiles doesnt even have a file extension, they should go in junk
+                if len(self.image_name.split(".")) <2 :
+                    raise Exception(f"No File format present in the filename {self.image_name}")
+
+                ##somefiles doesnt even have a file extension, they should go in junk
+                if self.image_name.split(".")[-1] == "_" :
+                    raise Exception(f"No File format present in the filename {self.image_name}")
+                
                 im = Image.open(self.image_path)
 
                 data.update({"size": im.size})
