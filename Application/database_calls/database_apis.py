@@ -10,7 +10,7 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .database_calls import create_db_instance, close_db_instance, get_key, insert_key
+from .database_calls import create_db_instance, close_db_instance, get_key, insert_key, RetrieveInChunks
 
 import coloredlogs, verboselogs, logging
 verboselogs.install()
@@ -155,4 +155,42 @@ async def get_facebook_images(request):
         'error': False,
         'success': True,
         "data": stored_value
+        })
+
+
+@DATABASE_BP.get('/images/gmail')
+async def get_gmail_images(request):
+    """
+    Right now indexing is not available
+    """
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    
+    ins_normal = RetrieveInChunks("gmail", db_instance, "gmail_images_normal", 1)
+
+    result_normal = ins_normal.retreive()
+
+    ins_png = RetrieveInChunks("gmail", db_instance, "gmail_images_png", 1)
+    result_png = ins_png.retreive()
+
+    images = result_normal
+    for image in result_normal:
+        ext = image["path"].split(".")[-1]
+        with open(image["path"], "rb") as f:
+            _img = base64.b64encode(f.read())
+            img_source = 'data:image/%s;base64,'%ext+_img.decode()
+        image.update({"uri": img_source})
+
+    for image in result_png:
+        with open(image["path"], "rb") as f:
+            _img = base64.b64encode(f.read())
+            img_source = 'data:image/png;base64,'+_img.decode()
+        image.update({"uri": img_source})
+
+
+    close_db_instance(db_instance)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": result_normal+result_png
         })

@@ -67,6 +67,41 @@ class GmailsEMTakeout(object):
             os.makedirs(self.image_dir) 
 
 
+
+        self.image_dir_temp = os.path.join(self.image_dir, "temp")
+        if not os.path.exists(self.image_dir_temp):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_temp}")
+            os.makedirs(self.image_dir_temp)
+
+        ##creating sub sirectories for image formats 
+
+        self.image_dir_png = os.path.join(self.image_dir, "png")
+        if not os.path.exists(self.image_dir_png):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_png}")
+            os.makedirs(self.image_dir_png)
+
+
+        self.image_dir_small = os.path.join(self.image_dir, "small")
+        if not os.path.exists(self.image_dir_small):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_small}")
+            os.makedirs(self.image_dir_small)
+
+
+
+        self.image_dir_junk = os.path.join(self.image_dir, "junk")
+        if not os.path.exists(self.image_dir_junk):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_junk}")
+            os.makedirs(self.image_dir_junk)
+
+
+
+        self.image_dir_normal = os.path.join(self.image_dir, "normal")
+        if not os.path.exists(self.image_dir_normal):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_normal}")
+            os.makedirs(self.image_dir_normal)
+
+
+
         self.pdf_dir = os.path.join(user_data_path, "mails/gmail/pdfs")
         if not os.path.exists(self.pdf_dir):
             logger.warning(f"Path doesnt exists creating {self.pdf_dir}")
@@ -273,14 +308,19 @@ class GmailsEMTakeout(object):
 
 
                         if ctype.startswith("image"):
-                            image_path = os.path.join(self.image_dir, attachment_name)
+                            _image_path = os.path.join(self.image_dir_temp, attachment_name)
+                            with open(_image_path, "wb") as f:
+                                f.write(part.get_payload(decode=True))
+                            image_data = {"path": _image_path, "email_html": file_path_html, "email_text": file_path_text}
+                            ins = StoreInChunks("gmail",  image_data, db_instance)
+                            image_path = ins.image_path
+                            ins.insert()
                             with open(image_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
-                                image_data = {"path": image_path, "email_html": file_path_html, "email_text": file_path_text}
-                                ins = StoreInChunks("gmail",  image_data, db_instance)
-                                ins.insert()
+                                
                         
                         elif ctype == "application/pdf" or ctype =="application/octet-stream":
+                            
                             pdf_path = os.path.join(self.pdf_dir, attachment_name)
                             with open(pdf_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))

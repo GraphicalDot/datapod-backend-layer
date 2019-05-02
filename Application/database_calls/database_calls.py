@@ -1,9 +1,11 @@
 
-
+import os
 import plyvel
 import json
 import imghdr
 import coloredlogs, verboselogs, logging
+from errors_module.errors import APIBadRequest
+from PIL import Image
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
@@ -77,18 +79,71 @@ def get_key(key, db_instance):
     return 
 
 
+
+
+class RetrieveInChunks(object):
+    def __init__(self, main_key,  db_instance, sub_key, index):
+        self.main_key = main_key
+        self.db_instance = db_instance
+        self.sub_key  = sub_key
+
+        self.index = index
+
+    def retreive(self):
+        main_data = get_key(self.main_key, self.db_instance)
+        sub_data = main_data.get(self.sub_key) 
+        if not sub_data:
+            raise APIBadRequest("This subkey doesnt exists in the data for main key")
+
+        if self.index not in sub_data:
+            return []
+        else:
+            sub_sub_key = self.sub_key +"_" + str(self.index)
+            return  get_key(sub_sub_key, self.db_instance)
+
+
+
 class StoreInChunks(object):
     def __init__(self, main_key,  data, db_instance, sub_key=None):
         self.main_key = main_key
         self.data = data
         self.db_instance = db_instance
         self.sub_key  = sub_key
+
+
         if not self.sub_key:
-            extension = imghdr.what(data["path"])
-            if extension == "png":
-                self.sub_key = "gmail_images_png"
-            else:
-                self.sub_key = "gmail_images_rest"
+            self.image_path = data["path"]
+            self.image_name = os.path.basename(self.image_path)
+            self.image_path_dir = os.path.dirname(os.path.dirname(self.image_path))
+
+            #extension = imghdr.what(data["path"])
+            try:
+                im = Image.open(self.image_path)
+
+                data.update({"size": im.size})
+                if im.size[0] < 150 or im.size[1] < 150:                     
+                    self.sub_key = "gmail_images_small"
+                    self.image_path = os.path.join(self.image_path_dir, "small/%s"%self.image_name)
+                else:
+                    if im.format.lower() == "png":
+                        ##this will mostly be png files and will have google map images
+                        self.sub_key = "gmail_images_png"
+                        self.image_path = os.path.join(self.image_path_dir, "png/%s"%self.image_name)
+
+                    else:
+                        self.sub_key = "gmail_images_normal"
+                        self.image_path = os.path.join(self.image_path_dir, "normal/%s"%self.image_name)
+
+                im.close() 
+            except Exception as e:
+                logger.error(e)
+                logger.error("Not an image file %s"%data["path"])
+                data.update({"size": None})
+                self.sub_key = "gmail_images_junk"
+                self.image_path = os.path.join(self.image_path_dir, "junk/%s"%self.image_name)
+
+            self.data.update({"path": self.image_path})             
+            #self.sub_key = "gmail_images_rest"
 
         ##turn for sub_sub_key i.e gmail_images_1, gmail_images_2 etc
         self.old_sub_sub_key = None
