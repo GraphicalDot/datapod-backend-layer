@@ -38,6 +38,7 @@ logger = logging.getLogger(__file__)
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
 from database_calls import DATABASE_BP
+from remote import REMOTE_BP
 #from secrets.aws_secret_manager import get_secrets
 
 app = Sanic(__name__)
@@ -57,6 +58,7 @@ def main():
     app.blueprint(DATASOURCES_BP)
     app.blueprint(ERRORS_BP)
     app.blueprint(DATABASE_BP)
+    app.blueprint(REMOTE_BP)
     #app.blueprint(UPLOAD_BP)
     #app.blueprint(USER_ACCOUNTS_BP)
     # app.blueprint(MIDDLE_LAYER)
@@ -67,6 +69,7 @@ def main():
     
     app.config.user_data_path = config.user_data_path
     app.config.db_dir_path = config.db_dir_path
+    app.config.archive_path = config.archive_path
 
     logger.info(app.config)
     app.run(host="0.0.0.0", port=8000)

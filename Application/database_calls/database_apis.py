@@ -194,3 +194,4 @@ async def get_gmail_images(request):
         'success': True,
         "data": result_normal+result_png
         })
+
