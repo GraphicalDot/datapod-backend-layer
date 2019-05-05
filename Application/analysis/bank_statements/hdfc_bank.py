@@ -6,7 +6,7 @@ from os import path, getcwd, makedirs
 from PyPDF2 import PdfFileReader, PdfFileWriter
 import camelot
 import hashlib
-from .analytics import Analytics
+from analytics import Analytics
 
 def decrypt_pdf(input_path, output_path, password):
     with open(input_path, 'rb') as input_file, \
@@ -146,7 +146,7 @@ class HDFCBank(object):
 
 if __name__=="__main__":
     from pprint import pprint
-    instance =  HDFCBank("35276617", "/home/feynman/Programs/Datapod-gui/Application/user_data/mails/gmail/pdfs")
+    instance =  HDFCBank("35276617", "/home/feynman/Programs/datapod-backend-layer/Application/userdata/mails/gmail/pdfs")
     data = instance.analyse()
     pprint(data)
     i = 0

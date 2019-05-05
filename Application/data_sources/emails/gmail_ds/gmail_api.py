@@ -1,7 +1,7 @@
 #-*- coding:utf-8 -*- 
 
 
-
+import shutil
 import asyncio
 import aiohttp
 from sanic import Blueprint
@@ -43,6 +43,30 @@ async def gmail_login(request):
         'success': True,
         })
 
+
+    ##add this if this has to executed periodically
+    ##while True:
+    password = "BIGzoho8681@#"
+    key, salt = generate_scrypt_key(password)
+    logging.info(f"salt for scrypt key is {salt}")
+    logging.info(f" key for AES encryption is  {key}")
+
+    for (source, destination, encrypted_path) in source_destination_list: 
+        shutil.make_archive(destination, 'zip', source)
+        logger.info(f"Archiving done at the path {destination}")
+        time.sleep(1)
+        with open("%s.zip"%destination, "rb") as f:
+            file_bytes = f.read()
+            data = aes_encrypt(key, file_bytes)
+            with open(encrypted_path, "wb") as f:
+                f.write(data)
+
+
+    return 
+
+
+
+
 async def periodic(app, gmail_takeout_path):
     ##add this if this has to executed periodically
     ##while True:
@@ -67,13 +91,35 @@ async def gmail_takeout(request):
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
 
-    if not request.json["path"].endswith("mbox"):
-        raise APIBadRequest("This path is not a valid mbox file")
-
-
-    logger.info(f"THe request was successful with path {request.json['path']}")
+    # if not request.json["path"].endswith("mbox"):
+    #     raise APIBadRequest("This path is not a valid mbox file")
+    archive_file_name = os.path.basename(request.json["path"])
+    """
+    logger.info(f"archive file name is {archive_file_name}")
+    logger.info(f"User data path is {request.app.config.user_data_path}")
+    new_archive_path = os.path.join(request.app.config.user_data_path, archive_file_name)
     
-    request.app.add_task(periodic(request.app, request.json["path"]))
+    logger.info(f"New archive path is  {new_archive_path}")
+
+
+    shutil.copy2(request.json["path"], request.app.config.user_data_path)
+
+    logger.info(f"New archive path is {new_archive_path}")
+    """
+
+    if not os.path.exists(request.app.config.user_data_path):
+            os.makedirs(request.app.config.user_data_path)
+
+    
+    path = os.path.join(request.app.config.user_data_path,   "Takeout/Mail/All mail Including Spam and Trash.mbox")
+    
+    if not os.path.exists(path):
+        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.user_data_path, format=None)
+    
+    
+    logger.info(f"THe request was successful with path {path}")
+    
+    request.app.add_task(periodic(request.app, path))
     return response.json(
         {
         'error': False,
