@@ -6,7 +6,7 @@ from os import path, getcwd, makedirs
 from PyPDF2 import PdfFileReader, PdfFileWriter
 import camelot
 import hashlib
-from analytics import Analytics
+from .analytics import Analytics
 
 def decrypt_pdf(input_path, output_path, password):
     with open(input_path, 'rb') as input_file, \

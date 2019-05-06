@@ -23,7 +23,7 @@ def validate_fields(required_fields, request_json):
         raise Exception("Improper JSON format")
 
 
-
+    
 
 
 async def periodic(app, instagram_object):
