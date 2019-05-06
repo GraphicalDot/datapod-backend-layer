@@ -43,7 +43,7 @@ def validate_fields(required_fields, request_json):
 
 
 
-@BROWSER_HISTORY_BP.post('/firefox')
+@BROWSER_HISTORY_BP.get('/firefox')
 def firefox_history(request):
     data_path = os.path.expanduser('~')+"/.mozilla/firefox/"
     for data_dir in os.listdir(data_path):
@@ -68,20 +68,16 @@ def firefox_history(request):
             queries.append(e[2])
     result = get_most_visited([e[1] for e in results],  50)
 
+    x_axis, y_axis = list(zip(*result))
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": {"most_searched": result, "queries": queries}
+        "data": {"most_searched": {"x_axis": x_axis, "y_axis": y_axis}, "queries": queries}
         })
 
 
-
-
-
-
-
-@BROWSER_HISTORY_BP.post('/chrome')
+@BROWSER_HISTORY_BP.get('/chrome')
 def chrome_history(request):
     data_path = os.path.expanduser('~')+"/.config/google-chrome/"
     data_dir = "Default"
@@ -109,11 +105,12 @@ def chrome_history(request):
         if e[1]:
             queries.append(e[1])
     
+    x_axis, y_axis = list(zip(*result))
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": {"most_searched": result, "queries": queries}
+        "data": {"most_searched": {"x_axis": x_axis, "y_axis": y_axis}, "queries": queries}
         })
 
 

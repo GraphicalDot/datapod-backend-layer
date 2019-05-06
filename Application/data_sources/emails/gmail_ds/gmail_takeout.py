@@ -35,11 +35,67 @@ def indian_time_stamp(naive_timestamp=None):
     tz_kolkata = pytz.timezone('Asia/Kolkata')
     time_format = "%Y-%m-%d %H:%M:%S"
     if naive_timestamp:
-        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp/1000.0))
+        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp))
     else:
         naive_timestamp = datetime.datetime.now()
         aware_timestamp = tz_kolkata.localize(naive_timestamp)
     return aware_timestamp.strftime(time_format + " %Z%z")
+
+
+
+class PurchaseReservations(object):
+    
+    def __init__(self, gmail_takeout_path, user_data_path, db_dir_path):
+        self.db_dir_path = db_dir_path
+        self.user_data_path = user_data_path
+        self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
+
+        if not os.path.exists(self.path):
+            raise Exception("Reservations and purchase data doesnt exists")
+
+
+    def parse(self):
+        with open(self.path, "r") as f: 
+            data = json.loads(f.read()) 
+            try: 
+                self.parse_purchase(data) 
+            except Exception as e: 
+                print (data) 
+
+
+
+    def nparse_purchase(data):
+        merchant_name = data["transactionMerchant"]["name"]
+        time = indian_time_stamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000)
+        items = []
+        addresses = []
+        for item in data["lineItem"]:
+            items.append(item["name"])
+            address = item["purchase"]["fulfillment"]["location"]["address"]
+            addresses.extend(address)
+        return {"merchant_name": merchant_name, 
+                 "time": time, 
+                 "addresses": addresses,
+                 "products": items
+                    }
+
+    def parse_flight_reservation():
+
+
+    def parse_train_reservation():
+        pass
+
+    def parse_cab_reservation():
+        pass
+
+    for f in os.listdir(): 
+         with open(f, "r") as fi: 
+             data = json.loads(fi.read()) 
+             try: 
+                print (data["transactionMerchant"]) 
+             except Exception as e: 
+                 print (data) 
+
 
 
 
