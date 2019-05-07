@@ -16,7 +16,7 @@ from  analysis.bank_statements import BankStatements
 from  analysis.cab_service import CabService
 import bleach
 
-
+import json
 
 # import coloredlogs, verboselogs, logging
 # verboselogs.install()
@@ -45,56 +45,99 @@ def indian_time_stamp(naive_timestamp=None):
 
 class PurchaseReservations(object):
     
-    def __init__(self, gmail_takeout_path, user_data_path, db_dir_path):
+    def __init__(self, gmail_takeout_path, db_dir_path):
         self.db_dir_path = db_dir_path
-        self.user_data_path = user_data_path
         self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
-
+        self.db_instance = create_db_instance(db_dir_path)
         if not os.path.exists(self.path):
             raise Exception("Reservations and purchase data doesnt exists")
 
 
     def parse(self):
-        with open(self.path, "r") as f: 
-            data = json.loads(f.read()) 
-            try: 
-                self.parse_purchase(data) 
-            except Exception as e: 
-                print (data) 
+        purchase = []
+        reservations = []
+        for filename in os.listdir(self.path):
+            filepath = os.path.join(self.path, filename)
+            with open(filepath, "r") as f: 
+                data = json.loads(f.read()) 
+                try: 
+                    result = self.parse_purchase(data)
+                    if result.get("type") == "purchase":
+                        purchase.append(result)
+                    else:
+                        reservations.append(result)
 
+                except Exception as e: 
+                    logger.error(f"In DATA {data} error is  <<{e}>>")
+            
+        insert_key("gmail_purchase", purchase, self.db_instance)
+        insert_key("gmail_reservations", reservations, self.db_instance)
 
+        close_db_instance(self.db_instance)
 
-    def nparse_purchase(data):
-        merchant_name = data["transactionMerchant"]["name"]
-        time = indian_time_stamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000)
-        items = []
-        addresses = []
-        for item in data["lineItem"]:
-            items.append(item["name"])
-            address = item["purchase"]["fulfillment"]["location"]["address"]
-            addresses.extend(address)
-        return {"merchant_name": merchant_name, 
-                 "time": time, 
-                 "addresses": addresses,
-                 "products": items
-                    }
+    def parse_purchase(self, data): 
+        address = None
+        src = None
+        dest = None
+        address = None
+        _type = None
+        merchant_name = None
+        if data.get("transactionMerchant"):
+            merchant_name = data["transactionMerchant"]["name"] 
+            time = indian_time_stamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000) 
+        else:
+            merchant_name = None 
+            time = None
+        
+        items = [] 
 
-    def parse_flight_reservation():
+        for item in data["lineItem"]: 
+            if item.get("purchase"):
+                if item["purchase"].get("productInfo"):
+                    _type="purchase"
+                    if item["purchase"].get("fulfillment"):
+                        address = item["purchase"]["fulfillment"]["location"]["address"]
 
+                    items.append(item["purchase"]["productInfo"]["name"])
+                else:
+                    #DATA {'merchantOrderId': '21823872872', 'creationTime': {'usecSinceEpochUtc': '1538748693000000', 
+                    # 'granularity': 'MICROSECOND'}, 'transactionMerchant': {'name': 'swiggy.in'}, 
+                    # 'lineItem': [{'purchase': {'status': 'DELIVERED'}}]} with error 'productInfo'
 
-    def parse_train_reservation():
+                    raise Exception("Unidentified type One, probably incomplete data")
+            else:
+                if item.get("flightReservation"):
+                    _type="flights"
+                    merchant_name = item["provider"]["name"]
+                    time = indian_time_stamp(float(item["flightReservation"]["flightLeg"]["flightStatus"]["departureTime"]["usecSinceEpochUtc"])/1000000) 
+                    src = item["flightReservation"]["flightLeg"]["departureAirport"]["servesCity"]["name"]
+                    dest = item["flightReservation"]["flightLeg"]["arrivalAirport"]["servesCity"]["name"]
+                else:
+                    raise Exception("Unidentified Type 2")
+        
+        return {"merchant_name": merchant_name,  
+                "time": time,  
+                "products": items,
+                "address": address,
+                "dest": dest, 
+                "src": src,
+                "type": _type
+                    } 
+ 
+
+    def parse_food_delivery(self):
         pass
 
-    def parse_cab_reservation():
+    def parse_flight_reservation(self):
         pass
 
-    for f in os.listdir(): 
-         with open(f, "r") as fi: 
-             data = json.loads(fi.read()) 
-             try: 
-                print (data["transactionMerchant"]) 
-             except Exception as e: 
-                 print (data) 
+    def parse_train_reservation(self):
+        pass
+
+    def parse_cab_reservation(self):
+        pass
+
+
 
 
 
@@ -411,9 +454,6 @@ class GmailsEMTakeout(object):
             #when the email is just plain text
             body = email_message.get_payload(decode=True)
             #logger.error(f"email with Plaintext found, Which is rare {email_message.is_multipart()} email from {email_from}")
-
-
-
 
         nl = "\r\n"
 

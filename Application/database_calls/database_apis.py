@@ -195,3 +195,37 @@ async def get_gmail_images(request):
         "data": result_normal+result_png
         })
 
+
+@DATABASE_BP.get('/gmail/purchases')
+async def get_gmail_purchases(request):
+    """
+    Right now indexing is not available
+    """
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    stored_value = get_key("gmail_purchase", db_instance)
+    
+    close_db_instance(db_instance)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": stored_value
+        })
+
+
+@DATABASE_BP.get('/gmail/reservations')
+async def get_gmail_reservations(request):
+    """
+    Right now indexing is not available
+    """
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    stored_value = get_key("gmail_reservations", db_instance)
+    
+    close_db_instance(db_instance)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": stored_value
+        })
+

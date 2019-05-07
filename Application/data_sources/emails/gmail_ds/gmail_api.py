@@ -9,7 +9,7 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .gmail_takeout import GmailsEMTakeout
+from .gmail_takeout import GmailsEMTakeout, PurchaseReservations
 
 import coloredlogs, verboselogs, logging
 verboselogs.install()
@@ -46,6 +46,7 @@ async def gmail_login(request):
 
     ##add this if this has to executed periodically
     ##while True:
+
     password = "BIGzoho8681@#"
     key, salt = generate_scrypt_key(password)
     logging.info(f"salt for scrypt key is {salt}")
@@ -94,18 +95,6 @@ async def gmail_takeout(request):
     # if not request.json["path"].endswith("mbox"):
     #     raise APIBadRequest("This path is not a valid mbox file")
     archive_file_name = os.path.basename(request.json["path"])
-    """
-    logger.info(f"archive file name is {archive_file_name}")
-    logger.info(f"User data path is {request.app.config.user_data_path}")
-    new_archive_path = os.path.join(request.app.config.user_data_path, archive_file_name)
-    
-    logger.info(f"New archive path is  {new_archive_path}")
-
-
-    shutil.copy2(request.json["path"], request.app.config.user_data_path)
-
-    logger.info(f"New archive path is {new_archive_path}")
-    """
 
     if not os.path.exists(request.app.config.user_data_path):
             os.makedirs(request.app.config.user_data_path)
@@ -125,4 +114,27 @@ async def gmail_takeout(request):
         'error': False,
         'success': True,
         "data": "Dude some empty data"
+        })
+
+
+@GMAIL_BP.get('/takeout/purchase_n_reservations')
+async def gmail_takeout(request):
+    """
+    To get all the assets created by the requester
+    """
+    
+    path = os.path.join(request.app.config.user_data_path, "Takeout")
+    
+    if not os.path.exists(path):
+        raise Exception(f"Path {path} doesnt exists")
+    
+    
+    ins = PurchaseReservations(path, request.app.config.db_dir_path)
+    ins.parse()
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": "Successful"
         })
