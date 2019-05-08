@@ -9,7 +9,7 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .gmail_takeout import GmailsEMTakeout, PurchaseReservations
+from .gmail_takeout import GmailsEMTakeout, PurchaseReservations, LocationHistory
 
 import coloredlogs, verboselogs, logging
 verboselogs.install()
@@ -137,4 +137,27 @@ async def gmail_takeout(request):
         'error': False,
         'success': True,
         "data": "Successful"
+        })
+
+
+@GMAIL_BP.get('/takeout/location_history')
+async def takeout_location_history(request):
+    """
+    To get all the assets created by the requester
+    """
+    
+    path = os.path.join(request.app.config.user_data_path, "Takeout")
+    
+    if not os.path.exists(path):
+        raise Exception(f"Path {path} doesnt exists")
+    
+    
+    ins = await LocationHistory(path, request.app.config.db_dir_path)
+    results = ins.store()
+    
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": results
         })

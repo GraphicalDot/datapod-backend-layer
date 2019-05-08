@@ -24,9 +24,14 @@ import json
 # logger = logging.getLogger(__name__)
 from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 DEBUG=False
+import time
 from asyncinit import asyncinit
 import pytz
+import asyncio
+import concurrent
+
 import coloredlogs, verboselogs, logging
+from geopy.geocoders import Nominatim
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
@@ -40,6 +45,112 @@ def indian_time_stamp(naive_timestamp=None):
         naive_timestamp = datetime.datetime.now()
         aware_timestamp = tz_kolkata.localize(naive_timestamp)
     return aware_timestamp.strftime(time_format + " %Z%z")
+
+
+def month_aware_time_stamp(naive_timestamp=None): 
+     tz_kolkata = pytz.timezone('Asia/Kolkata') 
+     time_format = "%Y-%m-%d %H:%M:%S" 
+     if naive_timestamp: 
+         aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp)) 
+     else: 
+         naive_timestamp = datetime.datetime.now() 
+         aware_timestamp = tz_kolkata.localize(naive_timestamp) 
+     return {"timestamp": aware_timestamp.strftime(time_format + " %Z%z"), "year": aware_timestamp.year, "month": aware_timestamp.month} 
+
+
+@asyncinit
+class LocationHistory(object):
+    
+    async def __init__(self, gmail_takeout_path, db_dir_path):
+        self.geolocator = Nominatim(user_agent="Datapod")
+        self.db_dir_path = db_dir_path
+        self.path = os.path.join(gmail_takeout_path, "Location History/Location History.json")
+        self.pr_executor = concurrent.futures.ProcessPoolExecutor(max_workers=10)
+        self.th_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+        self.main_key = "location"
+        self.location_db_data = {}
+        if not os.path.exists(self.path):
+            raise Exception("Reservations and purchase data doesnt exists")
+
+
+    def reverse_geo_code(self, lat, lon):
+        try:
+            location = self.geolocator.reverse(f"{lat}, {lon}")
+            result = location.raw["address"]
+        except Exception as e:
+            try:
+                location = self.geolocator.reverse(f"{lat}, {lon}")
+                result = location.raw["address"]
+            except Exception as e:
+                logging.error(e)
+                result = None
+        return result
+
+
+    def store(self):
+        self.db_instance = create_db_instance(self.db_dir_path)
+        with open(self.path, "rb") as fi:
+            result  = fi.read() 
+            location = json.loads(result)
+
+        location_data = location["locations"]
+        #tasks = [self.reverse_geo_code(loc["latitudeE7"]/10000000, loc["longitudeE7"]/10000000) \
+        #for loc in location_data]
+    
+        ##update the location history array with month and year
+        for loc_data in location_data: 
+            _t = month_aware_time_stamp(float(loc_data["timestampMs"])/1000)  
+            loc_data.update(_t)
+            self.push_db(loc_data, int(_t["month"]), int(_t["year"]))
+
+
+        insert_key(self.main_key, self.location_db_data, self.db_instance)
+        close_db_instance(self.db_instance)
+        return 
+
+    def push_db(self, data, month, year):
+        """
+        {'timestampMs': '1510211478168', 'latitudeE7': 285594542, 'longitudeE7': 772102843, 'accuracy': 1414, 'altitude': 78,
+        'verticalAccuracy': 192, 'timestamp': '2017-11-09 12:41:18 IST+0530', 'year': 2017, 'month': 11}
+        """
+        if not self.location_db_data.get(year):
+            self.location_db_data[year] = [month]
+        else:
+            if month not in self.location_db_data[year]:
+                months = self.location_db_data[year]
+                months.append(month)
+                self.location_db_data[year] = months
+
+        key = f'location_{year}_{month}'
+        logging.info(key)
+        stored_value = get_key(key, self.db_instance)
+
+        value = [data]
+        if stored_value:
+            value = value+stored_value  
+
+
+        insert_key(key, value, self.db_instance)
+        return 
+
+    async def parse(self):
+
+
+
+        tasks = [asyncio.get_event_loop().run_in_executor(
+                                self.th_executor, 
+                                self.reverse_geo_code, 
+                                loc["latitudeE7"]/10000000, 
+                                loc["longitudeE7"]/10000000) for loc in location_data[0:1000]]
+        #several_futures = asyncio.gather(*tasks)
+        #results = loop.run_until_complete(several_futures)
+        completed, pending = await asyncio.wait(tasks)
+        results = [t.result() for t in completed]
+        #results = await asyncio.gather(*tasks)
+        #await asyncio.wait(tasks)
+        #loop.run_until_complete(asyncio.wait(tasks))
+        return results 
 
 
 

@@ -4,6 +4,7 @@ import pathlib
 p = str(pathlib.Path(os.getcwd()))
 user_data_path = os.path.join(str(p), "userdata")
 db_dir_path = os.path.join(str(p), "database")
+#db_dir_path = "/home/feynman/Desktop/database"
 archive_path = os.path.join(str(p), "archive")
 
 

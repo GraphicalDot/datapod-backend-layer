@@ -53,12 +53,10 @@ def insert_key(key, value, db_instance):
         print(e)
     if not db_instance:
         db_instance.close()
-    print(f"Inserting Key Completed {key}")
 
     return 
 
 def get_key(key, db_instance):
-    print(f"Get Key {key}")
 
     if isinstance(key, str):
         key = key.encode()
@@ -79,7 +77,7 @@ def get_key(key, db_instance):
     return 
 
 
-    
+
 
 class RetrieveInChunks(object):
     def __init__(self, main_key,  db_instance, sub_key, index):

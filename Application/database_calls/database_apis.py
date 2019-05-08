@@ -220,7 +220,7 @@ async def get_gmail_reservations(request):
     """
     db_instance = create_db_instance(request.app.config.db_dir_path)
     stored_value = get_key("gmail_reservations", db_instance)
-    
+    logger.info(stored_value)
     close_db_instance(db_instance)
     return response.json(
         {
