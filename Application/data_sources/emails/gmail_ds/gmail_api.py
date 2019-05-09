@@ -9,8 +9,8 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .gmail_takeout import GmailsEMTakeout, PurchaseReservations, LocationHistory
-
+from .gmail_takeout import GmailsEMTakeout, PurchaseReservations
+from .location import  LocationHistory
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -152,8 +152,8 @@ async def takeout_location_history(request):
         raise Exception(f"Path {path} doesnt exists")
     
     
-    ins = await LocationHistory(path, request.app.config.db_dir_path)
-    results = ins.store()
+    ins =  LocationHistory(path, request.app.config.db_dir_path)
+    results = ins.format()
     
     return response.json(
         {

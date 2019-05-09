@@ -1,5 +1,6 @@
 
 SERVER = "imap.gmail.com"
+import hashlib
 from pprint import pprint
 import datetime
 import email
@@ -72,6 +73,25 @@ class LocationHistory(object):
         self.location_db_data = {}
         if not os.path.exists(self.path):
             raise Exception("Reservations and purchase data doesnt exists")
+
+    def most_visited(self):
+        """
+        res will be an updated list of dicts with each dict having a 
+        month and year to it
+        this will be only for a month of the year to calculate most visited 
+        place of a month
+        """
+        hashed_dict  = {}
+        for e in res: 
+            um = str(e["latitudeE7"]) + str(e["longitudeE7"]) 
+            _hash = hashlib.sha224(um.encode()).hexdigest() 
+            if hashed_dict.get(_hash): 
+                f = hashed_dict.get(_hash) 
+                f.append(e) 
+                hashed_dict[_hash] = f 
+            else: 
+                hashed_dict[_hash] = [f] 
+
 
 
     def reverse_geo_code(self, lat, lon):

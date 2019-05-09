@@ -1,6 +1,23 @@
 import pytz
 import datetime
 import hashlib
+import json
+import os
+import pytz
+import asyncio
+import concurrent
+import asyncinit
+from collections import Counter
+from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
+import coloredlogs, verboselogs, logging
+import operator
+from geopy.geocoders import Nominatim
+verboselogs.install()
+coloredlogs.install()
+logger = logging.getLogger(__file__)
+
+
+
 
 def month_aware_time_stamp(naive_timestamp=None): 
      tz_kolkata = pytz.timezone('Asia/Kolkata') 
@@ -31,33 +48,34 @@ class Location(object):
         self.timestamp, self.year, self.month = month_aware_time_stamp(self.time_stamp)
         self.hash = self.hashed()
 
-    def __str__(self):
+    def data(self):
         return self.__dict__
 
     def hashed(self):
         string = str(self.latitude)+str(self.longitude)
         return hashlib.sha3_224(string.encode()).hexdigest()
 
-
+    ##treat places similar if three places decimal matches
     def __hash__(self):
-        string = str(self.latitude)+str(self.longitude)
+        latitude = str(self.latitude)[0:6] 
+        longitude = str(self.longitude)[0:6] 
+        string = latitude+longitude 
         return hash(string.encode())
 
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
-            return self.hash == other.hash and self.month == other.month and self.year == self.year
+            return self.hash == other.hash and self.month == other.month and self.year == other.year
         return False
 
     def __ne__(self, other):
         """Override the default Unequal behavior"""
-        return self.hash != other.hash or self.month != other.month or self.year != self.year
+        return self.hash != other.hash or self.month != other.month or self.year != other.year
 
-  @asyncinit
 class LocationHistory(object):
     
-    async def __init__(self, gmail_takeout_path, db_dir_path):
+    def __init__(self, gmail_takeout_path, db_dir_path):
         self.geolocator = Nominatim(user_agent="Datapod")
         self.db_dir_path = db_dir_path
         self.path = os.path.join(gmail_takeout_path, "Location History/Location History.json")
@@ -84,8 +102,8 @@ class LocationHistory(object):
         return result
 
 
-    def store(self):
-        self.db_instance = create_db_instance(self.db_dir_path)
+    def format(self):
+        #self.db_instance = create_db_instance(self.db_dir_path)
         with open(self.path, "rb") as fi:
             result  = fi.read() 
             location = json.loads(result)
@@ -95,15 +113,58 @@ class LocationHistory(object):
         #for loc in location_data]
     
         ##update the location history array with month and year
-        for loc_data in location_data: 
-            _t = month_aware_time_stamp(float(loc_data["timestampMs"])/1000)  
-            loc_data.update(_t)
-            self.push_db(loc_data, int(_t["month"]), int(_t["year"]))
+        for item in location_data: 
+            i_tem = Location(item["timestampMs"], item["latitudeE7"], item["longitudeE7"], item["accuracy"], 
+                            item.get("velocity"), item.get("heading"), item.get("altitude"), 
+                            item.get("vertical_accuracy"), item.get("activity"))
+            
+            #self.push_db(loc_data, int(_t["month"]), int(_t["year"]))
+            if not self.location_db_data.get(i_tem.year):
+                #if year is not present
+                self.location_db_data[i_tem.year] = {i_tem.month: [i_tem]}
+            else:
+                ##year is present
+                if  not  self.location_db_data[i_tem.year].get(i_tem.month):
+                    #month is not present
+                    self.location_db_data[i_tem.year].update({i_tem.month: [i_tem]})
+                else:
+                    #month is present
+                    self.location_db_data[i_tem.year][i_tem.month] += [i_tem]
 
+        for year in self.location_db_data.keys():
+            for month in self.location_db_data[year].keys():
+                res = self.location_db_data[year][month]    
+                logger.info(f"Year {year} and Month {month}, number of locations visited is {len(res)} ")
+        #insert_key(self.main_key, self.location_db_data, self.db_instance)
+        #close_db_instance(self.db_instance)
 
-        insert_key(self.main_key, self.location_db_data, self.db_instance)
-        close_db_instance(self.db_instance)
+        print (self.most_visited_places(self.location_db_data))
         return 
+
+
+    def most_visited_places(self, data):
+        most_visited = {}
+        for year in data.keys():
+            for month in data[year].keys():
+                res = data[year][month]
+                
+                ##will make a dictionary out of the list with values as their number
+                ##of duplicacy
+                duplicates = Counter(res)
+                _most_common =  [i[0].data() for i in duplicates.most_common(3)]
+                logger.info(_most_common)
+                for item in _most_common:
+                    address = self.reverse_geo_code(item["latitude"], item["longitude"])
+                    item.update({"address": address})
+
+                if most_visited.get(year):
+                    most_visited[year].update({month: _most_common})
+                else:
+                    most_visited.update({year: {month: _most_common}})
+
+
+        return most_visited        
+
 
     def push_db(self, data, month, year):
         """
