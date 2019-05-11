@@ -79,6 +79,7 @@ class LocationHistory(object):
 
         self.main_key = "location"
         self.location_db_data = {}
+        self.location_signature = {} ##which will have details of what year has what all months
         if not os.path.exists(self.path):
             raise Exception("Reservations and purchase data doesnt exists")
 
@@ -116,8 +117,12 @@ class LocationHistory(object):
             if not self.location_db_data.get(i_tem.year):
                 #if year is not present
                 self.location_db_data[i_tem.year] = {i_tem.month: [i_tem]}
+                self.location_signature[i_tem.year] = [i_tem.month]
             else:
                 ##year is present
+                if  i_tem.month not in self.location_signature[i_tem.year]:
+                    self.location_signature[i_tem.year] += [i_tem.month]
+
                 if  not  self.location_db_data[i_tem.year].get(i_tem.month):
                     #month is not present
                     self.location_db_data[i_tem.year].update({i_tem.month: [i_tem]})
@@ -125,8 +130,9 @@ class LocationHistory(object):
                     #month is present
                     self.location_db_data[i_tem.year][i_tem.month] += [i_tem]
 
+        print (self.location_signature)
         self.store()
-        self.insert_all_data()
+        self.insert_location_signature()
         return 
 
 
@@ -137,6 +143,7 @@ class LocationHistory(object):
                 ##list of the the location object for a month in a year
                 res = self.location_db_data[year][month] 
 
+                key= f"location_{year}_{month}"
                 key_no_dups = f"location_no_dups_{year}_{month}"
                 key_most_visited = f"location_most_visited_{year}_{month}"
                 most_visited = self.most_visited_places(res)
@@ -144,6 +151,9 @@ class LocationHistory(object):
                 ##set will remove the duplicate elements from the res, duplicate locations
 
                 no_dups = set(res)
+                ##store all the data for a month in a year
+                insert_key(key, [i.data() for i in res],db_instance)
+
                 logger.info(f"Year {year} and Month {month}, number of locations visited is {len(res)} ")
                 logger.info(f"Year {year} and Month {month}, number of non duplicate locations visited is {len(no_dups)} ")
 
@@ -164,11 +174,11 @@ class LocationHistory(object):
         return _most_common 
 
 
-    def insert_all_data(self):
+    def insert_location_signature(self):
         """
         To store all the data on the basis of the year and the month 
         """
         db_instance = create_db_instance(self.db_dir_path)
-        insert_key("location_data", self.location_db_data, db_instance)
+        insert_key("location", self.location_signature, db_instance)
         close_db_instance(db_instance)
         

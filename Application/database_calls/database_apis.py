@@ -1,7 +1,7 @@
 
 #-*- coding:utf-8 -*- 
 
-
+import calendar
 import subprocess
 import asyncio
 import aiohttp
@@ -229,3 +229,50 @@ async def get_gmail_reservations(request):
         "data": stored_value
         })
 
+@DATABASE_BP.get('/gmail/locations')
+async def get_gmail_locations(request):
+    """
+    Right now indexing is not available
+    """
+    db_instance = create_db_instance(request.app.config.db_dir_path)
+    stored_value = get_key("location", db_instance)
+    logger.info(stored_value)
+    res = {}
+    flat_res = []
+    for year in stored_value.keys():
+        for month in stored_value[year]:
+            ##list of the the location object for a month in a year
+            key_most_visited = f"location_most_visited_{year}_{month}"
+            key_no_dups = f"location_no_dups_{year}_{month}"
+
+            most_visited= get_key(key_most_visited, db_instance)
+            no_dups= get_key(key_no_dups, db_instance)
+            
+            addr = []
+            for entry in most_visited[0:3]:
+                if entry["address"].get("country_code"):
+                    entry["address"].pop("country_code")
+                addr.append(", ".join(entry["address"].values()))
+            
+            
+                if res.get(year):
+                    #if month is present
+                    if res[year].get(calendar.month_abbr[month]):
+                        res[year][calendar.month_abbr[month]] += [", ".join(entry["address"].values())]
+                    else:
+                        res[year][calendar.month_abbr[month]] = [", ".join(entry["address"].values())]
+
+                else:
+                    res[year] = {calendar.month_abbr[month]: [", ".join(entry["address"].values())] }
+
+            flat_res.append({"year":  year, "month": calendar.month_abbr[month], "visited": len(no_dups), "address": addr})
+
+
+    logger.info(res)
+    close_db_instance(db_instance)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": reversed(flat_res)
+        })
