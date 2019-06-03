@@ -10,6 +10,12 @@ N = 2**16 ##meant for ram
 R = 10
 P = 10
 
+def generate_aes_key(number_of_bytes): 
+     #return get_random_bytes(number_of_bytes) 
+     return os.urandom(number_of_bytes) 
+
+
+
 
 def generate_scrypt_key(password, salt=None):
     ##return bytes of keys, returns list in case of keys > 1
@@ -18,19 +24,21 @@ def generate_scrypt_key(password, salt=None):
     keys = scrypt(password,  salt, KEY_LENGTH, N, R, P, 1)
     return keys, salt
 
+def aes_encrypt(key, file_bytes): 
+     #return encrypt_CTR_MODE(key, file_bytes) 
+      
+     ##The nonce and the tag generated will be exactly 16 bytes 
+     #ciphertext, tag, nonce = aes_encrypt(key, file_bytes) 
+     #ciphertext = b"".join([tag, ciphertext, nonce]) 
+     #The AES_GCM encrypted file content 
+     #secret = binascii.hexlify(ciphertext) 
+     if isinstance(file_bytes, str): 
+         file_bytes = file_bytes.encode() 
+     cipher = AES.new(key, AES.MODE_GCM) 
+     ciphertext, tag = cipher.encrypt_and_digest(file_bytes) 
+     nonce = cipher.nonce 
+     return b"".join([tag, ciphertext, nonce]) 
 
-def aes_encrypt(key, file_bytes):
-    ##The nonce and the tag generated will be exactly 16 bytes
-    ##ciphertext, tag, nonce = aes_encrypt(key, file_bytes)
-    ##ciphertext = b"".join([tag, ciphertext, nonce])
-    ##The AES_GCM encrypted file content
-    ##secret = binascii.hexlify(ciphertext)
-    if isinstance(file_bytes, str):
-        file_bytes = file_bytes.encode()
-    cipher = AES.new(key, AES.MODE_GCM)
-    ciphertext, tag = cipher.encrypt_and_digest(file_bytes)
-    nonce = cipher.nonce
-    return tag+ciphertext+nonce
 
 def aes_decrypt(key, ciphertext):
 

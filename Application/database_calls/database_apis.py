@@ -73,6 +73,7 @@ async def get_all_stats(request):
         """disk usage in human readable format (e.g. '2,1GB')"""
         return subprocess.check_output(['du','-sh', path]).split()[0].decode('utf-8')
 
+    logger.info(f"User data path is {request.app.config.user_data_path}")
     number_of_files = sum([len(files) for r, d, files in os.walk(request.app.config.user_data_path)])
     total_size = du(request.app.config.user_data_path)
     services = [
