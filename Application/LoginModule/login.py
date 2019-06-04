@@ -133,27 +133,21 @@ def sync_directory(dir_path, identity_id, access_key, secret_key, session_token)
 
 
     sync_command = f"aws s3 sync {dir_path} s3://{BUCKET_NAME}/{identity_id}"
-    print (sync_command)
 
-    dest = f"s3://{BUCKET_NAME}/{identity_id}"
-    #os.system(sync_command)
-    # output = subprocess.run(args=sync_command, shell=True, stdout = subprocess.PIPE, universal_newlines=True)
-    # print(output.stdout)
-    run_command(sync_command)
-    print ("No command working")
+    for out in os_system(sync_command):
+        logging.info(out)
 
-    # if not p.stderr:
-    #     logging.info("Directories are in sync")
-    # else: 
-    #     while True:
-    #         out = p.stderr.read(1)
-    #         if out == '' and p.poll() != None:
-    #             break
-    #         if out != '':
-    #             #sys.stdout.write(out)
-    #             logging.info(out)
-    #             #sys.stdout.flush()
     return 
+
+def os_system(command):
+
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            logging.info("Files are already in sync")
+            break
+        yield line.decode().split("\r")[0]
 
 def run_command(command):
     print ("command working")
@@ -176,7 +170,7 @@ def run_command(command):
     if p.returncode != 0:
        # The run_command() function is responsible for logging STDERR 
        print("Error: " + str(err))
-
+    
 
 if __name__ == "__main__":
     username = "houzier.saurav@gmail.com"
@@ -190,7 +184,7 @@ if __name__ == "__main__":
     
     user_data_path = os.path.join(os.path.dirname(filepath), "userdata/filewise/facebook/")
     if os.path.exists(user_data_path):
-        print ("Valid path")
+        logging.warning(f"The directory which will be synced to remote {user_data_path}")
     
     
     sync_directory(user_data_path, identity_id, access_key, secret_key, session_token)
