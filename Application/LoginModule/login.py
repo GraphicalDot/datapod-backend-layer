@@ -3,6 +3,15 @@ import os
 import requests
 import json
 import pathlib
+
+
+#generat enew 32 byte key
+#openssl rand -out sse-c.key 32
+
+def generate_aes_key(number_of_bytes): 
+     #return get_random_bytes(number_of_bytes) 
+     return os.urandom(number_of_bytes) 
+
 filepath = str(pathlib.Path(os.getcwd()))
 
 import subprocess
@@ -131,12 +140,16 @@ def sync_directory(dir_path, identity_id, access_key, secret_key, session_token)
     os.environ['AWS_SESSION_TOKEN'] = session_token # visible in this process + all children
     os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
 
+    _key = generate_aes_key(32)
 
-    sync_command = f"aws s3 sync {dir_path} s3://{BUCKET_NAME}/{identity_id}"
+    key = "".join(map(chr, _key))
+    #print (key)
 
+    logging.info(f"Please not down your AES key {_key.hex()}")
+    sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://sse-c.key {dir_path} s3://{BUCKET_NAME}/{identity_id}"
+    print (sync_command)
     for out in os_system(sync_command):
         logging.info(out)
-
     return 
 
 def os_system(command):
