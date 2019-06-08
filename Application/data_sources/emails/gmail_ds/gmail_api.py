@@ -11,6 +11,8 @@ import os
 from errors_module.errors import APIBadRequest
 from .gmail_takeout import GmailsEMTakeout, PurchaseReservations
 from .location import  LocationHistory
+from sanic.exceptions import SanicException
+
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -23,8 +25,8 @@ def validate_fields(required_fields, request_json):
         for field in required_fields:
             if request_json.get(field) is None:
                 raise APIBadRequest("{} is required".format(field))
-    except (ValueError, AttributeError):
-        raise Exception("Improper JSON format")
+    except Exception as e:
+        raise APIBadRequest(f"Error: {e.__str__()}")
 
 
 
@@ -82,8 +84,8 @@ async def periodic(app, gmail_takeout_path):
     logger.info('Periodic task has finished execution')
     return 
 
-@GMAIL_BP.post('/takeout')
-async def gmail_takeout(request):
+@GMAIL_BP.post('/takeout/parse')
+async def parse(request):
     """
     To get all the assets created by the requester
     """
@@ -92,28 +94,35 @@ async def gmail_takeout(request):
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
 
+
     # if not request.json["path"].endswith("mbox"):
     #     raise APIBadRequest("This path is not a valid mbox file")
     archive_file_name = os.path.basename(request.json["path"])
 
     if not os.path.exists(request.app.config.user_data_path):
+            logger.warning(f"Creating path {request.app.config.user_data_path}")
             os.makedirs(request.app.config.user_data_path)
 
     
     path = os.path.join(request.app.config.user_data_path,   "Takeout/Mail/All mail Including Spam and Trash.mbox")
+    logger.warning(f"Path for gmail takeout data is  {path}")
     
-    if not os.path.exists(path):
-        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.user_data_path, format=None)
+
+
+    if os.path.exists(path):
+       logger.warning(f"Overiding gmail takeout data at {path}")
+     
+    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.user_data_path, format=None)
     
     
     logger.info(f"THe request was successful with path {path}")
     
-    request.app.add_task(periodic(request.app, path))
+    #request.app.add_task(periodic(request.app, path))
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": "Dude some empty data"
+        "data": "Takeout data parsing has been completed successfully"
         })
 
 
@@ -138,6 +147,7 @@ async def gmail_takeout(request):
         'success': True,
         "data": "Successful"
         })
+
 
 
 @GMAIL_BP.get('/takeout/location_history')

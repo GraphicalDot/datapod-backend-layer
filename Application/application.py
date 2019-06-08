@@ -72,6 +72,8 @@ def main():
     app.config.archive_path = config.archive_path
 
     logger.info(app.config)
+    #app.error_handler.add(Exception, server_error_handler)
+
     app.run(host="0.0.0.0", port=8000)
     
     """
@@ -115,7 +117,8 @@ def main():
         ##close_connections(app)
         loop.stop()
     """
-
+async def server_error_handler(request, exception):
+    return text("Oops, server error", status=500)
 
 if __name__ == "__main__":
     main()

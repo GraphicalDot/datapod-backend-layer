@@ -2,10 +2,20 @@
 import os
 import pathlib
 p = str(pathlib.Path(os.getcwd()))
-user_data_path = os.path.join(str(p), "userdata")
-db_dir_path = os.path.join(str(p), "database")
+home = os.path.expanduser("~")
+
+datapod_dir = os.path.join(home, ".Datapod")
+
+
+keys_dir = os.path.join(datapod_dir, "Keys")
+
+
+user_data_path = os.path.join(datapod_dir, "data")
+
+
+db_dir_path = os.path.join(datapod_dir, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
-archive_path = os.path.join(str(p), "archive")
+archive_path = os.path.join(datapod_dir, "archive")
 
 
 HOST = "localhost"

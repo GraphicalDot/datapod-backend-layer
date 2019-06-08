@@ -76,3 +76,22 @@ class AccountCreationError(ApiException):
 
 ##---------------------ACCOUNT ERRORS END --------------------------------##
 
+@ERRORS_BP.exception(ApiException)
+def api_json_error(request, exception):
+    return json({
+        'message': exception.message,
+        'error': True,
+        'success': False
+    }, status=exception.status_code)
+
+
+@ERRORS_BP.exception(Exception)
+def json_error(request, exception):
+    try:
+        code = exception.status_code
+    except AttributeError:
+        code = 500
+    LOGGER.exception(exception)
+    return json({
+        'error': exception.args[0]
+    }, status=code)
