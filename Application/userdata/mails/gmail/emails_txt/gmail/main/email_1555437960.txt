@@ -1,9 +1,0 @@
-From: saurav verma <houzier.saurav@gmail.com>
-To: dummy.houzier.saurav@gmail.com
-Date: Tue, 16 Apr 2019 23:36:00 +0530
-Attachments:
-
-Subject: Fwd: Status Update for Rail Booking NR260261398104827
-
-Body: 
----------- Forwarded message ---------From: Ankit Malik Date: Tue, Apr 16, 2019 at 6:50 PMSubject: Fwd: Status Update for Rail Booking NR260261398104827To: saurav verma ---------- Forwarded message ---------From: MMT Rail Status Update Date: Sun, Apr 7, 2019, 03:57Subject: Status Update for Rail Booking NR260261398104827To: *Journey Details**PNR Number* *Train Number* *Train Name* *Date(DD/MM/YYYY)* *From Station* *ToStation* *Reservation Upto Station* *Boarding Point Station* *Class*2259829379 12017 DEHRADUN SHTBDI 07/04/2019 NDLS HW HW NDLS CC*S.No.* *Booking Status* *Current Status**(Status/Coach No/Berth No)* *(Status/Coach No/Berth No)*1 CNF/C3/9 CNF/C3/92 CNF/C3/8 CNF/C3/8*Charting Status* Chart Prepared*Legends**Symbol* *Description**CAN / MOD* Cancelled or Modified Passenger*CNF / Confirmed* Confirmed (Coach/Berth number will be available afterchart preparation)*RAC* Reservation Against Cancellation*WL #* Waiting List Number*RLWL* Remote Location Wait List*GNWL* General Wait List*PQWL* Pooled Quota Wait List*REGRET/WL* No More Booking Permitted*RELEASED* Ticket Not Cancelled but Alternative Accommodation Provided*R# #* RAC Coach Number Berth Number-- Regards,Saurav Vermahttps://www.linkedin.com/in/saurav1verma/

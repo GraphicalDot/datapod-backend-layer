@@ -1,9 +1,0 @@
-From: Google <no-reply@accounts.google.com>
-To: houzier.saurav@gmail.com
-Date: Mon, 15 Apr 2019 18:21:30 +0000 (UTC)
-Attachments:
-
-Subject: Critical security alert for your linked Google Account
-
-Body: 
-Your account houzier.saurav@gmail.com is listed as the recovery email fordummy.houzier.saurav@gmail.com. Don't recognize this account? Click hereAccess for less secure apps setting has been turned on for your linkedaccountdummy.houzier.saurav@gmail.comAccess for less secure apps setting has been turned on for your GoogleAccount dummy.houzier.saurav@gmail.com. If you didn't change it, you shouldcheck what happened.Check activityYou received this email to let you know about important changes to yourGoogle Account and services.© 2019 Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA

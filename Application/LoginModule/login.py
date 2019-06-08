@@ -140,13 +140,13 @@ def sync_directory(dir_path, identity_id, access_key, secret_key, session_token)
     os.environ['AWS_SESSION_TOKEN'] = session_token # visible in this process + all children
     os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
 
-    _key = generate_aes_key(32)
+    # _key = generate_aes_key(32)
 
-    key = "".join(map(chr, _key))
+    # key = "".join(map(chr, _key))
     #print (key)
+    encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
 
-    logging.info(f"Please not down your AES key {_key.hex()}")
-    sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://sse-c.key {dir_path} s3://{BUCKET_NAME}/{identity_id}"
+    sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{encryption_key_path} {dir_path} s3://{BUCKET_NAME}/{identity_id}"
     print (sync_command)
     for out in os_system(sync_command):
         logging.info(out)
@@ -195,7 +195,8 @@ if __name__ == "__main__":
     identity_id, access_key, secret_key, session_token = aws_temp_creds(id_token, username, new_password)
     
     
-    user_data_path = os.path.join(os.path.dirname(filepath), "userdata/filewise/facebook/")
+    #user_data_path = os.path.join(os.path.dirname(filepath), "userdata/filewise/facebook/")
+    user_data_path =  "/home/feynman/.Datapod/data"
     if os.path.exists(user_data_path):
         logging.warning(f"The directory which will be synced to remote {user_data_path}")
     

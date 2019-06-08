@@ -8,5 +8,7 @@ from .emails  import EMAILS_BP
 from .instagram_ds import INSTAGRAM_BP
 from .facebook_ds import FACEBOOK_BP
 from .browsers import BROWSER_HISTORY_BP
-DATASOURCES_BP = Blueprint.group(EMAILS_BP, INSTAGRAM_BP, BROWSER_HISTORY_BP, FACEBOOK_BP, 
+from .github import GITHUB_BP
+DATASOURCES_BP = Blueprint.group(EMAILS_BP, INSTAGRAM_BP, BROWSER_HISTORY_BP, 
+                            FACEBOOK_BP, GITHUB_BP, 
                             url_prefix="/datasources")
