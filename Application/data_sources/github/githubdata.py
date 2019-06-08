@@ -25,8 +25,53 @@ import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
+FNULL = open(os.devnull, 'w')
 
+def logging_subprocess(popenargs,
+                       logger,
+                       stdout_log_level=logging.DEBUG,
+                       stderr_log_level=logging.ERROR,
+                       **kwargs):
+    """
+    Variant of subprocess.call that accepts a logger instead of stdout/stderr,
+    and logs stdout messages via logger.debug and stderr messages via
+    logger.error.
+    """
+    child = subprocess.Popen(popenargs, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, **kwargs)
+    if sys.platform == 'win32':
+        log_info("Windows operating system detected - no subprocess logging will be returned")
 
+    log_level = {child.stdout: stdout_log_level,
+                 child.stderr: stderr_log_level}
+
+    def check_io():
+        if sys.platform == 'win32':
+            return
+        ready_to_read = select.select([child.stdout, child.stderr],
+                                      [],
+                                      [],
+                                      1000)[0]
+        for io in ready_to_read:
+            line = io.readline()
+            if not logger:
+                continue
+            if not (io == child.stderr and not line):
+                logger.log(log_level[io], line[:-1])
+
+    # keep checking stdout/stderr until the child exits
+    while child.poll() is None:
+        check_io()
+
+    check_io()  # check again to catch anything after the process exits
+
+    rc = child.wait()
+
+    if rc != 0:
+        print('{} returned {}:'.format(popenargs[0], rc), file=sys.stderr)
+        print('\t', ' '.join(popenargs), file=sys.stderr)
+
+    return rc
 
 def get_query_args(query_args=None):
     if not query_args:
@@ -66,12 +111,10 @@ def _request_http_error(exc, auth, errors):
         delta = max(10, reset - gm_now)
 
         limit = headers.get('x-ratelimit-limit')
-        print('Exceeded rate limit of {} requests; waiting {} seconds to reset'.format(limit, delta),  # noqa
-              file=sys.stderr)
+        logging.error('Exceeded rate limit of {} requests; waiting {} seconds to reset'.format(limit, delta))
 
         if auth is None:
-            print('Hint: Authenticate to raise your GitHub rate limit',
-                  file=sys.stderr)
+            logging.warning('Hint: Authenticate to raise your GitHub rate limit')
 
         time.sleep(delta)
         should_continue = True
@@ -179,18 +222,18 @@ def get_github_host(args=None):
     return host
 
 
-def get_github_repo_url(args, repository):
-    if args.prefer_ssh:
-        return repository['ssh_url']
+def get_github_repo_url(username, password, repository):
+    # if args.prefer_ssh:
+    #     return repository['ssh_url']
 
     if repository.get('is_gist'):
         return repository['git_pull_url']
 
-    auth = get_auth(args, False)
+    auth = get_auth(username, password, False)
     if auth:
         repo_url = 'https://{0}@{1}/{2}/{3}.git'.format(
             auth,
-            get_github_host(args),
+            get_github_host(),
             repository['owner']['login'],
             repository['name'])
     else:
@@ -325,21 +368,29 @@ def mkdir_p(*args):
             else:
                 raise
 
+def mask_password(url, secret='*****'):
+    parsed = urlparse(url)
 
+    if not parsed.password:
+        return url
+    elif parsed.password == 'x-oauth-basic':
+        return url.replace(parsed.username, secret)
 
-def backup_repositories(args, output_directory, repositories):
+    return url.replace(parsed.password, secret)
+
+def backup_repositories(username, password, output_directory, repositories):
     logging.info('Backing up repositories')
-    repos_template = 'https://{0}/repos'.format(get_github_api_host(args))
+    repos_template = 'https://{0}/repos'.format(get_github_api_host())
 
-    if args.incremental:
-        last_update = max(list(repository['updated_at'] for repository in repositories) or [time.strftime('%Y-%m-%dT%H:%M:%SZ', time.localtime())])  # noqa
-        last_update_path = os.path.join(output_directory, 'last_update')
-        if os.path.exists(last_update_path):
-            args.since = open(last_update_path).read().strip()
-        else:
-            args.since = None
-    else:
-        args.since = None
+    # if args.incremental:
+    #     last_update = max(list(repository['updated_at'] for repository in repositories) or [time.strftime('%Y-%m-%dT%H:%M:%SZ', time.localtime())])  # noqa
+    #     last_update_path = os.path.join(output_directory, 'last_update')
+    #     if os.path.exists(last_update_path):
+    #         args.since = open(last_update_path).read().strip()
+    #     else:
+    #         args.since = None
+    # else:
+    #     args.since = None
 
     for repository in repositories:
         if repository.get('is_gist'):
@@ -352,53 +403,62 @@ def backup_repositories(args, output_directory, repositories):
             repo_cwd = os.path.join(output_directory, 'repositories', repository['name'])
 
         repo_dir = os.path.join(repo_cwd, 'repository')
-        repo_url = get_github_repo_url(args, repository)
+        repo_url = get_github_repo_url(username, password, repository)
 
-        include_gists = (args.include_gists or args.include_starred_gists)
-        if (args.include_repository or args.include_everything) \
-                or (include_gists and repository.get('is_gist')):
-            repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
-            fetch_repository(repo_name,
-                             repo_url,
-                             repo_dir,
-                             skip_existing=args.skip_existing,
-                             bare_clone=args.bare_clone,
-                             lfs_clone=args.lfs_clone)
+        logger.info(f"This is the repo url {repo_url}")
+        #include_gists = (args.include_gists or args.include_starred_gists)
+        # if (args.include_repository or args.include_everything) \
+        #         or (include_gists and repository.get('is_gist')):
+        repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
+        fetch_repository(repo_name,
+                            repo_url,
+                            repo_dir,
+                            skip_existing=False,
+                            bare_clone=False,
+                            lfs_clone=False) #clone LFS repositories (requires Git LFS to be installed, https://git-lfs.github.com) [*])
 
-            if repository.get('is_gist'):
-                # dump gist information to a file as well
-                output_file = '{0}/gist.json'.format(repo_cwd)
-                with codecs.open(output_file, 'w', encoding='utf-8') as f:
-                    json_dump(repository, f)
+        if repository.get('is_gist'):
+            # dump gist information to a file as well
+            output_file = '{0}/gist.json'.format(repo_cwd)
+            with codecs.open(output_file, 'w', encoding='utf-8') as f:
+                json_dump(repository, f)
 
                 continue  # don't try to back anything else for a gist; it doesn't exist
 
-        download_wiki = (args.include_wiki or args.include_everything)
-        if repository['has_wiki'] and download_wiki:
-            fetch_repository(repository['name'],
-                             repo_url.replace('.git', '.wiki.git'),
-                             os.path.join(repo_cwd, 'wiki'),
-                             skip_existing=args.skip_existing,
-                             bare_clone=args.bare_clone,
-                             lfs_clone=args.lfs_clone)
+        #download_wiki = (args.include_wiki or args.include_everything)
+        # download_wiki = True
+        # if repository['has_wiki'] and download_wiki:
+        #     fetch_repository(repository['name'],
+        #                      repo_url.replace('.git', '.wiki.git'),
+        #                      os.path.join(repo_cwd, 'wiki'),
+        #                      skip_existing=args.skip_existing,
+        #                      bare_clone=args.bare_clone,
+        #                      lfs_clone=args.lfs_clone)
 
-        if args.include_issues or args.include_everything:
-            backup_issues(args, repo_cwd, repository, repos_template)
+        # if args.include_issues or args.include_everything:
+        #     backup_issues(args, repo_cwd, repository, repos_template)
 
-        if args.include_pulls or args.include_everything:
-            backup_pulls(args, repo_cwd, repository, repos_template)
+        # if args.include_pulls or args.include_everything:
+        #     backup_pulls(args, repo_cwd, repository, repos_template)
 
-        if args.include_milestones or args.include_everything:
-            backup_milestones(args, repo_cwd, repository, repos_template)
+        # if args.include_milestones or args.include_everything:
+        #     backup_milestones(args, repo_cwd, repository, repos_template)
 
-        if args.include_labels or args.include_everything:
-            backup_labels(args, repo_cwd, repository, repos_template)
+        # if args.include_labels or args.include_everything:
+        #     backup_labels(args, repo_cwd, repository, repos_template)
 
-        if args.include_hooks or args.include_everything:
-            backup_hooks(args, repo_cwd, repository, repos_template)
+        """
+        backup_hooks(args, repo_cwd, repository, repos_template)
+        backup_issues(args, repo_cwd, repository, repos_template)
+        backup_pulls(args, repo_cwd, repository, repos_template)
+        backup_milestones(args, repo_cwd, repository, repos_template)
+        backup_labels(args, repo_cwd, repository, repos_template)
+        backup_hooks(args, repo_cwd, repository, repos_template)
+        """
 
-    if args.incremental:
-        open(last_update_path, 'w').write(last_update)
+
+    # if args.incremental:
+    #     open(last_update_path, 'w').write(last_update)
 
 
 def backup_issues(args, repo_cwd, repository, repos_template):
@@ -712,7 +772,9 @@ def json_dump(data, output_file):
 def main():
     username = "graphicaldot"
     password = "mitthuparishweta"
-    output_directory = "/home/feynman/Desktop"
+    home = os.path.expanduser("~")
+
+    output_directory = f"{home}/.datapod/github"
     output_directory = os.path.realpath(output_directory)
     if not os.path.isdir(output_directory):
         logging.info('Create output directory {0}'.format(output_directory))
@@ -726,7 +788,7 @@ def main():
     authenticated_user = get_authenticated_user(username, password)
     logging.info(authenticated_user)
     repositories = retrieve_repositories(username, password, authenticated_user)
-    backup_repositories(args, output_directory, repositories)
+    backup_repositories(username, password, output_directory, repositories)
 
     """
 
