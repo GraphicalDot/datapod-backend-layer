@@ -38,6 +38,8 @@ if not os.path.exists(f"{keys_dir}/encryption.key"):
 user_data_path = os.path.join(datapod_dir, "data")
 
 
+parse_data_path = os.path.join(datapod_dir, "parsed")
+
 db_dir_path = os.path.join(datapod_dir, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 archive_path = os.path.join(datapod_dir, "archive")

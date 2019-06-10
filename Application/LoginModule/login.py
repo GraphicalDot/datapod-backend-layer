@@ -131,58 +131,9 @@ def set_new_password(email, new_password, validation_code):
     return 
 
 
-def sync_directory(dir_path, identity_id, access_key, secret_key, session_token):
-    if not os.path.exists(dir_path):
-        raise Exception("Please provide a valid directory name")
 
-    os.environ['AWS_ACCESS_KEY_ID'] = access_key # visible in this process + all children
-    os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key # visible in this process + all children
-    os.environ['AWS_SESSION_TOKEN'] = session_token # visible in this process + all children
-    os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
 
-    # _key = generate_aes_key(32)
 
-    # key = "".join(map(chr, _key))
-    #print (key)
-    encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
-
-    sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{encryption_key_path} {dir_path} s3://{BUCKET_NAME}/{identity_id}"
-    print (sync_command)
-    for out in os_system(sync_command):
-        logging.info(out)
-    return 
-
-def os_system(command):
-
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-    while True:
-        line = process.stdout.readline()
-        if not line:
-            logging.info("Files are already in sync")
-            break
-        yield line.decode().split("\r")[0]
-
-def run_command(command):
-    print ("command working")
-    
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         shell=True)
-    # Read stdout from subprocess until the buffer is empty !
-    print ("command working")
-    
-    for line in iter(p.stdout.readline, b''):
-        if line: # Don't print blank lines
-            yield line
-    # This ensures the process has completed, AND sets the 'returncode' attr
-    while p.poll() is None:                                                                                                                                        
-        sleep(.1) #Don't waste CPU-cycles
-    # Empty STDERR buffer
-    err = p.stderr.read()
-    if p.returncode != 0:
-       # The run_command() function is responsible for logging STDERR 
-       print("Error: " + str(err))
     
 
 if __name__ == "__main__":
