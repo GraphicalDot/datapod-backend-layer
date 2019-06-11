@@ -10,8 +10,6 @@ import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
-from LoginModule.login import login, aws_temp_creds
-
 
 
 def os_system(command:str, final_message:str) -> str:

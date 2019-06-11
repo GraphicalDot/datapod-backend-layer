@@ -3,48 +3,83 @@ import os
 import pathlib
 import subprocess
 from EncryptionModule.symmetric import generate_aes_key
+from errors_module.errors import APIBadRequest
+
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
-p = str(pathlib.Path(os.getcwd()))
 home = os.path.expanduser("~")
+MAIN_DIR = os.path.join(home, ".Datapod")
+KEYS_DIR = os.path.join(MAIN_DIR, "Keys")
 
-datapod_dir = os.path.join(home, ".Datapod")
+def validate_fields(required_fields, request_json):
+    try:
+        for field in required_fields:
+            if request_json.get(field) is None:
+                raise APIBadRequest("{} is required".format(field))
+    except (ValueError, AttributeError):
+        raise Exception("Improper JSON format")
 
 
-keys_dir = os.path.join(datapod_dir, "Keys")
+if not os.path.exists(KEYS_DIR):
+    logging.warning("Creating encryption keys Directory")
+    os.makedirs(KEYS_DIR)
 
 
 key = generate_aes_key(32)
 
-
-
-if not os.path.exists(keys_dir):
-    logging.warning("Creating encryption keys Directory")
-    os.makedirs(keys_dir)
-
-
-if not os.path.exists(f"{keys_dir}/encryption.key"):
+if not os.path.exists(f"{KEYS_DIR}/encryption.key"):
     logging.warning("Generating new key for encryption")
-    with open(f"{keys_dir}/encryption.key", "wb") as fileobj:
+    with open(f"{KEYS_DIR}/encryption.key", "wb") as fileobj:
         fileobj.write(key)
+
+class Config:
+    MAIN_DIR = MAIN_DIR
+    KEYS_DIR = KEYS_DIR
+    DATA_PATH = os.path.join(MAIN_DIR, "userdata")
+    PARSED_DATA_PATH = os.path.join(DATA_PATH, "parsed")
+    RAW_DATA_PATH = os.path.join(DATA_PATH, "raw")
+
+    DB_PATH = os.path.join(DATA_PATH, "database")
+    #db_dir_path = "/home/feynman/Desktop/database"
+    BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
+
+    URL = None
+
+
+
+    HOST = "localhost"
+    PORT = 8000
+    DEBUG = True
+    VALIDATE_FIELDS = None
+
+    REQUEST_MAX_SIZE = 100000000         
+    REQUEST_BUFFER_QUEUE_SIZE = 100
+    REQUEST_TIMEOUT= 60
+    RESPONSE_TIMEOUT= 60
+    KEEP_ALIVE= True 
+    KEEP_ALIVE_TIMEOUT=5
+    GRACEFUL_SHUTDOWN_TIMEOUT = 15.0
+    ACCESS_LOG = True   
+
 
 
 #openssl rand -out .key 32
+class DevelopmentConfig(Config):   
+    URL = "https://jadrlk2ok9.execute-api.ap-south-1.amazonaws.com/"
+    LOGIN = f"{URL}Production/login"
+    SIGNUP = f"{URL}Production/signup" 
+    CONFIRM_SIGN_UP = f"{URL}Production/confirm-sign-up"
+    PROFILE = f"{URL}Production/profile"
+    AWS_CREDS = f"{URL}Production/awstempcredentials"
+    FORGOT_PASS = f"{URL}Production/forgotpassword"
+    CONFIRM_FORGOT_PASS = f"{URL}Production/confirmpassword"
+    BUCKET_NAME = "datapod-backups"
+    AWS_DEFAULT_REGION = "ap-south-1"
+    HOST = "localhost"
+    PORT = 8000
+    DEBUG = True
+    VALIDATE_FIELDS = validate_fields
 
-
-user_data_path = os.path.join(datapod_dir, "data")
-
-
-parse_data_path = os.path.join(datapod_dir, "parsed")
-
-db_dir_path = os.path.join(datapod_dir, "database")
-#db_dir_path = "/home/feynman/Desktop/database"
-archive_path = os.path.join(datapod_dir, "archive")
-
-
-HOST = "localhost"
-PORT = 8000
-DEBUG = True

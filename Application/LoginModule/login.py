@@ -3,7 +3,10 @@ import os
 import requests
 import json
 import pathlib
+from sanic import Blueprint
 
+import subprocess
+from time import sleep
 
 #generat enew 32 byte key
 #openssl rand -out sse-c.key 32
@@ -12,10 +15,7 @@ def generate_aes_key(number_of_bytes):
      #return get_random_bytes(number_of_bytes) 
      return os.urandom(number_of_bytes) 
 
-filepath = str(pathlib.Path(os.getcwd()))
 
-import subprocess
-from time import sleep
 
 import coloredlogs, verboselogs, logging
 verboselogs.install()
@@ -23,18 +23,14 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
-URL = "https://jadrlk2ok9.execute-api.ap-south-1.amazonaws.com/"
+USERS_BP = Blueprint("user", url_prefix="/")
 
-LOGIN = f"{URL}Production/login"
-SIGNUP = f"{URL}Production/signup" 
-CONFIRM_SIGN_UP = f"{URL}Production/confirm-sign-up"
-PROFILE = f"{URL}Production/profile"
-AWS_CREDS = f"{URL}Production/awstempcredentials"
-FORGOT_PASS = f"{URL}Production/forgotpassword"
-CONFIRM_FORGOT_PASS = f"{URL}Production/confirmpassword"
-BUCKET_NAME = "datapod-backups"
-AWS_DEFAULT_REGION = "ap-south-1"
 
+
+
+
+
+@USERS_BP.get('/login')
 def login(username, password):
     r = requests.post(LOGIN, data=json.dumps({"email": username, "password": password}))
     result = r.json()
@@ -47,6 +43,8 @@ def login(username, password):
     return result["data"]["id_token"], result["data"]["refresh_token"]
 
 
+
+@USERS_BP.get('/sign_up')
 def signup(token, email, password, name, phone_number, preferred_username):
     """
     {
@@ -73,6 +71,8 @@ def signup(token, email, password, name, phone_number, preferred_username):
     return result["message"]
 
 
+
+@USERS_BP.get('/confirm_signup')
 def confirm_signup(email, validation_code):
     r = requests.post(CONFIRM_SIGN_UP, data=json.dumps({"email": email,"code": validation_code}))
     result = r.json()
@@ -85,6 +85,7 @@ def confirm_signup(email, validation_code):
 
 
 
+@USERS_BP.get('/profile')
 def profile(token, email):
     r = requests.post(PROFILE, data=json.dumps({"email": email}), headers={"Authorization": token})
     result = r.json()
@@ -96,6 +97,9 @@ def profile(token, email):
 
     return result["data"]
 
+
+
+@USERS_BP.get('/backup_credentials')
 def aws_temp_creds(token, username, password):
     r = requests.post(AWS_CREDS, data=json.dumps({"email": username, "password": password}), headers={"Authorization": token})
     result = r.json()
@@ -108,6 +112,8 @@ def aws_temp_creds(token, username, password):
             result["data"]["secret_key"], result["data"]["session_token"] 
 
 
+
+@USERS_BP.get('/forgot_password')
 def forgot_password(email):
     r = requests.post(FORGOT_PASS, data=json.dumps({"email": email}))
     result = r.json()
@@ -119,6 +125,8 @@ def forgot_password(email):
 
     return 
 
+
+@USERS_BP.get('/new_password')
 def set_new_password(email, new_password, validation_code):
     r = requests.post(CONFIRM_FORGOT_PASS, data=json.dumps({"email": email, "password": new_password, "code":  validation_code }))
     result = r.json()
