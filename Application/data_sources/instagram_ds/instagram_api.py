@@ -13,19 +13,6 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 INSTAGRAM_BP = Blueprint("instagram", url_prefix="/instagram")
 
-
-def validate_fields(required_fields, request_json):
-    try:
-        for field in required_fields:
-            if request_json.get(field) is None:
-                raise APIBadRequest("{} is required".format(field))
-    except (ValueError, AttributeError):
-        raise Exception("Improper JSON format")
-
-
-    
-
-
 async def periodic(app, instagram_object):
     ##add this if this has to executed periodically
     ##while True:
@@ -43,9 +30,7 @@ async def periodic(app, instagram_object):
 async def instagram_fetch_images(request):
     """
     """
-    required_fields = ["username", "password"]
-    validate_fields(required_fields, request.json)
-
+    request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
 
     
     instagram_object = instagram_login(request.json["username"], request.json["password"])
@@ -58,5 +43,5 @@ async def instagram_fetch_images(request):
         {
         'error': False,
         'success': True,
-        "data": "Dude some empty data"
+        "data": "Instagram login has been sucessful"
         })
