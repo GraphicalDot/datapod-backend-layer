@@ -16,39 +16,19 @@ logger = logging.getLogger(__file__)
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
 
-def validate_fields(required_fields, request_json):
-    try:
-        for field in required_fields:
-            if request_json.get(field) is None:
-                raise APIBadRequest("{} is required".format(field))
-    except (ValueError, AttributeError):
-        raise APIBadRequest("Improper JSON format")
-
-
-
-
-    #await save_instagram(allposts, instagram_path, app.config.db_dir_path)
-    return 
 
 @GITHUB_BP.post('/parse')
 async def parse(request):
     """
     """
 
-    logger.info("THe file began execution")
-    
-    required_fields = ["path"]
-    validate_fields(required_fields, request.json)
-    dest_directory  = f"{request.app.config.user_data_path}/github"
+    request.app.config.VALIDATE_FIELDS(["path", "override"], request.json)
 
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
+    dest_directory  = f"{request.app.config.RAW_DATA_PATH}/github"
 
-    logging.warning (f"Target Directory is {request.json['path']}")
-    logging.warning (f"Destination Directory is {dest_directory}")
-    
-    if not os.path.exists(dest_directory):
-        os.makedirs(dest_directory)
+    if os.path.exists(dest_directory):
+        if not request.json["override"]:
+            raise APIBadRequest("GITHUB Data already exists")
 
     if request.json["path"].endswith("zip"):
         shutil.unpack_archive(request.json["path"], extract_dir=dest_directory, format=None)
@@ -57,8 +37,6 @@ async def parse(request):
         t = tarfile.open(request.json["path"], 'r')
         t.extractall(dest_directory)
 
-        # with gzip.open(request.json["path"], 'r') as f_in, open(dest_directory, 'wb') as f_out:
-        #     shutil.copyfileobj(f_in, f_out)
 
     else:
         raise APIBadRequest("Unknown format")

@@ -11,8 +11,16 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 home = os.path.expanduser("~")
-MAIN_DIR = os.path.join(home, ".Datapod")
-KEYS_DIR = os.path.join(MAIN_DIR, "Keys")
+MAIN_DIR = os.path.join(home, ".datapod")
+KEYS_DIR = os.path.join(MAIN_DIR, "keys")
+USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
+PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
+RAW_DATA_PATH = os.path.join(USERDATA_PATH, "raw")
+
+DB_PATH = os.path.join(USERDATA_PATH, "database")
+#db_dir_path = "/home/feynman/Desktop/database"
+BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
+
 
 def validate_fields(required_fields, request_json):
     try:
@@ -22,11 +30,10 @@ def validate_fields(required_fields, request_json):
     except (ValueError, AttributeError):
         raise Exception("Improper JSON format")
 
-
-if not os.path.exists(KEYS_DIR):
-    logging.warning("Creating encryption keys Directory")
-    os.makedirs(KEYS_DIR)
-
+for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH, DB_PATH, BACKUP_PATH]:
+    if not os.path.exists(path):
+        logging.warning(f"Creating {path} Directory")
+        os.makedirs(path)
 
 key = generate_aes_key(32)
 
@@ -38,13 +45,13 @@ if not os.path.exists(f"{KEYS_DIR}/encryption.key"):
 class Config:
     MAIN_DIR = MAIN_DIR
     KEYS_DIR = KEYS_DIR
-    DATA_PATH = os.path.join(MAIN_DIR, "userdata")
-    PARSED_DATA_PATH = os.path.join(DATA_PATH, "parsed")
-    RAW_DATA_PATH = os.path.join(DATA_PATH, "raw")
+    USERDATA_PATH = USERDATA_PATH
+    PARSED_DATA_PATH = PARSED_DATA_PATH
+    RAW_DATA_PATH = RAW_DATA_PATH
 
-    DB_PATH = os.path.join(DATA_PATH, "database")
+    DB_PATH = DB_PATH    
     #db_dir_path = "/home/feynman/Desktop/database"
-    BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
+    BACKUP_PATH = BACKUP_PATH
 
     URL = None
 

@@ -20,16 +20,6 @@ logger = logging.getLogger(__file__)
 GMAIL_BP = Blueprint("gmail", url_prefix="/gmail")
 
 
-def validate_fields(required_fields, request_json):
-    try:
-        for field in required_fields:
-            if request_json.get(field) is None:
-                raise APIBadRequest("{} is required".format(field))
-    except Exception as e:
-        raise APIBadRequest(f"Error: {e.__str__()}")
-
-
-
 
 @GMAIL_BP.post('/credentials')
 async def gmail_login(request):
@@ -49,7 +39,7 @@ async def gmail_login(request):
     ##add this if this has to executed periodically
     ##while True:
 
-    password = "BIGzoho8681@#"
+    password = ""
     key, salt = generate_scrypt_key(password)
     logging.info(f"salt for scrypt key is {salt}")
     logging.info(f" key for AES encryption is  {key}")
@@ -89,34 +79,13 @@ async def parse(request):
     """
     To get all the assets created by the requester
     """
-    required_fields = ["path"]
-    validate_fields(required_fields, request.json)
+    request.app.config.VALIDATE_FIELDS(["path"], request.json)
+
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
-
-
-    # if not request.json["path"].endswith("mbox"):
-    #     raise APIBadRequest("This path is not a valid mbox file")
-    archive_file_name = os.path.basename(request.json["path"])
-
-    if not os.path.exists(request.app.config.user_data_path):
-            logger.warning(f"Creating path {request.app.config.user_data_path}")
-            os.makedirs(request.app.config.user_data_path)
-
+    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
-    path = os.path.join(request.app.config.user_data_path,   "Takeout/Mail/All mail Including Spam and Trash.mbox")
-    logger.warning(f"Path for gmail takeout data is  {path}")
-    
-
-
-    if os.path.exists(path):
-       logger.warning(f"Overiding gmail takeout data at {path}")
-     
-    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.user_data_path, format=None)
-    
-    
-    logger.info(f"THe request was successful with path {path}")
-    
+        
     #request.app.add_task(periodic(request.app, path))
     return response.json(
         {
