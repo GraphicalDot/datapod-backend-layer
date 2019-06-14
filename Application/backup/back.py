@@ -88,12 +88,21 @@ class Backup(object):
         if not os.listdir(self.raw_data_path):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
-        archival_name = datetime.datetime.utcnow().strftime("%B-%d-%Y:%H:%M:%S")
-        backup_path = f"{self.backup_path}/{archival_name}.tar"
+        archival_name = datetime.datetime.utcnow().strftime("%B-%d-%Y_%H-%M-%S")
+
+
+        backup_path_dir = f"{self.backup_path}/{archival_name}"
+        if not os.path.exists(backup_path_dir):
+            os.makedirs(backup_path_dir)
+        
+        backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
+
+            
         logging.info(f"The dir whose backup will be made {self.raw_data_path}")
         logging.info(f"The dir where backup will be made {backup_path}")
         
-        backup_command = f"tar -cvpf {backup_path} -g={self.user_index} --lzma {self.raw_data_path}"
+        backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"
+        #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
 
         print (backup_command)
         for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
