@@ -12,6 +12,7 @@ logger = logging.getLogger(__file__)
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
+USER_INDEX = f"{MAIN_DIR}/user.index"
 KEYS_DIR = os.path.join(MAIN_DIR, "keys")
 USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
 PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
@@ -21,6 +22,21 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
+
+
+def os_command_output(command:str, final_message:str) -> str:
+    """
+    final message, This will be printed if there is no output on sttout on the 
+    command line 
+
+    """
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            logging.info(final_message)
+            break
+        yield line.decode().split("\r")[0]
 
 def validate_fields(required_fields, request_json):
     try:
@@ -44,8 +60,10 @@ if not os.path.exists(f"{KEYS_DIR}/encryption.key"):
 
 class Config:
     MAIN_DIR = MAIN_DIR
+    USER_INDEX = USER_INDEX
     KEYS_DIR = KEYS_DIR
     USERDATA_PATH = USERDATA_PATH
+
     PARSED_DATA_PATH = PARSED_DATA_PATH
     RAW_DATA_PATH = RAW_DATA_PATH
 
@@ -70,6 +88,7 @@ class Config:
     KEEP_ALIVE_TIMEOUT=5
     GRACEFUL_SHUTDOWN_TIMEOUT = 15.0
     ACCESS_LOG = True   
+    OS_COMMAND_OUTPUT  = os_command_output
 
 
 

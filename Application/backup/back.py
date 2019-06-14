@@ -9,22 +9,11 @@ import datetime
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
+from errors_module.errors import APIBadRequest, PathDoesntExists
 logger = logging.getLogger(__file__)
 
 
-def os_system(command:str, final_message:str) -> str:
-    """
-    final message, This will be printed if there is no output on sttout on the 
-    command line 
 
-    """
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-    while True:
-        line = process.stdout.readline()
-        if not line:
-            logging.info(final_message)
-            break
-        yield line.decode().split("\r")[0]
 
 def run_command(command: str) -> None:
 
@@ -48,32 +37,71 @@ def run_command(command: str) -> None:
     return 
 
 
-class Backup(ABC):
 
-    def __init__(self, datapod_dir):
-        self.datapod_dir = datapod_dir
-        self.user_index = f""
 
-        ##the directory inside the datapod_dir with all the backups
-        self.backup_dir = os.path.join(datapod_dir, "backup")
+class Backup(object):
 
-        ##the directory which will have all the data, parsed or unparsed
-        self.data_dir = os.path.join(datapod_dir, "userdata")
+    def __init__(self, request):
+        # self.datapod_dir = datapod_dir
+        # self.user_index = f""
 
-        ##the file inside the datapod_dir which will have the encryption keys of 
-        ##the user
-        self.encryption_file_name = os.path.join(datapod_dir, "keys/encryption.key")
+        # ##the directory inside the datapod_dir with all the backups
+        # self.backup_dir = os.path.join(datapod_dir, "backup")
 
-    
-    @abstractmethod
+        # ##the directory which will have all the data, parsed or unparsed
+        # self.data_dir = os.path.join(datapod_dir, "userdata")
+
+        # ##the file inside the datapod_dir which will have the encryption keys of 
+        # ##the user
+        # self.encryption_file_name = os.path.join(datapod_dir, "keys/encryption.key")
+        self.request = request
+        self.userdata_path = self.request.app.config.USERDATA_PATH
+        
+        ##file which keeps tracks of the data that has been backup last time
+        self.user_index = self.request.app.config.USER_INDEX
+
+
+        ##subdirectories in userdata path which deals with raw, parsed and database path 
+        ##for the userdata.
+        self.parsed_data_path = self.request.app.config.PARSED_DATA_PATH
+        self.raw_data_path = self.request.app.config.RAW_DATA_PATH
+
+        self.db_path = self.request.app.config.DB_PATH
+        self.backup_path = self.request.app.config.BACKUP_PATH
+
+
     def create(self):
         """
+        --level=0, for fullbackup
+        --level=1, for incremental backup
+        --listed_incremental is equivalent to -g
+         --atime-preserve=system 
 
+         brew install gnu-tar
+
+        #tar --create --lzma --verbose --multi-volume --tape-length 102400  --file=MyArchive.tgz raw -g user.index
+        With --newer you're simply updating/creating the archive with the files that have changed since the date you pass it.
+
+        tar  --create --lzma --verbose  --file=MyArchive raw/facebook/facebook-sauravverma14473426
 
         """
-        pass
+        if not os.listdir(self.raw_data_path):
+            raise APIBadRequest("The directory whose backup needs to be made is empty")
+        
+        archival_name = datetime.datetime.utcnow().strftime("%B-%d-%Y:%H:%M:%S")
+        backup_path = f"{self.backup_path}/{archival_name}.tar"
+        logging.info(f"The dir whose backup will be made {self.raw_data_path}")
+        logging.info(f"The dir where backup will be made {backup_path}")
+        
+        backup_command = f"tar -cvpf {backup_path} -g={self.user_index} --lzma {self.raw_data_path}"
 
-    @abstractmethod
+        print (backup_command)
+        for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
+            logging.info(out)
+        return 
+
+
+    
     def split(self):
         """
         if the backup is huge please split it into different 1GB files, so it will be easier to 
@@ -81,7 +109,6 @@ class Backup(ABC):
         """
         pass
 
-    @abstractmethod
     def sync_backup(self):
         """
         """
@@ -96,15 +123,7 @@ class S3Backup(Backup):
         self.bucket_name = bucket_name
 
 
-    def create(self):
-                
-        archival_name = datetime.datetime.utcnow().strftime("%B-%d-%Y")
-        backup_command = f"tar cvpf {self.backup_dir}/{archival_name} --listed-incremental=usr.index --lzma {self.data_dir}"
-
-        print (backup_command)
-        for out in os_system(backup_command, "Backup"):
-            logging.info(out)
-
+    
     def sync_backup(self, dir_path, identity_id, access_key, secret_key, default_region, session_token):
         if not os.path.exists(dir_path):
             raise Exception("Please provide a valid directory name")

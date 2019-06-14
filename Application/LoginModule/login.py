@@ -15,9 +15,6 @@ USERS_BP = Blueprint("user", url_prefix="/user")
 
 
 
-
-
-
 @USERS_BP.post('/login')
 def login(request):
     request.app.config.VALIDATE_FIELDS(["email", "password"], request.json)

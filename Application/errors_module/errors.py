@@ -54,6 +54,15 @@ class APIBadRequest(ApiException):
         super().__init__(message)
 
 
+
+@add_status_code(400)
+class PathDoesntExists(ApiException):
+    def __init__(self, path=None,
+                        status_code=None):
+        self.message = f"{path} doesnt exists"
+        super().__init__(self.message)
+
+
 @add_status_code(400)
 class AccountError(ApiException):
     def __init__(self, message="This Account already exists with us",

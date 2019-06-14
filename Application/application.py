@@ -39,6 +39,7 @@ from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
 from database_calls import DATABASE_BP
 from LoginModule import USERS_BP
+from backup import BACKUP_BP
 
 #from secrets.aws_secret_manager import get_secrets
 
@@ -60,6 +61,7 @@ def main():
     app.blueprint(ERRORS_BP)
     app.blueprint(DATABASE_BP)
     app.blueprint(USERS_BP)
+    app.blueprint(BACKUP_BP)
 
     #app.blueprint(UPLOAD_BP)
     #app.blueprint(USER_ACCOUNTS_BP)
