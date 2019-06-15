@@ -17,7 +17,7 @@ parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())
 
 sys.path.append(parent_module_path)
 
-from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
+#from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
 
 
 def indian_time_stamp(naive_timestamp=None):

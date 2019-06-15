@@ -6,6 +6,7 @@ import os
 import subprocess
 import time
 import datetime
+import platform
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -101,7 +102,13 @@ class Backup(object):
         logging.info(f"The dir whose backup will be made {self.raw_data_path}")
         logging.info(f"The dir where backup will be made {backup_path}")
         
-        backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"
+        if platform.system() == "Linux":
+            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
+        elif platform.system() == "Darwin":
+            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"
+        else:
+            raise APIBadRequest("The platform is not available for this os distribution")
+        
         #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
 
         print (backup_command)

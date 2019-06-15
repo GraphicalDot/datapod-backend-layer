@@ -41,7 +41,7 @@ print (parent_module_path)
 
 sys.path.append(parent_module_path)
 
-from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key
+#from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key
 
 #from database_calls import database_calls 
 #import create_db_instance, close_db_instance, get_key, insert_key

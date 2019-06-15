@@ -18,7 +18,7 @@ BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 
 
 
-@BACKUP_BP.post('/make_backup')
+@BACKUP_BP.get('/make_backup')
 async def make_backup(request):
     """
     """

@@ -37,7 +37,7 @@ logger = logging.getLogger(__file__)
 
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
-from database_calls import DATABASE_BP
+#from database_calls import DATABASE_BP
 from LoginModule import USERS_BP
 from backup import BACKUP_BP
 
@@ -59,7 +59,6 @@ def main():
     #app.blueprint(ASSETS_BP)
     app.blueprint(DATASOURCES_BP)
     app.blueprint(ERRORS_BP)
-    app.blueprint(DATABASE_BP)
     app.blueprint(USERS_BP)
     app.blueprint(BACKUP_BP)
 

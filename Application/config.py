@@ -4,7 +4,7 @@ import pathlib
 import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
-
+from database_calls.database_calls import intialize_db
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -22,7 +22,7 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-
+intialize_db(os.path.join(DB_PATH, "database.db"))
 
 def os_command_output(command:str, final_message:str) -> str:
     """

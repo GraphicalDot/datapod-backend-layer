@@ -8,7 +8,6 @@ import asyncio
 import concurrent
 import asyncinit
 from collections import Counter
-from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 import coloredlogs, verboselogs, logging
 import operator
 from geopy.geocoders import Nominatim
