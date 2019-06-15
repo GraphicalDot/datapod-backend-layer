@@ -9,6 +9,8 @@ import tarfile
 import gzip
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
+import datetime
+
 from .back import Backup
 verboselogs.install()
 coloredlogs.install()
@@ -21,27 +23,22 @@ BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 @BACKUP_BP.get('/make_backup')
 async def make_backup(request):
     """
+    ##TODO ADD entries to BACKUP_TBL
     """
+    archival_object = datetime.datetime.utcnow()
+    archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
 
-    instance = Backup(request)
-    instance.create()
+    try:
+        instance = Backup(request)
+        instance.create(archival_name)
+        new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
+        new_log_entry.save()
 
-    # if os.path.exists(dest_directory):
-    #     if not request.json["override"]:
-    #         raise APIBadRequest("GITHUB Data already exists")
+    except Exception as e:
+        logging.error(e.__str__())
+        new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival failed because of {e.__str__()} on {archival_name}", error=1, success=0)
+        new_log_entry.save()
 
-    # if request.json["path"].endswith("zip"):
-    #     shutil.unpack_archive(request.json["path"], extract_dir=dest_directory, format=None)
-
-    # elif request.json["path"].endswith(".gz"):
-    #     t = tarfile.open(request.json["path"], 'r')
-    #     t.extractall(dest_directory)
-
-
-    # else:
-    #     raise APIBadRequest("Unknown format")
-
-    # logger.info(f"THe request was successful with crypto path {request.json['path']}")
 
     return response.json(
         {

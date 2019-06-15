@@ -71,7 +71,7 @@ class Backup(object):
         self.backup_path = self.request.app.config.BACKUP_PATH
 
 
-    def create(self):
+    def create(self, archival_name):
         """
         --level=0, for fullbackup
         --level=1, for incremental backup
@@ -89,7 +89,6 @@ class Backup(object):
         if not os.listdir(self.raw_data_path):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
-        archival_name = datetime.datetime.utcnow().strftime("%B-%d-%Y_%H-%M-%S")
 
 
         backup_path_dir = f"{self.backup_path}/{archival_name}"
@@ -103,9 +102,9 @@ class Backup(object):
         logging.info(f"The dir where backup will be made {backup_path}")
         
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
         elif platform.system() == "Darwin":
-            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  --atime-preserve -f {backup_path} {self.raw_data_path}"
+            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  -f {backup_path} {self.raw_data_path}"
         else:
             raise APIBadRequest("The platform is not available for this os distribution")
         
@@ -113,7 +112,7 @@ class Backup(object):
 
         print (backup_command)
         for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
-            logging.info(out)
+            logging.info(f"Archiving {out[-70:]}")
         return 
 
 

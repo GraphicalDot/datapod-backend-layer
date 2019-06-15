@@ -29,3 +29,9 @@ def intialize_db(path):
         Logs,
         Backups
         ])
+    for person in Logs.select():
+        print(person.message)
+
+    return Logs, Backups
+
+

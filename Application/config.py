@@ -18,18 +18,21 @@ USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
 PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
 RAW_DATA_PATH = os.path.join(USERDATA_PATH, "raw")
 
+
+
+##Intializing database and intialize the table object of the sqlite db
+
 DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-intialize_db(os.path.join(DB_PATH, "database.db"))
+Logs, Backup = intialize_db(os.path.join(DB_PATH, "database.db"))
+
+
+##########-------------------------------------------------------###########
 
 def os_command_output(command:str, final_message:str) -> str:
-    """
-    final message, This will be printed if there is no output on sttout on the 
-    command line 
 
-    """
     process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     while True:
         line = process.stdout.readline()
@@ -89,6 +92,9 @@ class Config:
     GRACEFUL_SHUTDOWN_TIMEOUT = 15.0
     ACCESS_LOG = True   
     OS_COMMAND_OUTPUT  = os_command_output
+    LOGS_TBL = Logs
+    BACKUPS_TBL = Backup
+    
 
 
 
