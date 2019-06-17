@@ -20,7 +20,16 @@ BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 
 
 
+
+@BACKUP_BP.get('/settings')
+#async def make_backup(request, ws):
+async def backup_settings(request):
+    request.app.config.VALIDATE_FIELDS(["time", "backup_frequency", "number_of_backups", "upload_speed", "download_speed"], request.json)
+
+
+
 @BACKUP_BP.get('/make_backup')
+#async def make_backup(request, ws):
 async def make_backup(request):
     """
     ##TODO ADD entries to BACKUP_TBL
@@ -30,7 +39,10 @@ async def make_backup(request):
 
     try:
         instance = Backup(request)
-        instance.create(archival_name)
+        async for i in instance.create(archival_name):
+            logging.info(i)
+            #await ws.send(i)
+
         new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         new_log_entry.save()
 

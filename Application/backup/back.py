@@ -7,6 +7,8 @@ import subprocess
 import time
 import datetime
 import platform
+import tempfile
+
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -15,6 +17,17 @@ logger = logging.getLogger(__file__)
 
 
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
 
 def run_command(command: str) -> None:
 
@@ -90,19 +103,20 @@ class Backup(object):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
 
-
+        temp = tempfile.TemporaryFile()
         backup_path_dir = f"{self.backup_path}/{archival_name}"
         if not os.path.exists(backup_path_dir):
             os.makedirs(backup_path_dir)
         
-        backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
+        # backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
 
             
         logging.info(f"The dir whose backup will be made {self.raw_data_path}")
-        logging.info(f"The dir where backup will be made {backup_path}")
+        # logging.info(f"The dir where backup will be made {backup_path}")
         
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {temp} {self.raw_data_path}"                                                                                                                                                                                                                                            
         elif platform.system() == "Darwin":
             backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  -f {backup_path} {self.raw_data_path}"
         else:
@@ -112,7 +126,14 @@ class Backup(object):
 
         print (backup_command)
         for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
-            logging.info(f"Archiving {out[-70:]}")
+            yield (f"Archiving {out[-70:]}")
+            
+        temp.seek(0)
+        with cd(backup_path_dir):
+            # we are in ~/Library
+            command = "tar -xMv --file=tar_archive.{tar,tar-{2..100}} {temp}"
+            self.request.app.config.OS_COMMAND_OUTPUT(command, "Split")
+        temp.close()
         return 
 
 
@@ -121,7 +142,13 @@ class Backup(object):
         """
         if the backup is huge please split it into different 1GB files, so it will be easier to 
         sync on remote backup
+        To extract from the archive: 
+
+        tar -xMv --file=tar_archive.{tar,tar-{2..100}} [files to extract] 
+
+
         """
+        #tar --tape-length=102400 -cMv --file=tar_archive.{tar,tar-{2..100}} backup.tar.lzma 
         pass
 
     def sync_backup(self):
