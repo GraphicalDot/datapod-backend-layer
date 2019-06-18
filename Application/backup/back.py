@@ -29,26 +29,7 @@ class cd:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
-def run_command(command: str) -> None:
 
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         shell=True)
-    # Read stdout from subprocess until the buffer is empty !
-    
-    for line in iter(p.stdout.readline, b''):
-        if line: # Don't print blank lines
-            yield line
-    # This ensures the process has completed, AND sets the 'returncode' attr
-    while p.poll() is None:                                                                                                                                        
-        time.sleep(.1) #Don't waste CPU-cycles
-    # Empty STDERR buffer
-    err = p.stderr.read()
-    if p.returncode != 0:
-       # The run_command() function is responsible for logging STDERR 
-       print("Error: " + str(err))
-    return 
 
 
 
@@ -78,13 +59,13 @@ class Backup(object):
         ##subdirectories in userdata path which deals with raw, parsed and database path 
         ##for the userdata.
         self.parsed_data_path = self.request.app.config.PARSED_DATA_PATH
-        self.raw_data_path = self.request.app.config.RAW_DATA_PATH
+        self.raw_data_path = os.path.join(self.request.app.config.RAW_DATA_PATH, "facebook")
 
         self.db_path = self.request.app.config.DB_PATH
         self.backup_path = self.request.app.config.BACKUP_PATH
 
 
-    def create(self, archival_name):
+    async def create(self, archival_name):
         """
         --level=0, for fullbackup
         --level=1, for incremental backup
@@ -102,8 +83,8 @@ class Backup(object):
         if not os.listdir(self.raw_data_path):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
-
-        temp = tempfile.TemporaryFile()
+        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
+        #temp = tempfile.TemporaryFile()
         backup_path_dir = f"{self.backup_path}/{archival_name}"
         if not os.path.exists(backup_path_dir):
             os.makedirs(backup_path_dir)
@@ -113,43 +94,52 @@ class Backup(object):
             
         logging.info(f"The dir whose backup will be made {self.raw_data_path}")
         # logging.info(f"The dir where backup will be made {backup_path}")
-        
+        logging.error(f"Temporary file location is {temp.name}")
+
         if platform.system() == "Linux":
-            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {backup_path} {self.raw_data_path}"                                                                                                                                                                                                                                            
-            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}   -f {temp} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
         elif platform.system() == "Darwin":
-            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index}  -f {backup_path} {self.raw_data_path}"
+            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"
         else:
             raise APIBadRequest("The platform is not available for this os distribution")
-        
+
         #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
 
-        print (backup_command)
         for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
             yield (f"Archiving {out[-70:]}")
             
-        temp.seek(0)
-        with cd(backup_path_dir):
-            # we are in ~/Library
-            command = "tar -xMv --file=tar_archive.{tar,tar-{2..100}} {temp}"
-            self.request.app.config.OS_COMMAND_OUTPUT(command, "Split")
-        temp.close()
+        async for msg in self.split(backup_path_dir, temp.name):
+            yield msg
+        
+        self.remove_temporary_archive(temp.name)
+    
         return 
 
+    def remove_temporary_archive(self, file_name):
+        logging.warning(f"Removing temporary backup file {file_name}")
+        try:
+            os.remove(file_name)
+        except Exception as e:
+            logging.info(f"couldnt remove temporary archive file {file_name}")
+        return 
 
-    
-    def split(self):
-        """
-        if the backup is huge please split it into different 1GB files, so it will be easier to 
-        sync on remote backup
-        To extract from the archive: 
+    async def split(self, backup_path_dir, file_path):
+        dir_name, file_name = os.path.split(file_path)
 
-        tar -xMv --file=tar_archive.{tar,tar-{2..100}} [files to extract] 
+        with cd(backup_path_dir):
+            logging.info(f"THe directory where split is taking place {backup_path_dir}")
+            if platform.system() == "Linux":
+                command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
+                
+            elif platform.system() == "Darwin":
+                command = "gtar --tape-length=%s -cMv --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
+            else:
+                raise APIBadRequest("The platform is not available for this os distribution")
 
-
-        """
-        #tar --tape-length=102400 -cMv --file=tar_archive.{tar,tar-{2..100}} backup.tar.lzma 
-        pass
+            logging.warning(f"Splitting command is {command}")
+            for out in self.request.app.config.OS_COMMAND_OUTPUT(command, "Split"):
+                yield (f"Archiving {out[-70:]}")
+        return 
 
     def sync_backup(self):
         """
@@ -187,14 +177,7 @@ class S3Backup(Backup):
             logging.info(out)
         return 
 
-    def split(self, tar_file_name):
-        """
-        if the backup is huge please split it into different 1GB files, so it will be easier to 
-        sync on remote backup
-        """
-        command = f'split -b 1024M {tar_file_name} "{tar_file_name}.part."'
 
-        pass
 
 
 if __name__ == "__main__":

@@ -94,6 +94,8 @@ class Config:
     OS_COMMAND_OUTPUT  = os_command_output
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
+    #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
+    TAR_SPLIT_SIZE = 10240 #size of the files in which the backup tar file will be broken
     
 
 
