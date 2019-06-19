@@ -38,7 +38,7 @@ logger = logging.getLogger(__file__)
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
-from LoginModule import USERS_BP
+from users_module import USERS_BP
 from backup import BACKUP_BP
 
 #from secrets.aws_secret_manager import get_secrets
