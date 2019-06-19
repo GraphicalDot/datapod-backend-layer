@@ -26,7 +26,7 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-Logs, Backup = intialize_db(os.path.join(DB_PATH, "database.db"))
+Logs, Backup, Credentials, Emails = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -94,6 +94,8 @@ class Config:
     OS_COMMAND_OUTPUT  = os_command_output
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
+    CREDENTIALS_TBL = Credentials
+    EMAILS_TBL = Emails
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 10240 #size of the files in which the backup tar file will be broken
     
@@ -103,13 +105,18 @@ class Config:
 #openssl rand -out .key 32
 class DevelopmentConfig(Config):   
     URL = "https://jadrlk2ok9.execute-api.ap-south-1.amazonaws.com/"
-    LOGIN = f"{URL}Production/login"
-    SIGNUP = f"{URL}Production/signup" 
-    CONFIRM_SIGN_UP = f"{URL}Production/confirm-sign-up"
-    PROFILE = f"{URL}Production/profile"
-    AWS_CREDS = f"{URL}Production/awstempcredentials"
-    FORGOT_PASS = f"{URL}Production/forgotpassword"
-    CONFIRM_FORGOT_PASS = f"{URL}Production/confirmpassword"
+    LOGIN = f"{URL}Production/users/login"
+    SIGNUP = f"{URL}Production/users/signup" 
+    CONFIRM_SIGN_UP = f"{URL}Production/users/confirm-signup"
+    CHANGE_MFA_SETINGS = f"{URL}Production/users/mfa-settings"
+    ASSOCIATE_MFA = f"{URL}Production/users/associate-mfa"
+    VERIFY_MFA = f"{URL}Production/users/verify-mfa"
+    POST_LOGIN_MFA = f"{URL}Production/users/post-login-mfa"
+    AWS_CREDS = f"{URL}Production/users/temp-credentials"
+    FORGOT_PASS = f"{URL}Production/users/forgotpassword"
+    CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirmpassword"
+    
+    MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     BUCKET_NAME = "datapod-backups"
     AWS_DEFAULT_REGION = "ap-south-1"
     HOST = "localhost"

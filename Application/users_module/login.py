@@ -264,3 +264,33 @@ def temp_credentials(request):
         'success': True,
         "data": result["data"]
        })
+
+
+@USERS_BP.post('/mnemonics')
+def mnemonics(request):
+    
+    """
+    session is the session which you will get after enabling MFA and calling login api
+    code is the code generated from the MFA device
+    username is the username of the user
+    """
+
+    request.app.config.VALIDATE_FIELDS(["mnemonic", "key_index", "id_token"], request.json)
+
+    if type(request.json["enabled"]) != bool:
+        raise APIBadRequest("Enabled must be boolean")
+
+
+    r = requests.post(request.app.config.MNEMONIC_KEYS, data=json.dumps({"mnemonic": request.json["mnemonic"], 
+        "key_index": request.json["key_index"]}), headers={"Authorization": request.json["id_token"]})
+
+    try:
+        result = r.json()
+    except Exception:
+        raise APIBadRequest(f"Errror in gettig keys for the index {request.json['key_index']}")
+
+    return response.json({
+        'error': False,
+        'success': True,
+        "data": result
+       })
