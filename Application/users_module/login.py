@@ -7,14 +7,34 @@ from sanic import response
 from errors_module.errors import APIBadRequest
 from database_calls.credentials import store_credentials, get_credentials
 from functools import wraps
-
+from jose import jwt, JWTError 
+import pytz
+import datetime
+import dateutil
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 USERS_BP = Blueprint("user", url_prefix="/user")
+
+
+def revoke_time_stamp(days=0, hours=0, minutes=0, timezone=None): 
+    if not timezone:
+        logging.error("Please specify valid timezone for your servers")
+        raise APIBadRequest("Please specify valid timezone for your servers")
+    tz_kolkata = pytz.timezone(timezone) 
+    time_format = "%Y-%m-%d %H:%M:%S" 
+    naive_timestamp = datetime.datetime.now() 
+    aware_timestamp = tz_kolkata.localize(naive_timestamp) 
+ 
+    ##This actually creates a new instance od datetime with Days and hours 
+    _future = datetime.timedelta(days=days, hours=hours, minutes=minutes) 
+    result = aware_timestamp + _future 
+    return result.timestamp() 
+
+
 
 def id_token_validity():
     def decorator(f):
@@ -30,7 +50,27 @@ def id_token_validity():
                 logger.error("Credentials aren't present, Please Login again")
                 raise APIBadRequest("Credentials aren't present, Please Login again")
 
-            response = await f(request, result["id_token"].decode(), *args, **kwargs)
+
+            ##TODO Check validity of id_token before 
+            id_token = result["id_token"].decode()
+            payload = jwt.get_unverified_claims(id_token)
+
+            time_now = datetime.datetime.fromtimestamp(revoke_time_stamp(timezone=request.app.config.TIMEZONE))
+            time_expiry = datetime.datetime.fromtimestamp(payload["exp"])
+            rd = dateutil.relativedelta.relativedelta (time_expiry, time_now)
+
+
+            print (f"{rd.years} years, {rd.months} months, {rd.days} days, {rd.hours} hours, {rd.minutes} minutes and {rd.seconds} seconds")
+
+            if rd.minutes < 20:
+                logging.error("Renewing id_token, as it will expire soon")
+                id_token = update_tokens(request)
+
+            # if payload["exp"] < :
+            #     logging.error("Users tokens have expired updating the new tokens")
+            #     update_tokens(request)
+
+            response = await f(request, id_token.decode(), *args, **kwargs)
             return response
             # if is_authorized:
             #     # the user is authorized.
@@ -53,23 +93,14 @@ async def temp_credentials(request, id_token):
     username is the username of the user
     """
 
-    # result = get_credentials(request.app.config.CREDENTIALS_TBL)
-    # logging.info(result)
-    # if not result:
-    #     raise APIBadRequest("Credentials aren't present, Please Login again")
     
-    # request.app.config.VALIDATE_FIELDS(["id_token"], request.json)
+    # r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({"id_token": id_token}))
+    # result = r.json()
+    # logging.info(result)
 
-    # if type(request.json["enabled"]) != bool:
-    #     raise APIBadRequest("Enabled must be boolean")
-
-    r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({"id_token": id_token}))
-    result = r.json()
-    logging.info(result)
-
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+    # if result.get("error"):
+    #     logger.error(result["message"])
+    #     raise APIBadRequest(result["message"])
     
 
     return response.json({
@@ -93,8 +124,7 @@ async def login(request):
         raise APIBadRequest(result["message"])
     
 
-    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], 
-                request.json["password"], result["data"]["id_token"], 
+    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"],  result["data"]["id_token"], 
                  result["data"]["access_token"], result["data"]["refresh_token"])
     
     return response.json(
@@ -117,7 +147,7 @@ def update_tokens(request):
     if not result:
         logger.error("Credentials aren't present, Please Login again")
     
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": result["username"], "password": result["password"]}))
+    r = requests.post(request.app.config.RENEW_REFRESH_TOKEN, data=json.dumps({"username": result["username"], "refresh_token": result["refresh_token"]}))
     result = r.json()
     logging.info(result)
     if result.get("error"):
@@ -129,7 +159,7 @@ def update_tokens(request):
                 request.json["password"], result["data"]["id_token"], 
                 result["data"]["access_token"], result["data"]["refresh_token"])
     logger.success("tokens are renewed")
-    return 
+    return result["data"]["id_token"]
 
 
 @USERS_BP.post('/sign_up')

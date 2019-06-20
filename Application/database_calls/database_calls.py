@@ -44,7 +44,6 @@ def intialize_db(path):
     class Credentials(BaseModel):
 
         username = peewee.CharField(unique=True)
-        password = peewee.CharField()
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
         access_token = peewee.BlobField(null= True)

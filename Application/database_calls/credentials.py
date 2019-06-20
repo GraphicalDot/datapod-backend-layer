@@ -6,10 +6,9 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
-def store_credentials(credentials_tbl_obj, username, password, id_token, access_token, refresh_token):
+def store_credentials(credentials_tbl_obj, username, id_token, access_token, refresh_token):
     try:
-        user_id = (credentials_tbl_obj.insert(username=username, 
-                                    password=password, 
+        user_id = (credentials_tbl_obj.insert(username=username,  
                                     id_token=id_token, 
                                     access_token= access_token, 
                                     refresh_token=refresh_token)

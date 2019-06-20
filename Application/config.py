@@ -116,7 +116,9 @@ class DevelopmentConfig(Config):
     FORGOT_PASS = f"{URL}Production/users/forgotpassword"
     CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirmpassword"
     PROFILE = f"{URL}Production/users/profile"
-    
+    RENEW_REFRESH_TOKEN = f"{URL}Production/users/renew-refresh-token"
+    LOGOUT = f"{URL}Production/users/log-out"
+    TIMEZONE  = 'Asia/Kolkata'
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     BUCKET_NAME = "datapod-backups"
     AWS_DEFAULT_REGION = "ap-south-1"
