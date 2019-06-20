@@ -3,6 +3,25 @@
 import peewee
 import datetime
 
+
+
+"""
+http://docs.peewee-orm.com/en/latest/peewee/playhouse.html#schema-migrations
+pubdate_field = DateTimeField(null=True)
+comment_field = TextField(default='')
+
+# Run the migration, specifying the database table, field name and field.
+migrate(
+    migrator.add_column('comment_tbl', 'pub_date', pubdate_field),
+    migrator.add_column('comment_tbl', 'comment', comment_field),
+)
+
+http://docs.peewee-orm.com/en/latest/peewee/querying.html#updating-existing-records
+Update query uery = Stat.update(counter=Stat.counter + 1).where(Stat.url == request.url)
+"""
+
+
+
 def intialize_db(path):
     db = peewee.SqliteDatabase(path)
 
@@ -24,13 +43,16 @@ def intialize_db(path):
 
     class Credentials(BaseModel):
 
-        username = peewee.CharField()
+        username = peewee.CharField(unique=True)
         password = peewee.CharField()
-        mnemonic = peewee.TextField()
-        id_token = peewee.BlobField()
+        mnemonic = peewee.TextField(null=True)
+        id_token = peewee.BlobField(null= True)
+        access_token = peewee.BlobField(null= True)
+        refresh_token = peewee.BlobField(null= True)
+
 
     class Emails(BaseModel):
-        email_id = peewee.CharField()
+        email_id = peewee.CharField(unique=True)
         from_addr = peewee.CharField()
         to_addr = peewee.CharField()
         subject = peewee.TextField()
@@ -55,8 +77,10 @@ def intialize_db(path):
         Credentials,
         Emails
         ])
-    for person in Logs.select():
-        print(person.message)
+    # for person in Logs.select().dicts():
+    #     print(person.message)
+    for person in Credentials.select().dicts():
+        print(person)
 
     return Logs, Backups, Credentials, Emails
 

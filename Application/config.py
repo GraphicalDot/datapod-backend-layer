@@ -115,6 +115,7 @@ class DevelopmentConfig(Config):
     AWS_CREDS = f"{URL}Production/users/temp-credentials"
     FORGOT_PASS = f"{URL}Production/users/forgotpassword"
     CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirmpassword"
+    PROFILE = f"{URL}Production/users/profile"
     
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     BUCKET_NAME = "datapod-backups"
