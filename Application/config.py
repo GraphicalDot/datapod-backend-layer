@@ -120,6 +120,8 @@ class DevelopmentConfig(Config):
     LOGOUT = f"{URL}Production/users/log-out"
     TIMEZONE  = 'Asia/Kolkata'
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
+    CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
+
     BUCKET_NAME = "datapod-backups"
     AWS_DEFAULT_REGION = "ap-south-1"
     HOST = "localhost"

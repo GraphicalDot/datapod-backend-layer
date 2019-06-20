@@ -1,6 +1,5 @@
 
 #-*- coding: utf-8 -*-
-
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -15,16 +14,36 @@ def store_credentials(credentials_tbl_obj, username, id_token, access_token, ref
            .on_conflict_replace()
            .execute())
 
-
-        # new_entry = credentials_tbl_obj.create(username=username, 
-        #                             password=password, 
-        #                             id_token=id_token, 
-        #                             access_token= access_token, 
-        #                             refresh_token=refresh_token)
-        # new_entry.save()
-        logging.info(f"On insert the credentials userid is {user_id}")
+        logger.info(f"On insert the credentials userid is {user_id}")
     except Exception as e:
-        logging.error(f"Couldnt save data to credentials_tbl because of {e}")
+        logger.error(f"Couldnt save data to credentials_tbl because of {e}")
+    return 
+
+
+def update_id_and_access_tokens(credentials_tbl_obj, username, id_token, access_token):
+    try:
+        credentials_tbl_obj.update(
+            id_token=id_token,  
+            access_token= access_token).\
+        where(credentials_tbl_obj.username==username).\
+        execute()
+
+        logger.info(f"On update al tokens the credentials userid is {username}")
+    except Exception as e:
+        logger.error(f"Couldnt save data to credentials_tbl because of {e}")
+    return 
+
+
+def update_mnemonic(credentials_tbl_obj, username, mnemonic):
+    try:
+        credentials_tbl_obj.update(
+            mnemonic=mnemonic).\
+        where(credentials_tbl_obj.username==username).\
+        execute()
+
+        logger.info(f"On update mnemonic the credentials username is {username}")
+    except Exception as e:
+        logger.error(f"Couldnt update mnemonic for credentials_tbl because of {e}")
     return 
 
 

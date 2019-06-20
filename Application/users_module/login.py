@@ -5,12 +5,15 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 from errors_module.errors import APIBadRequest
-from database_calls.credentials import store_credentials, get_credentials
+from database_calls.credentials import store_credentials, get_credentials, update_id_and_access_tokens,\
+            update_mnemonic
+    
 from functools import wraps
 from jose import jwt, JWTError 
 import pytz
 import datetime
 import dateutil
+import hashlib
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -190,9 +193,10 @@ def update_tokens(request, username, refresh_token):
     
 
     ##Updating credentials table of the user
-    store_credentials(request.app.config.CREDENTIALS_TBL, username, 
+    update_id_and_access_tokens(request.app.config.CREDENTIALS_TBL, 
+                username,
                result["data"]["id_token"], 
-                result["data"]["access_token"], refresh_token)
+                result["data"]["access_token"])
     
     logger.success("tokens are renewed")
     return result["data"]["id_token"]
@@ -235,7 +239,7 @@ async def confirm_signup(request):
     r = requests.post(request.app.config.CONFIRM_SIGN_UP, data=json.dumps({"username": request.json["username"],
                 "code": request.json["code"]}))
     result = r.json()
-
+    logger.info(result)
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
@@ -244,7 +248,7 @@ async def confirm_signup(request):
         'error': False,
         'success': True,
         "message": result["message"],
-        "data": None
+        "data": result["data"]
         })
 
 
@@ -394,6 +398,41 @@ async def post_login_mfa(request):
         "data": result["data"]
        })
 
+
+
+@USERS_BP.post('/check_mnemonic')
+@id_token_validity()
+async def check_mnemonic(request, id_token, username):
+    
+    """
+    session is the session which you will get after enabling MFA and calling login api
+    code is the code generated from the MFA device
+    username is the username of the user
+    """
+
+    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
+    mnemonic = request.json["mnemonic"]
+    if len(mnemonic.split(" ")) != 12:
+        raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
+
+
+    mnemonic_sha_256 = hashlib.sha3_256(mnemonic.encode()).hexdigest()
+
+    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({"username": username, 
+        "mnemonic_sha_256": mnemonic_sha_256}), headers={"Authorization": id_token})
+
+    try:
+        result = r.json()
+    except Exception as e:
+        raise APIBadRequest(f"Errror in checking mnemonic sanctity {e.__str__()}")
+
+    update_mnemonic(request.app.config.CREDENTIALS_TBL, username, mnemonic)
+    
+    return response.json({
+        'error': False,
+        'success': True,
+        "data": result["message"]
+       })
 
 
 @USERS_BP.post('/mnemonics')
