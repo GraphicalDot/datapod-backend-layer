@@ -40,14 +40,13 @@ async def make_backup(request):
     try:
         instance = Backup(request)
         async for msg in instance.create(archival_name):
-            logging.info(msg)
-            #await ws.send(i)
-            pass
+            logger.info(msg)
+            
         new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         new_log_entry.save()
 
     except Exception as e:
-        logging.error(e.__str__())
+        logger.error(e.__str__())
         new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival failed because of {e.__str__()} on {archival_name}", error=1, success=0)
         new_log_entry.save()
 

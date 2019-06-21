@@ -97,7 +97,7 @@ class Config:
     CREDENTIALS_TBL = Credentials
     EMAILS_TBL = Emails
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
-    TAR_SPLIT_SIZE = 1024000 #size of the files in which the backup tar file will be broken
+    TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     
 
 

@@ -84,7 +84,8 @@ class Backup(object):
         if not os.listdir(self.raw_data_path):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
-        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
+        #temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
+        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz', delete=False)
         #temp = tempfile.TemporaryFile()
         backup_path_dir = f"{self.backup_path}/{archival_name}"
         if not os.path.exists(backup_path_dir):
@@ -98,7 +99,9 @@ class Backup(object):
         logging.error(f"Temporary file location is {temp.name}")
 
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+
         elif platform.system() == "Darwin":
             backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"
         else:
@@ -107,7 +110,7 @@ class Backup(object):
         #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
 
         for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
-            yield (f"Archiving {out[-70:]}")
+            yield (f"Archiving {out.split('/')[-1]}")
             
         async for msg in self.split(backup_path_dir, temp.name):
             yield msg
@@ -125,27 +128,33 @@ class Backup(object):
         return 
 
     async def split(self, backup_path_dir, file_path):
+        ##TODO: filename in split command is fixed but it may change on the type of compression being used
         dir_name, file_name = os.path.split(file_path)
 
         with cd(backup_path_dir):
             logging.info(f"THe directory where split is taking place {backup_path_dir}")
             if platform.system() == "Linux":
-                command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
-                
+                #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
+                command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.request.app.config.TAR_SPLIT_SIZE, file_path)
             elif platform.system() == "Darwin":
-                command = "gtar --tape-length=%s -cMv --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
+                command = "split -b %sm %s backup.tar.gz.1"%(self.request.app.config.TAR_SPLIT_SIZE, file_path)
+                
+                #command = "gtar --tape-length=%s -cMv --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
             else:
                 raise APIBadRequest("The platform is not available for this os distribution")
 
             logging.warning(f"Splitting command is {command}")
             for out in self.request.app.config.OS_COMMAND_OUTPUT(command, "Split"):
                 yield (f"Archiving {out[-70:]}")
+
+            for name in os.listdir("."):
+                self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {name} > {name}.sha512", "sha checksum")
+        
+            ##calculating the whole backup file tar 
+            self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {file_path} > backup.sha512", "sha checksum")
+        
         return 
 
-    def sync_backup(self):
-        """
-        """
-        pass
 
 
 
