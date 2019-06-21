@@ -40,7 +40,7 @@ async def make_backup(request):
     try:
         instance = Backup(request)
         async for msg in instance.create(archival_name):
-            #logging.info(msg)
+            logging.info(msg)
             #await ws.send(i)
             pass
         new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)

@@ -4,25 +4,11 @@
 import os
 import sys
 from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import scrypt
-KEY_LENGTH = 32
-N = 2**16 ##meant for ram
-R = 10
-P = 10
 
 def generate_aes_key(number_of_bytes): 
      #return get_random_bytes(number_of_bytes) 
      return os.urandom(number_of_bytes) 
 
-
-
-
-def generate_scrypt_key(password, salt=None):
-    ##return bytes of keys, returns list in case of keys > 1
-    if not salt:
-        salt = os.urandom(16)
-    keys = scrypt(password,  salt, KEY_LENGTH, N, R, P, 1)
-    return keys, salt
 
 def aes_encrypt(key, file_bytes): 
      #return encrypt_CTR_MODE(key, file_bytes) 

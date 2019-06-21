@@ -47,8 +47,9 @@ def intialize_db(path):
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
         access_token = peewee.BlobField(null= True)
+        password_hash = peewee.TextField(null= True)
         refresh_token = peewee.BlobField(null= True)
-
+        salt = peewee.TextField(null= True)
 
     class Emails(BaseModel):
         email_id = peewee.CharField(unique=True)

@@ -59,7 +59,8 @@ class Backup(object):
         ##subdirectories in userdata path which deals with raw, parsed and database path 
         ##for the userdata.
         self.parsed_data_path = self.request.app.config.PARSED_DATA_PATH
-        self.raw_data_path = os.path.join(self.request.app.config.RAW_DATA_PATH, "facebook")
+        #self.raw_data_path = os.path.join(self.request.app.config.RAW_DATA_PATH, "facebook")
+        self.raw_data_path = self.request.app.config.RAW_DATA_PATH
 
         self.db_path = self.request.app.config.DB_PATH
         self.backup_path = self.request.app.config.BACKUP_PATH

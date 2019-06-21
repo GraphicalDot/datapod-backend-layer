@@ -157,7 +157,9 @@ async def login(request):
         raise APIBadRequest(result["message"])
     
 
-    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"],  result["data"]["id_token"], 
+    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
+
+    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], password_hash, result["data"]["id_token"], 
                  result["data"]["access_token"], result["data"]["refresh_token"])
     
     return response.json(
@@ -410,7 +412,7 @@ async def check_mnemonic(request, id_token, username):
     username is the username of the user
     """
 
-    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
+    request.app.config.VALIDATE_FIELDS(["mnemonic", "password"], request.json)
     mnemonic = request.json["mnemonic"]
     if len(mnemonic.split(" ")) != 12:
         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
