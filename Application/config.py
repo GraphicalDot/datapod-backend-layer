@@ -65,6 +65,7 @@ class Config:
     MAIN_DIR = MAIN_DIR
     USER_INDEX = USER_INDEX
     KEYS_DIR = KEYS_DIR
+    BACKUP_KEY_ENCRYPTION_FILE = os.path.join(KEYS_DIR, "encryption.key")
     USERDATA_PATH = USERDATA_PATH
 
     PARSED_DATA_PATH = PARSED_DATA_PATH
@@ -121,11 +122,10 @@ class DevelopmentConfig(Config):
     TIMEZONE  = 'Asia/Kolkata'
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
-
-    BUCKET_NAME = "datapod-backups"
-    AWS_DEFAULT_REGION = "ap-south-1"
+    AWS_S3 = {"bucket_name": "datapod-backups","default_region": "ap-south-1"}
     HOST = "localhost"
     PORT = 8000
     DEBUG = True
     VALIDATE_FIELDS = validate_fields
 
+config_object = DevelopmentConfig

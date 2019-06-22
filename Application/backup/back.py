@@ -163,40 +163,39 @@ class Backup(object):
 
 
 
-class S3Backup(Backup):
-
-    def __init__(self, *args, **kwargs):
-        Backup.__init__(self, *args, **kwargs)
-        self.bucket_name = bucket_name
+class S3Backup(object):
 
 
-    
-    def sync_backup(self, dir_path, identity_id, access_key, secret_key, default_region, session_token):
-        if not os.path.exists(dir_path):
-            raise Exception("Please provide a valid directory name")
+    async def check_size():
+        size_command = "aws s3 s3://{config.AWS_S3['bucket_name']}/{identity_id} s3://mybucket --recursive --human-readable --summarize"
+        for out in config.OS_COMMAND_OUTPUT(size_command, "Files are in Sync"):
+            yield (out)
+        return
+
+
+    @staticmethod
+    async def sync_backup(config, identity_id, access_key, secret_key, session_token):
 
         os.environ['AWS_ACCESS_KEY_ID'] = access_key # visible in this process + all children
         os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key # visible in this process + all children
         os.environ['AWS_SESSION_TOKEN'] = session_token # visible in this process + all children
-        os.environ["AWS_DEFAULT_REGION"] = default_region
+        os.environ["AWS_DEFAULT_REGION"] = config.AWS_S3["default_region"]
 
         # _key = generate_aes_key(32)
 
         # key = "".join(map(chr, _key))
-        #print (key)
-        encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
+        # print (key)
+        # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
+        configure_command = "aws configure set default.s3.max_bandwidth 10MB/s"
+        for out in config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
+            yield (out)
 
-        sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{encryption_key_path} {dir_path} s3://{self.bucket_name}/{identity_id}"
+        sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{config.BACKUP_KEY_ENCRYPTION_FILE} {config.BACKUP_PATH} s3://{config.AWS_S3['bucket_name']}/{identity_id}"
         print (sync_command)
-        for out in os_system(sync_command, "Files are in Sync"):
-            logging.info(out)
-        return 
+        for out in config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
+            yield (out)
+        return
 
-
-
-
-if __name__ == "__main__":
-    pass
 
 
 

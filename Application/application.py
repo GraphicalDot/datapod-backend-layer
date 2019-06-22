@@ -74,9 +74,9 @@ def main():
     # app.config.user_data_path = config.user_data_path
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
-    app.config.from_object(config.DevelopmentConfig)
-
-    logger.info(app.config)
+    app.config.from_object(config.config_object)
+    import pprint 
+    pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
     app.run(host="0.0.0.0", port=8000)

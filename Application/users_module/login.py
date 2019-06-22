@@ -77,7 +77,7 @@ def id_token_validity():
 
             if rd.minutes < 20:
                 logger.error("Renewing id_token, as it will expire soon")
-                id_token = update_tokens(request, username, refresh_token)
+                id_token = update_tokens(request.app.config, username, refresh_token)
           
             if isinstance(id_token, bytes):
                 id_token = id_token.decode()
@@ -175,7 +175,7 @@ async def login(request):
 
 
 
-def update_tokens(request, username, refresh_token):
+def update_tokens(config, username, refresh_token):
     logger.warning("Updating tokens for the user with the help of refresh token")
     # result = get_credentials(request.app.config.CREDENTIALS_TBL)
     # logger.info(result)
@@ -184,7 +184,7 @@ def update_tokens(request, username, refresh_token):
     logger.info(username)
     logger.info(refresh_token)
         
-    r = requests.post(request.app.config.RENEW_REFRESH_TOKEN, data=json.dumps({"username": username, "refresh_token": refresh_token}))
+    r = requests.post(config.RENEW_REFRESH_TOKEN, data=json.dumps({"username": username, "refresh_token": refresh_token}))
     logging.info(r.text)
     result = r.json()
     logger.info(result)
@@ -195,7 +195,7 @@ def update_tokens(request, username, refresh_token):
     
 
     ##Updating credentials table of the user
-    update_id_and_access_tokens(request.app.config.CREDENTIALS_TBL, 
+    update_id_and_access_tokens(config.CREDENTIALS_TBL, 
                 username,
                result["data"]["id_token"], 
                 result["data"]["access_token"])
@@ -256,27 +256,27 @@ async def confirm_signup(request):
 
 
 
-@USERS_BP.post('/backup_credentials')
-async def aws_temp_creds(request):
-    request.app.config.VALIDATE_FIELDS(["token", "email", "password"], request.json)
+# @USERS_BP.post('/backup_credentials')
+# async def aws_temp_creds(request):
+#     request.app.config.VALIDATE_FIELDS(["token", "email", "password"], request.json)
 
-    r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({
-                    "email": request.json["email"], 
-                    "password": request.json["password"]}), 
-                    headers={"Authorization": request.json["token"]})
+#     r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({
+#                     "email": request.json["email"], 
+#                     "password": request.json["password"]}), 
+#                     headers={"Authorization": request.json["token"]})
     
-    result = r.json()
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+#     result = r.json()
+#     if result.get("error"):
+#         logger.error(result["message"])
+#         raise APIBadRequest(result["message"])
     
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": None,
-        "data": result["data"]
-        })
+#     return response.json(
+#         {
+#         'error': False,
+#         'success': True,
+#         "message": None,
+#         "data": result["data"]
+#         })
 
     
 
