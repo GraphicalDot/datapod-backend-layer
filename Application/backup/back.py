@@ -59,6 +59,8 @@ class Backup(object):
         ##subdirectories in userdata path which deals with raw, parsed and database path 
         ##for the userdata.
         self.parsed_data_path = self.request.app.config.PARSED_DATA_PATH
+        
+        
         #self.raw_data_path = os.path.join(self.request.app.config.RAW_DATA_PATH, "facebook")
         self.raw_data_path = self.request.app.config.RAW_DATA_PATH
 
@@ -148,11 +150,14 @@ class Backup(object):
                 yield (f"Archiving {out[-70:]}")
 
             for name in os.listdir("."):
-                self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {name} > {name}.sha512", "sha checksum")
+                logger.info(f"Creating sha checksum for backup split file {name}")
+                for out in self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {name} > {name}.sha512", "sha checksum"):
+                    yield (f"Creating sha checksum {out}")
         
             ##calculating the whole backup file tar 
-            self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {file_path} > backup.sha512", "sha checksum")
-        
+            for out in self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {file_path} > backup.sha512", "sha checksum"):
+                yield (f"Creating sha checksum {out}")
+
         return 
 
 

@@ -40,7 +40,7 @@ def os_command_output(command:str, final_message:str) -> str:
             logging.info(final_message)
             break
         yield line.decode().split("\r")[0]
-
+    
 def validate_fields(required_fields, request_json):
     try:
         for field in required_fields:
