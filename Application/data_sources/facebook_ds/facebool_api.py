@@ -21,7 +21,6 @@ FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 async def facebook_download_parse(request):
     """
     """
-    required_fields = ["path", "override"]
     request.app.config.VALIDATE_FIELDS(["path", "override"], request.json)
 
     if not request.json["path"].endswith("zip"):

@@ -186,7 +186,7 @@ class S3Backup(object):
         # key = "".join(map(chr, _key))
         # print (key)
         # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
-        configure_command = "aws configure set default.s3.max_bandwidth 10MB/s"
+        configure_command = "aws configure set default.s3.max_bandwidth 15MB/s"
         for out in config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
             yield (out)
 
