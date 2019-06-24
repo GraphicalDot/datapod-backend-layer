@@ -26,7 +26,7 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-Logs, Backup, Credentials, Emails = intialize_db(os.path.join(DB_PATH, "database.db"))
+Logs, Backup, Credentials, Emails, Purchases = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -97,6 +97,9 @@ class Config:
     BACKUPS_TBL = Backup
     CREDENTIALS_TBL = Credentials
     EMAILS_TBL = Emails
+    PURCHASES_TBL = Purchases
+    TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     
@@ -119,7 +122,7 @@ class DevelopmentConfig(Config):
     PROFILE = f"{URL}Production/users/profile"
     RENEW_REFRESH_TOKEN = f"{URL}Production/users/renew-refresh-token"
     LOGOUT = f"{URL}Production/users/log-out"
-    TIMEZONE  = 'Asia/Kolkata'
+    TIMEZONE  = 'Asia/Kolkata' #TODO: THis should be selected by users to findout Timezone and must be saved in sqlite3
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
     AWS_S3 = {"bucket_name": "datapod-backups","default_region": "ap-south-1"}

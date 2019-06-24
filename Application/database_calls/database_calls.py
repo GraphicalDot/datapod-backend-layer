@@ -2,7 +2,7 @@
 #from playhouse.sqlite_ext import SqliteExtDatabase
 import peewee
 import datetime
-
+import sqlite3
 
 
 """
@@ -23,7 +23,7 @@ Update query uery = Stat.update(counter=Stat.counter + 1).where(Stat.url == requ
 
 
 def intialize_db(path):
-    db = peewee.SqliteDatabase(path)
+    db = peewee.SqliteDatabase(path,  detect_types=sqlite3.PARSE_DECLTYPES)
 
 
     class BaseModel(peewee.Model):
@@ -69,19 +69,33 @@ def intialize_db(path):
                 (('from_addr', 'to_addr'), False),
             )
 
+    class Purchases(BaseModel):
+        merchant_name = peewee.CharField(index=True, null=False)
+        products = peewee.CharField(index=True, null=False)
+        source = peewee.CharField(index=True, null=False)
+        time = peewee.DateTimeField(index=True, null=False)
+        class Meta:
+            indexes = (
+            # create a unique on from/to/date
+            (('products', 'time', 'merchant_name'), True),
+
+            )
 
 
-    db.create_tables([
+
+    result = db.create_tables([
         Logs,
         Backups,
         Credentials,
-        Emails
+        Emails,
+        Purchases
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
-    for person in Credentials.select().dicts():
-        print(person)
+    print (result)
+    # for person in Credentials.select().dicts():
+    #     print(person)
 
-    return Logs, Backups, Credentials, Emails
+    return Logs, Backups, Credentials, Emails, Purchases
 
 

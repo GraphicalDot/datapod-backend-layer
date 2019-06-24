@@ -2,7 +2,7 @@
 
 
 from sanic import Blueprint
-from .gmail_ds.gmail_api import GMAIL_BP
+from .email_api import EMAIL_BP
 
-EMAILS_BP = Blueprint.group(GMAIL_BP, 
+EMAILS_BP = Blueprint.group(EMAIL_BP, 
                             url_prefix="/emails")
