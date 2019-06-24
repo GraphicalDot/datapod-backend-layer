@@ -36,15 +36,15 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
-def indian_time_stamp(naive_timestamp=None):
-    tz_kolkata = pytz.timezone('Asia/Kolkata')
+def indian_time_stamp(naive_timestamp, timezone):
+    tz_kolkata = pytz.timezone(timezone)
     time_format = "%Y-%m-%d %H:%M:%S"
     if naive_timestamp:
         aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp))
     else:
         naive_timestamp = datetime.datetime.now()
         aware_timestamp = tz_kolkata.localize(naive_timestamp)
-    return aware_timestamp.strftime(time_format + " %Z%z")
+    return aware_timestamp
 
 
 def month_aware_time_stamp(naive_timestamp=None): 
@@ -174,17 +174,17 @@ class LocationHistory(object):
 
 
 class PurchaseReservations(object):
-    
-    def __init__(self, gmail_takeout_path, db_dir_path):
-        self.db_dir_path = db_dir_path
+    __source__ = "takeout"
+    def __init__(self, gmail_takeout_path):
+        #self.db_dir_path = db_dir_path
         self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
-        self.db_instance = create_db_instance(db_dir_path)
+        #self.db_instance = create_db_instance(db_dir_path)
         if not os.path.exists(self.path):
             raise Exception("Reservations and purchase data doesnt exists")
 
 
     def parse(self):
-        purchase = []
+        purchases = []
         reservations = []
         for filename in os.listdir(self.path):
             filepath = os.path.join(self.path, filename)
@@ -192,68 +192,80 @@ class PurchaseReservations(object):
                 data = json.loads(f.read()) 
                 try: 
                     result = self.parse_purchase(data)
+                    result.update({"source": self.__source__})
                     if result.get("type") == "purchase":
-                        purchase.append(result)
+                        result.pop("type")
+                        result.pop('dest')
+                        result.pop('src')
+
+                        purchases.append(result)
                     else:
+                        result.pop("type")
                         reservations.append(result)
 
                 except Exception as e: 
-                    logger.error(f"In DATA {data} error is  <<{e}>>")
-            
-        insert_key("gmail_purchase", purchase, self.db_instance)
-        insert_key("gmail_reservations", reservations, self.db_instance)
+                    logger.error(f"In DATA {data} error is  <<{e}>>, filename is {filepath}" )
+        return reservations, purchases
 
-        close_db_instance(self.db_instance)
-
-    def parse_purchase(self, data): 
-        address = None
+    def parse_purchase(self, data):
+        
         src = None
         dest = None
-        address = None
         _type = None
         merchant_name = None
+        products = []
         if data.get("transactionMerchant"):
-            merchant_name = data["transactionMerchant"]["name"] 
-            time = indian_time_stamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000) 
+            merchant_name = data["transactionMerchant"]["name"]
+            time = indian_time_stamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000)
         else:
-            merchant_name = None 
+            merchant_name = None
             time = None
-        
-        items = [] 
 
-        for item in data["lineItem"]: 
+
+        for item in data["lineItem"]:
+            landing_page = []
+            address = None
+            price = None
+            name = None
             if item.get("purchase"):
                 if item["purchase"].get("productInfo"):
                     _type="purchase"
-                    if item["purchase"].get("fulfillment"):
-                        address = item["purchase"]["fulfillment"]["location"]["address"]
+                    name = item["purchase"]["productInfo"]["name"]
+                    try:
+                        price = item["purchase"]["unitPrice"]["displayString"]
+                    except:
+                        price = None
 
-                    items.append(item["purchase"]["productInfo"]["name"])
+                    if item["purchase"].get("fulfillment"):
+                        address = item["purchase"]["fulfillment"]["location"]["address"][0].replace("\n", ",")
+                        landing_page = item["purchase"]["landingPageUrl"]["link"]
+                    
+                    products.append({"name": name, "address": address, "price": price, "landing_page": landing_page})
+                
                 else:
-                    #DATA {'merchantOrderId': '21823872872', 'creationTime': {'usecSinceEpochUtc': '1538748693000000', 
-                    # 'granularity': 'MICROSECOND'}, 'transactionMerchant': {'name': 'swiggy.in'}, 
+                    #DATA {'merchantOrderId': '21823872872', 'creationTime': {'usecSinceEpochUtc': '1538748693000000',
+                    # 'granularity': 'MICROSECOND'}, 'transactionMerchant': {'name': 'swiggy.in'},
                     # 'lineItem': [{'purchase': {'status': 'DELIVERED'}}]} with error 'productInfo'
 
                     raise Exception("Unidentified type One, probably incomplete data")
+
             else:
                 if item.get("flightReservation"):
                     _type="flights"
                     merchant_name = item["provider"]["name"]
-                    time = indian_time_stamp(float(item["flightReservation"]["flightLeg"]["flightStatus"]["departureTime"]["usecSinceEpochUtc"])/1000000) 
+                    time = indian_time_stamp(float(item["flightReservation"]["flightLeg"]["flightStatus"]["departureTime"]["usecSinceEpochUtc"])/1000000)
                     src = item["flightReservation"]["flightLeg"]["departureAirport"]["servesCity"]["name"]
                     dest = item["flightReservation"]["flightLeg"]["arrivalAirport"]["servesCity"]["name"]
                 else:
                     raise Exception("Unidentified Type 2")
-        
-        return {"merchant_name": merchant_name,  
-                "time": time,  
-                "products": items,
-                "address": address,
-                "dest": dest, 
+
+        return {"merchant_name": merchant_name,
+                "time": time,
+                "products": products,
+                "dest": dest,
                 "src": src,
-                "type": _type
-                    } 
- 
+                "type": _type,
+                    }
 
     def parse_food_delivery(self):
         pass
