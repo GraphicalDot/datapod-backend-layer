@@ -422,14 +422,19 @@ async def update_user(request, id_token, username):
     if len(mnemonic.split(" ")) != 12:
         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
 
-    credentials = get_credentials()
+    credentials = get_credentials(request.app.config.CREDENTIALS_TBL)
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
+
+    if credentials.get("mnemonic"):
+        raise APIBadRequest("The mnemonic ia already present")
+
     if password_hash != credentials["password_hash"]:
         raise APIBadRequest("The password you have enetered is wrong")
     
 
     ##Encrypting user mnemonic with the scrypt key generated from the users password
     hex_salt, encrypted_menmonic = encrypt_mnemonic(request.json["password"], mnemonic)
+
 
     mnemonic_sha3_256 = hashlib.sha3_256(request.json["mnemonic"].encode()).hexdigest()
     mnemonic_sha3_512 = hashlib.sha3_512(request.json["mnemonic"].encode()).hexdigest()
@@ -438,11 +443,12 @@ async def update_user(request, id_token, username):
     r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
                 "public_key": request.json["public_key"], 
                 "username": username, 
-                "sha3_256": request.json["mnemonic_sha3_256"],
-                "sha3_512": request.json["mnemonic_sha3_512"]
-                }))
+                "sha3_256": mnemonic_sha3_256,
+                "sha3_512": mnemonic_sha3_512
+                }), headers={"Authorization": id_token})
     
     result = r.json()
+    logging.info(result)
 
     if result.get("error"):
         logger.error(result["message"])
@@ -450,20 +456,48 @@ async def update_user(request, id_token, username):
 
 
     update_mnemonic(request.app.config.CREDENTIALS_TBL, 
-                credentials["username"], 
+                username, 
                 encrypted_menmonic, 
                 hex_salt)
+
+
+
+
+@USERS_BP.post('/decrypt_mnemonic')
+async def decrypt_user_mnemonic(request):
+    """
+    Api to decrypt mnemonic stored in the sqlite table, 
+    Password is required to decrypt the mnemonic 
+
+    """
+    request.app.config.VALIDATE_FIELDS(["password"], request.json)
+    credentials = get_credentials(request.app.config.CREDENTIALS_TBL)
+
+    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
+
+    if password_hash != credentials["password_hash"]:
+        raise APIBadRequest("The password you have entered in incorrect")
+
+    if not credentials.get("mnemonic"):
+        raise APIBadRequest("No Encrypted Mnemonic present")
+
+    mnemonic = decrypt_mnemonic(request.json["password"], credentials["salt"], credentials["mnemonic"])
+    logger.info(f"THis is the decrypted mnemonic {mnemonic}")
+    return response.json({
+        "error": True, 
+        "success": False,
+        "message": "Mnemonic has been decrypted successfully",
+        "mnemonic": mnemonic
+    })
 
 
 @USERS_BP.post('/check_mnemonic')
 @id_token_validity()
 async def check_mnemonic(request, id_token, username):
-    
     """
 
     """
-
-    request.app.config.VALIDATE_FIELDS(["mnemonic", "password"], request.json)
+    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
     mnemonic = request.json["mnemonic"]
     if len(mnemonic.split(" ")) != 12:
         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
@@ -488,7 +522,7 @@ async def check_mnemonic(request, id_token, username):
        })
 
 
-@USERS_BP.post('/mnemonics')
+@USERS_BP.post('/child_keys')
 @id_token_validity()
 async def mnemonics(request, id_token, username):
     

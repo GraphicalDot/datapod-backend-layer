@@ -93,8 +93,8 @@ def intialize_db(path):
     # for person in Logs.select().dicts():
     #     print(person.message)
     print (result)
-    # for person in Credentials.select().dicts():
-    #     print(person)
+    for person in Credentials.select().dicts():
+        print(person)
 
     return Logs, Backups, Credentials, Emails, Purchases
 
