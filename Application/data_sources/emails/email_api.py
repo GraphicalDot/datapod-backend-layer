@@ -35,7 +35,7 @@ async def periodic(app, gmail_takeout_path):
     logger.info('Periodic task has finished execution')
     return 
 
-@EMAIL_BP.post('/gmail/takeout/parse')
+@EMAIL_BP.post('gmail/takeout/parse')
 async def parse(request):
     """
     To get all the assets created by the requester
@@ -56,7 +56,7 @@ async def parse(request):
         })
 
 
-@EMAIL_BP.get('/gmail/takeout/purchase_n_reservations')
+@EMAIL_BP.get('gmail/takeout/purchase_n_reservations')
 async def gmail_takeout(request):
     """
     To get all the assets created by the requester
@@ -72,6 +72,7 @@ async def gmail_takeout(request):
     reservations, purchases = await ins.parse()
     
     for purchase in purchases:
+        #print (purchase)
         q_purchase_db.store_purchase(request.app.config.PURCHASES_TBL, purchase)
 
 
@@ -84,24 +85,30 @@ async def gmail_takeout(request):
 
 
 
-@EMAIL_BP.post('/gmail/takeout/purchase_n_reservations/filter')
+@EMAIL_BP.post('gmail/takeout/purchase_n_reservations/filter')
 async def purchase_n_reservation_filter(request):
-    request.app.config.VALIDATE_FIELDS(["merchant_name"], request.json)
+    """
+    Page is the page number 
+    NUmber is the number of items on the page 
+    """
+    request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+
 
     result =  [q_purchase_db.format(request.app.config, purchase) for purchase in \
-            q_purchase_db.filter_merchant_name(request.app.config.PURCHASES_TBL, request.json["merchant_name"])] 
-    
-    print (result)
+                q_purchase_db.filter_merchant_name(request.app.config.PURCHASES_TBL, 
+                request.json["page"], request.json["number"],  request.json.get("merchant_name"))] 
+
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": "Successful"
+        "data": result,
+        "message": None
         })
 
 
 
-@EMAIL_BP.get('/gmail/takeout/location_history')
+@EMAIL_BP.get('gmail/takeout/location_history')
 async def takeout_location_history(request):
     """
     To get all the assets created by the requester

@@ -38,9 +38,25 @@ def update_id_and_access_tokens(credentials_tbl_obj, username, id_token, access_
     return 
 
 
-def filter_merchant_name(tbl_object, merchant_name):
-    return tbl_object.select().where(tbl_object.merchant_name == merchant_name).dicts()
+def filter_merchant_name(tbl_object, page, number,  merchant_name=None):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
 
+    """
+    if merchant_name:
+        return tbl_object\
+                .select()\
+                .where(tbl_object.merchant_name == merchant_name)\
+                .order_by(-tbl_object.time)\
+                .paginate(page, number)\
+                .dicts()
+    else:
+        return tbl_object\
+                .select()\
+                .order_by(-tbl_object.time)\
+                .paginate(page, number)\
+                .dicts()
 
 
 def format(config, db_purchase_obj):
@@ -52,7 +68,7 @@ def format(config, db_purchase_obj):
     return {
             "merchant_name": db_purchase_obj["merchant_name"],
             "products": products,
-            "time": db_purchase_obj["time"].strftime(config.TIME_FORMAT)
+            "time": db_purchase_obj["time"]
     }
 
 
