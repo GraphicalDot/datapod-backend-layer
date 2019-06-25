@@ -42,7 +42,8 @@ def check_bcrypt(password: str, hashed_password: str):
 
 def generate_scrypt_key(password, salt=None):
     ##return bytes of keys, returns list in case of keys > 1
+    ##returns hex encoded salt and key byte array
     if not salt:
         salt = os.urandom(16)
     keys = scrypt(password,  salt, KEY_LENGTH, N, R, P, 1)
-    return keys, salt
+    return keys, salt.hex()

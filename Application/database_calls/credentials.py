@@ -35,10 +35,11 @@ def update_id_and_access_tokens(credentials_tbl_obj, username, id_token, access_
     return 
 
 
-def update_mnemonic(credentials_tbl_obj, username, mnemonic):
+def update_mnemonic(credentials_tbl_obj, username, mnemonic, salt):
     try:
         credentials_tbl_obj.update(
-            mnemonic=mnemonic).\
+            mnemonic=mnemonic, 
+            salt=salt).\
         where(credentials_tbl_obj.username==username).\
         execute()
 

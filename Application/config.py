@@ -125,6 +125,7 @@ class DevelopmentConfig(Config):
     TIMEZONE  = 'Asia/Kolkata' #TODO: THis should be selected by users to findout Timezone and must be saved in sqlite3
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
+    UPDATE_USER = f"{URL}Production/users/update-user"
     AWS_S3 = {"bucket_name": "datapod-backups","default_region": "ap-south-1"}
     HOST = "localhost"
     PORT = 8000

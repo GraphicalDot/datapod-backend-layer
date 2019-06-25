@@ -7,6 +7,7 @@ from sanic import response
 from errors_module.errors import APIBadRequest
 from database_calls.credentials import store_credentials, get_credentials, update_id_and_access_tokens,\
             update_mnemonic
+from .users_helpers import encrypt_mnemonic, decrypt_mnemonic
     
 from functools import wraps
 from jose import jwt, JWTError 
@@ -402,14 +403,64 @@ async def post_login_mfa(request):
 
 
 
+@USERS_BP.post('/update_user')
+@id_token_validity()
+async def update_user(request, id_token, username):
+    """
+    When the user is trying to access the feature of backup, 
+    THe user has to finalize a mnemonic, whose hash will then be upload 
+    on the remote API, 
+
+    The password hash must be checked with the one stored in the credential tbl
+
+    Simulateneously, A scrypt password will be genrated from the user password and 
+    will be used to encrypt the user mnemonic
+    """
+
+    request.app.config.VALIDATE_FIELDS(["mnemonic", "password", "public_key"], request.json)
+    mnemonic = request.json["mnemonic"]
+    if len(mnemonic.split(" ")) != 12:
+        raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
+
+    credentials = get_credentials()
+    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
+    if password_hash != credentials["password_hash"]:
+        raise APIBadRequest("The password you have enetered is wrong")
+    
+
+    ##Encrypting user mnemonic with the scrypt key generated from the users password
+    hex_salt, encrypted_menmonic = encrypt_mnemonic(request.json["password"], mnemonic)
+
+    mnemonic_sha3_256 = hashlib.sha3_256(request.json["mnemonic"].encode()).hexdigest()
+    mnemonic_sha3_512 = hashlib.sha3_512(request.json["mnemonic"].encode()).hexdigest()
+
+    ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
+    r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
+                "public_key": request.json["public_key"], 
+                "username": username, 
+                "sha3_256": request.json["mnemonic_sha3_256"],
+                "sha3_512": request.json["mnemonic_sha3_512"]
+                }))
+    
+    result = r.json()
+
+    if result.get("error"):
+        logger.error(result["message"])
+        raise APIBadRequest(result["message"])
+
+
+    update_mnemonic(request.app.config.CREDENTIALS_TBL, 
+                credentials["username"], 
+                encrypted_menmonic, 
+                hex_salt)
+
+
 @USERS_BP.post('/check_mnemonic')
 @id_token_validity()
 async def check_mnemonic(request, id_token, username):
     
     """
-    session is the session which you will get after enabling MFA and calling login api
-    code is the code generated from the MFA device
-    username is the username of the user
+
     """
 
     request.app.config.VALIDATE_FIELDS(["mnemonic", "password"], request.json)
@@ -442,12 +493,11 @@ async def check_mnemonic(request, id_token, username):
 async def mnemonics(request, id_token, username):
     
     """
-    session is the session which you will get after enabling MFA and calling login api
-    code is the code generated from the MFA device
-    username is the username of the user
+    When a new pub/priv key pair needs to be generated, Password of the user is required 
+    to decrypt the mnemonic stored on localstorage.
     """
 
-    request.app.config.VALIDATE_FIELDS(["mnemonic", "key_index"], request.json)
+    request.app.config.VALIDATE_FIELDS(["mnemonic", "key_index", "password"], request.json)
 
     if type(request.json["enabled"]) != bool:
         raise APIBadRequest("Enabled must be boolean")
