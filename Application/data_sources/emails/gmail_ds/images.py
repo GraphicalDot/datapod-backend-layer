@@ -45,121 +45,73 @@ class GoogleImages(object):
     __source__ = "takeout"
     def __init__(self, gmail_takeout_path, app_config):
         #self.db_dir_path = db_dir_path
-        self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
+        self.path = os.path.join(gmail_takeout_path, "Google Photos")
         #self.db_instance = create_db_instance(db_dir_path)
         self.app_config = app_config
         if not os.path.exists(self.path):
             raise Exception("Reservations and purchase data doesnt exists")
+        self.images = []
+        self.videos = []
+        self.extras = []
 
-
-    async def parse(self):
-    for folder in os.listdir(google_photos_dir):
-         folder_path = os.path.join(google_photos_dir, folder)
-         if os.path.isdir(folder_path):
-             for file in os.listdir(folder_path):
-                 if [file.endswith(ext) for ext in ["png", "PNG", "jpg", "JPG"]]:
-                     images.append(file)
-                     pass
-                 elif [file.endswith(ext) for ext in ["mp4", "mov", "MOV", "MP4"]]:
-                     video.append(file)
-                 else:
-                     pass
 
 
     async def parse(self):
-        purchases = []
-        reservations = []
-        for filename in os.listdir(self.path):
-            filepath = os.path.join(self.path, filename)
-            with open(filepath, "r") as f: 
-                data = json.loads(f.read()) 
-                try: 
-                    result = await self.parse_purchase(data)
-                    result.update({"source": self.__source__})
-                    if result.get("type") == "purchase":
-                        result.pop("type")
-                        result.pop('dest')
-                        result.pop('src')
-
-                        purchases.append(result)
+        for folder in os.listdir(google_photos_dir):
+            folder_path = os.path.join(google_photos_dir, folder)
+            if os.path.isdir(folder_path):
+                for file in os.listdir(folder_path):
+                    file_path = os.path.join(folder_path, file )
+                    res = [file.endswith(ext) for ext in ["png", "PNG", "jpg", "JPG", "gif", "GIF"]]
+                    if any(res):
+                        #print (f"File is Image file {file} with {res}")
+                        images.append(file_path)
+                    elif any([file.endswith(ext) for ext in ["mp4", "mov", "MOV", "MP4"]]):
+                        #print (f"File is Video file {file}")
+                        videos.append(file_path)
                     else:
-                        result.pop("type")
-                        reservations.append(result)
+                        extras.append(file_path)
+        return 
 
-                except Exception as e: 
-                    logger.error(f"In DATA {data} error is  <<{e}>>, filename is {filepath}" )
-        return reservations, purchases
-
-    async def parse_purchase(self, data):
-        
-        src = None
-        dest = None
-        _type = None
-        merchant_name = None
-        products = []
-        if data.get("transactionMerchant"):
-            merchant_name = data["transactionMerchant"]["name"]
-            time = timezone_timestamp(float(data["creationTime"]["usecSinceEpochUtc"])/1000000, self.app_config.TIMEZONE)
-        else:
-            merchant_name = None
-            time = None
+    def image_json_path(self, image_path):
+        json_path = os.path.join(os.path.dirname(image_path), f"{os.path.abspath(image_path)}.json")
+        if os.path.exists(json_path):
+            return json_path
+        return None
 
 
-        for item in data["lineItem"]:
-            landing_page = []
-            address = None
-            price = None
-            name = None
-            if item.get("purchase"):
-                if item["purchase"].get("productInfo"):
-                    _type="purchase"
-                    name = item["purchase"]["productInfo"]["name"]
-                    try:
-                        price = item["purchase"]["unitPrice"]["displayString"]
-                    except:
-                        price = None
+    def some(self):
 
-                    if item["purchase"].get("fulfillment"):
-                        address = item["purchase"]["fulfillment"]["location"]["address"][0].replace("\n", ",")
-                        landing_page = item["purchase"]["landingPageUrl"]["link"]
-                    
-                    products.append({"name": name, "address": address, "price": price, "landing_page": landing_page})
-                
-                else:
-                    #DATA {'merchantOrderId': '21823872872', 'creationTime': {'usecSinceEpochUtc': '1538748693000000',
-                    # 'granularity': 'MICROSECOND'}, 'transactionMerchant': {'name': 'swiggy.in'},
-                    # 'lineItem': [{'purchase': {'status': 'DELIVERED'}}]} with error 'productInfo'
-
-                    raise Exception("Unidentified type One, probably incomplete data")
-
+        for image_path in images:
+            json_path = os.path.join(os.path.dirname(image_path), f"{os.path.abspath(image_path)}.json")
+            if os.path.exists(json_path):
+                pass
             else:
-                if item.get("flightReservation"):
-                    _type="flights"
-                    merchant_name = item["provider"]["name"]
-                    time = timezone_timestamp(float(item["flightReservation"]["flightLeg"]["flightStatus"]["departureTime"]["usecSinceEpochUtc"])/1000000, self.app_config.TIMEZONE)
-                    src = item["flightReservation"]["flightLeg"]["departureAirport"]["servesCity"]["name"]
-                    dest = item["flightReservation"]["flightLeg"]["arrivalAirport"]["servesCity"]["name"]
-                else:
-                    raise Exception("Unidentified Type 2")
+                new_path = f'{".".join(image_path.split(".")[:-1])[0:-1]}.json'
+                if not os.path.exists(new_path):
+                    #print (image_path, new_path)
+                    _new_path = f'{".".join(image_path.split(".")[:-1])}.json'
+                    if not os.path.exists(_new_path):
+                        print (image_path, _new_path)
 
-        return {"merchant_name": merchant_name,
-                "time": time,
-                "products": products,
-                "dest": dest,
-                "src": src,
-                "type": _type,
-                    }
 
-    def parse_food_delivery(self):
-        pass
 
-    def parse_flight_reservation(self):
-        pass
 
-    def parse_train_reservation(self):
-        pass
+    def parser3(self):
+        for image_path in images:
+    ...:     json_path = os.path.join(os.path.dirname(image_path), f"{os.path.abspath(image_path)}.json")
+    ...:     if os.path.exists(json_path):
+    ...:         with open(json_path, "rb") as fi:
+    ...:             data = json.loads(fi.read())
+    ...:             #pprint.pprint (data)
+    ...:             print (f'creationtime == {datetime.datetime.utcfromtimestamp(int(data["creationTime"]["timestamp"]))}')
+    ...:             print (f'modificationTime == {datetime.datetime.utcfromtimestamp(int(data["modificationTime"]["timestamp"]))}')
+    ...:             print (f'photoTakenTime == {datetime.datetime.utcfromtimestamp(int(data["photoTakenTime"]["timestamp"]))}')
+    ...:             print (f'descriptiotn == {data["description"]}')
+    ...:             print (f'url == {data["url"]}')
+    ...:             print (f'title == {data["title"]}')
 
-    def parse_cab_reservation(self):
-        pass
+
+
 
 

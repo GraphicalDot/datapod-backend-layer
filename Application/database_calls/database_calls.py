@@ -69,6 +69,25 @@ def intialize_db(path):
                 (('from_addr', 'to_addr'), False),
             )
 
+
+    class Images(BaseModel):
+        creation_time = peewee.DateTimeField(index=True, null=False)
+        modification_time = peewee.DateTimeField(index=True, null=False)
+        photo_taken_time = peewee.DateTimeField(index=True, null=False)
+        description = peewee.TextField(null=True)
+        url = peewee.TextField(null=False, index=True)
+        title = peewee.TextField(null=False, index=True)
+        geo_data = peewee.BareField()
+        class Meta:
+            indexes = (
+            # create a unique on from/to/date
+            (('creation_time', 'url', 'title'), True),
+
+            )
+
+        
+   
+
     class Purchases(BaseModel):
         merchant_name = peewee.CharField(index=True, null=False)
         products = peewee.CharField(index=True, null=False)
