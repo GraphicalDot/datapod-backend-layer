@@ -21,41 +21,7 @@ GMAIL_BP = Blueprint("gmail", url_prefix="/gmail")
 
 
 
-@GMAIL_BP.post('/credentials')
-async def gmail_login(request):
-    """
-    To get all the assets created by the requester
-    """
-    required_fields = ["username", "password"]
-    validate_fields(required_fields, request.json)
 
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        })
-
-
-    ##add this if this has to executed periodically
-    ##while True:
-
-    password = ""
-    key, salt = generate_scrypt_key(password)
-    logging.info(f"salt for scrypt key is {salt}")
-    logging.info(f" key for AES encryption is  {key}")
-
-    for (source, destination, encrypted_path) in source_destination_list: 
-        shutil.make_archive(destination, 'zip', source)
-        logger.info(f"Archiving done at the path {destination}")
-        time.sleep(1)
-        with open("%s.zip"%destination, "rb") as f:
-            file_bytes = f.read()
-            data = aes_encrypt(key, file_bytes)
-            with open(encrypted_path, "wb") as f:
-                f.write(data)
-
-
-    return 
 
 
 
@@ -116,6 +82,9 @@ async def gmail_takeout(request):
         'success': True,
         "data": "Successful"
         })
+
+
+
 
 
 

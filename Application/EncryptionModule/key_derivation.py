@@ -14,9 +14,6 @@ logger = logging.getLogger(__file__)
 
 
 
-
-
-
 def generate_bcrypt(password):
     if isinstance(password, str):
         password = password.encode()

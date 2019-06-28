@@ -1,8 +1,5 @@
 #-*- coding:utf-8 -*- 
 
-
-
-
 from InstagramAPI import InstagramAPI
 import time
 import asyncio

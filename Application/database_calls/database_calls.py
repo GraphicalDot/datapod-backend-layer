@@ -62,15 +62,14 @@ def intialize_db(path):
 
         class Meta:
             indexes = (
-                # create a unique on from/to/date
+                   # create a unique on from/to/date
                 (('from_addr', 'to_addr', 'date'), True),
-
-                # create a non-unique on from/to
                 (('from_addr', 'to_addr'), False),
             )
 
 
     class Images(BaseModel):
+        source = peewee.TextField(null=True)
         creation_time = peewee.DateTimeField(index=True, null=False)
         modification_time = peewee.DateTimeField(index=True, null=False)
         photo_taken_time = peewee.DateTimeField(index=True, null=False)
@@ -78,11 +77,11 @@ def intialize_db(path):
         url = peewee.TextField(null=False, index=True)
         title = peewee.TextField(null=False, index=True)
         geo_data = peewee.BareField()
+        image_path = peewee.TextField(null=True)
         class Meta:
             indexes = (
-            # create a unique on from/to/date
-            (('creation_time', 'url', 'title'), True),
-
+                # create a unique on from/to/date
+                (('creation_time', 'url', 'title'), True),
             )
 
         
@@ -107,7 +106,8 @@ def intialize_db(path):
         Backups,
         Credentials,
         Emails,
-        Purchases
+        Purchases,
+        Images
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
@@ -115,6 +115,6 @@ def intialize_db(path):
     for person in Credentials.select().dicts():
         print(person)
 
-    return Logs, Backups, Credentials, Emails, Purchases
+    return Logs, Backups, Credentials, Emails, Purchases, Images
 
 

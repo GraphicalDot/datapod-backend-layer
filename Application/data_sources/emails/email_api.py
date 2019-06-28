@@ -12,6 +12,10 @@ from .gmail_ds.purchases_n_reservations import PurchaseReservations
 from sanic.exceptions import SanicException
 from pprint import pprint
 import  database_calls.db_purchases_n_reservations as q_purchase_db
+import  database_calls.db_images as q_images_db
+
+from .gmail_ds.images import ParseGoogleImages
+
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -107,6 +111,33 @@ async def purchase_n_reservation_filter(request):
         })
 
 
+
+@EMAIL_BP.get('takeout/images')
+async def images(request):
+    """
+    To get all the assets created by the requester
+    """
+    
+    path = os.path.join(request.app.config.RAW_DATA_PATH, "Takeout")
+    
+    if not os.path.exists(path):
+        raise Exception(f"Path {path} doesnt exists")
+    
+    
+    ins = await ParseGoogleImages(path, request.app.config)
+    await ins.parse()
+    images_data = ins.images_data
+
+    for image_data in images_data:
+        image_data.update({"tbl_object": request.app.config.IMAGES_TBL}) 
+    
+    await asyncio.gather(*[q_images_db.store(**image_data) for image_data in images_data])
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": "Successful"
+        })
 
 @EMAIL_BP.get('gmail/takeout/location_history')
 async def takeout_location_history(request):
