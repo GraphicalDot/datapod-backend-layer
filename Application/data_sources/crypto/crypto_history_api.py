@@ -14,7 +14,7 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 CRYPTO_BP = Blueprint("crypto", url_prefix="")
-from database_calls.crypto.db_binance import store
+from database_calls.crypto.db_binance import store, get_creds
 
 
 @CRYPTO_BP.post('/creds/binance')
@@ -40,3 +40,15 @@ async def creds_binance(request):
         })
 
 
+@CRYPTO_BP.get('/store/binance')
+async def store_binance(request):
+    api_key, api_secret = get_creds(request.app.config.CRYPTO_CRED_TBL)
+    logging.info(f"Api key {api_key}")
+    logging.info(f"Api secret {api_secret}")
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        })

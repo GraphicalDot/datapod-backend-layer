@@ -1,21 +1,27 @@
 
 
 
+from database_calls.crypto.db_binance import get_creds
 
 
 
+async def binance_client():
+    data = get_creds()
 
 
+async def get_all_tickers():
+
+    pass
 
 
-
-def initiate_client():
-    client = Client(api_key, api_secret)
-
-def get_all_tickers():
-    tickers = client.get_orderbook_tickers()
+async def get_all_orders():
+    pass
 
 
+async def get_order_pair():
+    """
+    Get orders for a single pair like
+    """
 
 
 def for ticker in tickers[0:10]: 

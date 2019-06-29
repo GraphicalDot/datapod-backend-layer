@@ -16,3 +16,13 @@ def store(tbl_obj, api_key, api_secret):
     except Exception as e:
         logger.error(f"Couldnt save creds data for binanace exchange because of {e}")
     return 
+
+
+def get_creds(tbl_obj):
+    print (tbl_obj)
+    try:
+        res = tbl_obj.select().where(tbl_obj.exchange=="binance").get()
+        return res.api_key, res.api_secret
+    except Exception as e:
+        logger.error(f"Couldnt fetch creds data for binanace exchange because of {e}")
+    return 
