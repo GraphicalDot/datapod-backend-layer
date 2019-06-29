@@ -10,7 +10,7 @@ import gzip
 from binance.client import Client
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
-from database_calls.crypto.db_binance import store, get_creds
+from database_calls.crypto.db_binance import store, get_creds, get_pairs, filter_pair
 from .binance_ds.binance import binance_client, get_all_tickers, get_all_orders
 
 verboselogs.install()
@@ -53,6 +53,48 @@ async def store_binance(request):
     res = await get_all_orders(request.app.config, client, tickers)
 
 
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': res,
+        'messege': None
+        })
+
+
+
+@CRYPTO_BP.get('/binance/all_pairs')
+async def all_pairs_binance(request):
+
+    res = get_pairs(request.app.config.CRYPTO_EXG_BINANCE)
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': res,
+        'messege': None
+        })
+
+@CRYPTO_BP.post('/binance/filter_pair')
+async def all_pairs_binance(request):
+    request.app.config.VALIDATE_FIELDS(["pair_name"], request.json)
+    
+    if request.json.get("page"):
+        page = request.json.get("page")
+    else:
+        page=1
+
+    if request.json.get("number"):
+        number=request.json.get("number")
+    else:
+        number=100
+    
+
+    res = filter_pair(request.app.config.CRYPTO_EXG_BINANCE, request.json["pair_name"], page, number)
+    
+
+    
     return response.json(
         {
         'error': False,

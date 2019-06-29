@@ -58,3 +58,20 @@ def store_pairs(db_object, tbl_obj, pair_orders):
         logger.error(f"Couldnt store binance order pair {order['symbol']} because of {e}")
 
     return 
+
+
+
+
+def get_pairs(tbl_obj):
+    return [order.symbol for order in tbl_obj.select(tbl_obj.symbol).distinct()]
+
+
+
+def filter_pair(tbl_object, pair_name, page, number):
+    #.order_by(Tweet.created_date.desc())
+    return tbl_object\
+                .select()\
+                .where(tbl_object.symbol == pair_name)\
+                .order_by(-tbl_object.time)\
+                .paginate(page, number)\
+                .dicts()
