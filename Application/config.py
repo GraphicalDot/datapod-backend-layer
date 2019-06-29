@@ -4,7 +4,7 @@ import pathlib
 import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
-from database_calls.database_calls import intialize_db
+from database_calls.initialize_tables import intialize_db
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -26,7 +26,8 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-Logs, Backup, Credentials, Emails, Purchases, Images = intialize_db(os.path.join(DB_PATH, "database.db"))
+Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance \
+        = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -99,6 +100,8 @@ class Config:
     EMAILS_TBL = Emails
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images
+    CRYPTO_CRED_TBL = CryptCreds 
+    CRYPTO_EXG_BINANCE = CryptoExgBinance
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken

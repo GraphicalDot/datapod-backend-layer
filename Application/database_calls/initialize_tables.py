@@ -98,7 +98,35 @@ def intialize_db(path):
             (('products', 'time', 'merchant_name'), True),
 
             )
+    
+    class CryptoCreds(BaseModel):
+        exchange = peewee.CharField(index=True, null=False)
+        api_key = peewee.CharField(index=True, null=False)
+        api_secret = peewee.CharField(index=True, null=False)
+    
+    class CryptoExgBinance(BaseModel):
+        symbol =peewee.CharField(index=True, null=False)
+        order_id = peewee.IntegerField()
+        client_order_id = peewee.CharField(null=False)
+        price = peewee.CharField(null=False)
+        orig_qty = peewee.CharField(null=False)
+        executed_qty = peewee.CharField(null=False)
+        cummulative_quote_qty = peewee.CharField(index=True, null=False)
+        status = peewee.CharField(index=True, null=False)
+        time_in_force = peewee.CharField(null=False)
+        _type= peewee.CharField(null=False)
+        side= peewee.CharField(null=False)
+        stop_price = peewee.CharField(index=True, null=False)
+        iceberg_qty = peewee.CharField(null=False)
+        time = peewee.DateTimeField(index=True, null=False)
+        update_time = peewee.DateTimeField(index=True, null=False)
+        is_working = peewee.BooleanField(null=False)
+        class Meta:
+            indexes = (
+            # create a unique on from/to/date
+            (('symbol', 'status', 'time'), True),
 
+            )
 
 
     result = db.create_tables([
@@ -107,14 +135,23 @@ def intialize_db(path):
         Credentials,
         Emails,
         Purchases,
-        Images
+        Images,
+        CryptoCreds,
+        CryptoExgBinance
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
     print (result)
     for person in Credentials.select().dicts():
         print(person)
+    print ("\n\n")
 
-    return Logs, Backups, Credentials, Emails, Purchases, Images
+    for person in CryptoCreds.select().dicts():
+        print(person)
+
+
+
+    return Logs, Backups, Credentials, Emails, Purchases, Images, CryptoCreds,\
+        CryptoExgBinance
 
 

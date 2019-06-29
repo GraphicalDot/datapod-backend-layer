@@ -7,43 +7,36 @@ import os
 import zipfile
 import tarfile
 import gzip
+from binance.client import Client
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
-CRYPTO_BP = Blueprint("crypto", url_prefix="/crypto")
+CRYPTO_BP = Blueprint("crypto", url_prefix="")
+from database_calls.crypto.db_binance import store
 
 
-
-@CRYPTO_BP.post('/parse')
-async def parse(request):
+@CRYPTO_BP.post('/creds/binance')
+async def creds_binance(request):
     """
     """
 
-    request.app.config.VALIDATE_FIELDS(["path", "override"], request.json)
+    request.app.config.VALIDATE_FIELDS(["api_secret", "api_key"], request.json)
+    try:
+        client = Client(request.json["api_key"], request.json["api_secret"]) 
+        res = client.get_account_status() 
+        if not res["success"]:
+            raise APIBadRequest("Your account has some problems") 
+    except Exception:
+        raise APIBadRequest("The api key or api secret for binanace are wrong")
 
-    dest_directory  = f"{request.app.config.RAW_DATA_PATH}/crypto"
-
-    if os.path.exists(dest_directory):
-        if not request.json["override"]:
-            raise APIBadRequest("GITHUB Data already exists")
-
-    if request.json["path"].endswith("zip"):
-        shutil.unpack_archive(request.json["path"], extract_dir=dest_directory, format=None)
-
-    elif request.json["path"].endswith(".gz"):
-        t = tarfile.open(request.json["path"], 'r')
-        t.extractall(dest_directory)
-
-
-    else:
-        raise APIBadRequest("Unknown format")
-
-    logger.info(f"THe request was successful with crypto path {request.json['path']}")
+    store(request.app.config.CRYPTO_CRED_TBL, request.json["api_key"], request.json["api_secret"])
 
     return response.json(
         {
         'error': False,
         'success': True,
         })
+
+
