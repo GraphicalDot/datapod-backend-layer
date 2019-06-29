@@ -6,6 +6,19 @@ import sqlite3
 
 
 """
+class User(Model):
+    username = CharField()
+    join_date = DateTimeField(default=datetime.datetime.now)
+    is_admin = BooleanField()
+
+
+User.delete() # would delete all users in the database
+delete_instance() is a instance method, that will delete the database row represented by an instance of a Model subclass.
+
+me = User.create(username="myers") # create a new user with my username
+me.delete_instance() # delete me from the database
+
+
 http://docs.peewee-orm.com/en/latest/peewee/playhouse.html#schema-migrations
 pubdate_field = DateTimeField(null=True)
 comment_field = TextField(default='')
@@ -151,7 +164,7 @@ def intialize_db(path):
 
 
 
-    return Logs, Backups, Credentials, Emails, Purchases, Images, CryptoCreds,\
+    return db, Logs, Backups, Credentials, Emails, Purchases, Images, CryptoCreds,\
         CryptoExgBinance
 
 

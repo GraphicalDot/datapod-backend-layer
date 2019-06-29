@@ -26,7 +26,7 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance \
+DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance \
         = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
@@ -102,6 +102,7 @@ class Config:
     IMAGES_TBL = Images
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
+    DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken

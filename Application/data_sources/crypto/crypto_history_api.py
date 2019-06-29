@@ -10,11 +10,14 @@ import gzip
 from binance.client import Client
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
+from database_calls.crypto.db_binance import store, get_creds
+from .binance_ds.binance import binance_client, get_all_tickers, get_all_orders
+
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 CRYPTO_BP = Blueprint("crypto", url_prefix="")
-from database_calls.crypto.db_binance import store, get_creds
+
 
 
 @CRYPTO_BP.post('/creds/binance')
@@ -43,12 +46,17 @@ async def creds_binance(request):
 @CRYPTO_BP.get('/store/binance')
 async def store_binance(request):
     api_key, api_secret = get_creds(request.app.config.CRYPTO_CRED_TBL)
+    client = binance_client(api_key, api_secret)
+    tickers = [e["symbol"] for e in get_all_tickers(client)]
     logging.info(f"Api key {api_key}")
     logging.info(f"Api secret {api_secret}")
+    res = await get_all_orders(request.app.config, client, tickers)
 
 
     return response.json(
         {
         'error': False,
         'success': True,
+        'data': res,
+        'messege': None
         })
