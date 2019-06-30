@@ -11,11 +11,12 @@ from .gmail_ds.location import  LocationHistory
 from .gmail_ds.purchases_n_reservations import PurchaseReservations
 from sanic.exceptions import SanicException
 from pprint import pprint
+import base64
 import  database_calls.db_purchases_n_reservations as q_purchase_db
 import  database_calls.db_images as q_images_db
 
 from .gmail_ds.images import ParseGoogleImages
-
+import datetime
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -89,18 +90,33 @@ async def gmail_takeout(request):
 
 
 
-@EMAIL_BP.post('gmail/takeout/purchase_n_reservations/filter')
+@EMAIL_BP.get('gmail/takeout/purchase_n_reservations/filter')
 async def purchase_n_reservation_filter(request):
     """
     Page is the page number 
     NUmber is the number of items on the page 
     """
-    request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+    
+    args = RequestParameters()
+
+    logger.info(f"These are the args {args}")
+
+    if args.get("page"):
+        page = request.json.get("page")
+    else:
+        page = 1
+
+
+    if args.get("number"):
+        number = request.json.get("number")
+    else:
+        number = 200
 
 
     result =  [q_purchase_db.format(request.app.config, purchase) for purchase in \
                 q_purchase_db.filter_merchant_name(request.app.config.PURCHASES_TBL, 
-                request.json["page"], request.json["number"],  request.json.get("merchant_name"))] 
+                page, number,  args.get("merchant_name"))] 
 
     return response.json(
         {
@@ -109,6 +125,50 @@ async def purchase_n_reservation_filter(request):
         "data": result,
         "message": None
         })
+
+
+
+
+
+@EMAIL_BP.get('takeout/filter_images')
+async def filter_images(request):
+    """
+    To get all the assets created by the requester
+    """
+    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+    
+    args = RequestParameters()
+
+    logger.info(f"These are the args {args}")
+
+    if args.get("page"):
+        page = request.json.get("page")
+    else:
+        page = 1
+
+
+    if args.get("number"):
+        number = request.json.get("number")
+    else:
+        number = 200
+
+
+    images = q_images_db.filter_date(request.app.config.IMAGES_TBL, page, number,  time=None)
+    for image in images:
+        creation_time = image.pop("creation_time")
+        #data:image/png;base64
+        image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
+
+    logger.success(images)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": images,
+        "message": None
+        })
+
+
 
 
 

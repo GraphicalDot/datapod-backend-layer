@@ -22,7 +22,7 @@ async def store(tbl_object, source, creation_time, modification_time,
                         url=url, title=title, geo_data=geo_data, 
                         image_path=image_path).execute()
 
-        logger.info(f"success on insert {source} image {image_path}")
+        logger.success(f"success on insert {source} image {image_path}")
     except Exception as e:
         logger.error(f"Error on insert image {source} imge {image_path}  because of {e}")
     return 
@@ -33,9 +33,10 @@ def filter_date(tbl_object, page, number,  time=None):
          print(tweet.message, tweet.created_date)
 
     """
-    if type(time) != datetime.datetime:
-        raise APIBadRequest("Datetime format is wrong")
+  
     if time:
+        if type(time) != datetime.datetime:
+            raise APIBadRequest("Datetime format is wrong")
         return tbl_object\
                 .select()\
                 .where(tbl_object.creation_time == time)\
@@ -45,6 +46,8 @@ def filter_date(tbl_object, page, number,  time=None):
     else:
         return tbl_object\
                 .select()\
-                .order_by(-tbl_object.time)\
+                .order_by(-tbl_object.creation_time)\
                 .paginate(page, number)\
                 .dicts()
+
+

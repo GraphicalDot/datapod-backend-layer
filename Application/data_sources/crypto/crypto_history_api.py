@@ -7,6 +7,7 @@ import os
 import zipfile
 import tarfile
 import gzip
+import datetime
 from binance.client import Client
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
@@ -76,29 +77,58 @@ async def all_pairs_binance(request):
         'messege': None
         })
 
-@CRYPTO_BP.post('/binance/filter_pair')
+@CRYPTO_BP.get('/binance/filter_pair')
 async def all_pairs_binance(request):
-    request.app.config.VALIDATE_FIELDS(["pair_name"], request.json)
+    args = RequestParameters()
     
-    if request.json.get("page"):
-        page = request.json.get("page")
+    if args.get("page"):
+        page = args.get("page")
     else:
         page=1
 
-    if request.json.get("number"):
-        number=request.json.get("number")
+    if args.get("number"):
+        number= args.get("number")
     else:
         number=100
     
+    if args.get("pair_name"):
+        number= args.get("pair_name")
+    else:
+        pair_name=None
 
-    res = filter_pair(request.app.config.CRYPTO_EXG_BINANCE, request.json["pair_name"], page, number)
+    """    
+        'id': 119,
+        'symbol': 'WABIBTC',
+        'order_id': 2379648,
+        'client_order_id': 'hb8f37EjiIawsDRh8CJMTO',
+        'price': '0.00038276',
+        'orig_qty': '42.00000000',
+        'executed_qty': '42.00000000',
+        'cummulative_quote_qty': '0.01607592',
+        'status': 'FILLED',
+        'time_in_force': 'GTC',
+        '_type': 'LIMIT',
+        'side': 'BUY',
+        'stop_price': '0.00000000',
+        'iceberg_qty': '0.00000000',
+        'time': 1515615532962,
+        'update_time': 1515615545528,
+        'is_working': True},
+    """
+
+    res = [{"symbol": pair["symbol"], "price": pair["price"], 
+            "orig_qty": pair["orig_qty"], "executed_qty": pair["executed_qty"],
+             "status": pair["status"], "side": pair["side"],
+             "time": datetime.datetime.fromtimestamp(pair["time"]/1000.0).strftime("%d %b,%y")
+             }  for pair in filter_pair(request.app.config.CRYPTO_EXG_BINANCE, pair_name, page, number)]
     
+
 
     
     return response.json(
         {
         'error': False,
         'success': True,
-        'data': res,
+        'data': {"result" : res, "headers":   list(res[0].keys()) },
         'messege': None
         })

@@ -69,9 +69,17 @@ def get_pairs(tbl_obj):
 
 def filter_pair(tbl_object, pair_name, page, number):
     #.order_by(Tweet.created_date.desc())
-    return tbl_object\
+
+    if pair_name:
+        return tbl_object\
                 .select()\
                 .where(tbl_object.symbol == pair_name)\
+                .order_by(-tbl_object.time)\
+                .paginate(page, number)\
+                .dicts()
+
+    return tbl_object\
+                .select()\
                 .order_by(-tbl_object.time)\
                 .paginate(page, number)\
                 .dicts()
