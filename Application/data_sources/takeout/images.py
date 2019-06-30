@@ -1,4 +1,3 @@
-
 #-*- coding: utf-8 -*-
 import os
 import json
@@ -88,9 +87,4 @@ class ParseGoogleImages(object):
                     'image_path': image_path,
                     "source": self.__source__
             }
-            pprint (res)
             return res
-
-
-
-

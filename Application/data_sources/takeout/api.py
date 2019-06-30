@@ -6,22 +6,22 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .gmail_ds.gmail_takeout import GmailsEMTakeout, PurchaseReservations
-from .gmail_ds.location import  LocationHistory
-from .gmail_ds.purchases_n_reservations import PurchaseReservations
+from .parse_emails import GmailsEMTakeout
+from .location import  LocationHistory
+from .purchases_n_reservations import PurchaseReservations
 from sanic.exceptions import SanicException
 from pprint import pprint
 import base64
 import  database_calls.db_purchases_n_reservations as q_purchase_db
 import  database_calls.db_images as q_images_db
 
-from .gmail_ds.images import ParseGoogleImages
+from .images import ParseGoogleImages
 import datetime
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
-EMAIL_BP = Blueprint("", url_prefix="/")
+TAKEOUT_BP = Blueprint("", url_prefix="/takeout/")
 
 
 
@@ -40,7 +40,7 @@ async def periodic(app, gmail_takeout_path):
     logger.info('Periodic task has finished execution')
     return 
 
-@EMAIL_BP.post('gmail/takeout/parse')
+@TAKEOUT_BP.post('parse')
 async def parse(request):
     """
     To get all the assets created by the requester
@@ -61,7 +61,7 @@ async def parse(request):
         })
 
 
-@EMAIL_BP.get('gmail/takeout/purchase_n_reservations')
+@TAKEOUT_BP.get('purchase_n_reservations')
 async def gmail_takeout(request):
     """
     To get all the assets created by the requester
@@ -90,7 +90,7 @@ async def gmail_takeout(request):
 
 
 
-@EMAIL_BP.get('gmail/takeout/purchase_n_reservations/filter')
+@TAKEOUT_BP.get('purchase_n_reservations/filter')
 async def purchase_n_reservation_filter(request):
     """
     Page is the page number 
@@ -130,7 +130,7 @@ async def purchase_n_reservation_filter(request):
 
 
 
-@EMAIL_BP.get('takeout/filter_images')
+@TAKEOUT_BP.get('images/filter')
 async def filter_images(request):
     """
     To get all the assets created by the requester
@@ -172,7 +172,7 @@ async def filter_images(request):
 
 
 
-@EMAIL_BP.get('takeout/images')
+@TAKEOUT_BP.get('images')
 async def images(request):
     """
     To get all the assets created by the requester
@@ -199,7 +199,7 @@ async def images(request):
         "data": "Successful"
         })
 
-@EMAIL_BP.get('gmail/takeout/location_history')
+@TAKEOUT_BP.get('location_history')
 async def takeout_location_history(request):
     """
     To get all the assets created by the requester
