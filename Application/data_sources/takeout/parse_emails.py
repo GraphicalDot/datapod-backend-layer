@@ -13,7 +13,7 @@ from dateutil import parser
 import datetime
 import bleach
 import json
-
+import lxml
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 import time
 from asyncinit import asyncinit
@@ -21,6 +21,8 @@ import pytz
 import asyncio
 import concurrent
 from utils.utils import timezone_timestamp, month_aware_time_stamp
+from lxml.html.clean import Cleaner 
+
 import coloredlogs, verboselogs, logging
 from geopy.geocoders import Nominatim
 verboselogs.install()
@@ -115,17 +117,14 @@ class TakeoutEmails(object):
         i = 0
         for message in self.email_mbox: 
             #email_uid = self.emails[0].split()[x]
-            logger.info(message)
-            logger.info(message["From"])
             
             email_from, email_to, subject, local_message_date, email_message = message["From"], \
                     message["To"], message["Subject"], message["Date"], message
             self.save_email(email_from, email_to, subject, local_message_date, email_message)
             logger.info("\n\n\n")                
             i += 1
-            if i%10 == 1:
+            if i == 50:
                 break
-                logger.info(f"NUmber of emails saved {i}")
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
 
@@ -208,12 +207,50 @@ class TakeoutEmails(object):
                 return 0
         return int(result)
 
-    def remove_html(self, html_body):
-        if isinstance(html_body, bytes):
-            html_body = self.handle_encoding(html_body)
-        k = bleach.clean(html_body, tags=[], attributes={}, styles=[], strip=True).replace("\n", "")                                                                                                                                                                                       
+    # def remove_html(self, html_body):
+    #     if isinstance(html_body, bytes):
+    #         html_body = self.handle_encoding(html_body)
+    #     k = bleach.clean(html_body, tags=[], attributes={}, styles=[], strip=True).replace("\n", "")                                                                                                                                                                                       
 
-        return ' '.join(k.split())
+    #     final_text =  ' '.join(k.split())
+    #     base_patterns = {
+    #         '&[rl]dquo;': '',
+    #         '&[rl]squo;': '',
+    #         '&nbsp;': ''}
+
+        
+    #     for pattern, repl in base_patterns.items():
+    #         final_text = re.sub(pattern, repl, final_text)
+    #     return final_text
+
+
+    def _is_etree(self, tree):
+        if not isinstance(tree, lxml.etree.ElementBase):
+            raise Exception("you're passing something that's not an etree")
+
+
+    def get_clean_html(self, html_text, text_only=True):
+        etree = lxml.html.document_fromstring(html_text)
+        
+
+        self._is_etree(etree)
+        # enable filters to remove Javascript and CSS from HTML document
+        cleaner = Cleaner()
+        cleaner.javascript = True
+        cleaner.style = True
+        cleaner.html = True
+        cleaner.page_structure = False
+        cleaner.meta = False
+        cleaner.safe_attrs_only = False
+        cleaner.links = False
+        
+        html = cleaner.clean_html(etree)
+        if text_only:
+            return ' '.join(html.text_content().split()) 
+            #return html.text_content()
+
+        return lxml.html.tostring(html)
+
 
 
     def handle_encoding(self, data):
@@ -234,7 +271,6 @@ class TakeoutEmails(object):
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
         # Body details
         #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
-        print (dir(email_message))
         message_type = email_message.get("X-Gmail-Labels").split(",")[0]
 
 
@@ -361,15 +397,19 @@ class TakeoutEmails(object):
                 else:
                     html_body = body.decode().replace("\r", "").replace("\n", "")
             except Exception as e:
-                print (e)
-                print (body)
+                logger.error(e)
+                logger.error(body)
                 return 
                                                                                                                                                                                                                                                            
 
         with open(file_path_html, "wb") as f:
             data = f"From: {email_from}{nl}To: {email_to}{nl}Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
             
-            logger.info(f"HTML BODY {data}")
+            #logger.info(f"HTML BODY {data}")
+            #text = self.remove_html(html_body)
+            text = self.get_clean_html(html_body)
+            logger.success(text)
+            logger.error(f"This is the message type {message_type}")
             f.write(data.encode())
 
         return 
