@@ -30,24 +30,19 @@ logger = logging.getLogger(__file__)
 
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
-    def __init__(self, gmail_takeout_path, parsed_data_path):
+    def __init__(self, config):
         # self.db_dir_path = db_dir_path
-        self.email_mbox = mailbox.mbox(gmail_takeout_path) 
-        #self.email_dir_txt = os.path.join(parsed_data_path, "mails/gmail/emails_txt")
+        self.email_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+        self.email_mbox = mailbox.mbox(self.email_dir)
         
-        # if not os.path.exists(self.email_dir_txt):
-        #     logger.warning(f"Path doesnt exists creating {self.email_dir_txt}")
-        #     os.makedirs(self.email_dir_txt) 
-
-        
-        self.email_dir_html = os.path.join(parsed_data_path, "mails/gmail/email_html")
+        self.email_dir_html = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/email_html")
         
         for message_type in  ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
             if not os.path.exists(self.email_dir_html):
                 logger.warning(f"Path doesnt exists creating {self.email_dir_html}")
                 os.makedirs(self.email_dir_html)
 
-            self.image_dir = os.path.join(parsed_data_path, f"mails/gmail/images")
+            self.image_dir = os.path.join(config.PARSED_DATA_PATH, f"mails/gmail/images")
             if not os.path.exists(self.image_dir):
                 logger.warning(f"Path doesnt exists creating {self.image_dir}")
                 os.makedirs(self.image_dir) 
@@ -88,19 +83,17 @@ class TakeoutEmails(object):
 
 
 
-            self.pdf_dir = os.path.join(parsed_data_path, "mails/gmail/pdfs")
+            self.pdf_dir = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/pdfs")
             if not os.path.exists(self.pdf_dir):
                 logger.warning(f"Path doesnt exists creating {self.pdf_dir}")
                 os.makedirs(self.pdf_dir) 
 
 
-            self.extra_dir = os.path.join(parsed_data_path, "mails/gmail/extra")
+            self.extra_dir = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/extra")
             if not os.path.exists(self.extra_dir):
                 logger.warning(f"Path doesnt exists creating {self.extra_dir}")
                 os.makedirs(self.extra_dir) 
         logger.info("App intiation been done")
-
-
 
 
 
@@ -117,16 +110,20 @@ class TakeoutEmails(object):
 
         """
         #db_instance = create_db_instance(self.db_dir_path)
-        db_instance = None
+        #db_instance = None
 
         i = 0
         for message in self.email_mbox: 
             #email_uid = self.emails[0].split()[x]
+            logger.info(message)
+            logger.info(message["From"])
+            
             email_from, email_to, subject, local_message_date, email_message = message["From"], \
                     message["To"], message["Subject"], message["Date"], message
-            self.save_email(email_from, email_to, subject, local_message_date, email_message, db_instance)
+            self.save_email(email_from, email_to, subject, local_message_date, email_message)
+            logger.info("\n\n\n")                
             i += 1
-            if i%100 == 5:
+            if i%10 == 1:
                 break
                 logger.info(f"NUmber of emails saved {i}")
         logger.info(f"\n\nTotal number of emails {i}\n\n")
@@ -234,11 +231,11 @@ class TakeoutEmails(object):
         return re.sub('[^\w\-_\. ]', '_', filename).replace(" ", "")
 
 
-    def save_email(self, email_from, email_to, subject, local_message_date, email_message, db_instance):
+    def save_email(self, email_from, email_to, subject, local_message_date, email_message):
         # Body details
         #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
         print (dir(email_message))
-        message_type = message.get("X-Gmail-Labels").split(",")[0]
+        message_type = email_message.get("X-Gmail-Labels").split(",")[0]
 
 
         if message_type not in ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
@@ -255,7 +252,7 @@ class TakeoutEmails(object):
         body = ""
         html_body = ""
         attachments = "\n"
-        sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
+        #sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
 
         
         
@@ -340,9 +337,9 @@ class TakeoutEmails(object):
                         logger.error(f"Mostly junk MIME type {ctype} without a file_name")
 
 
-            if DEBUG:
-                # not multipart - i.e. plain text, no attachments, keeping fingers crossed
-                pprint(body)
+            # if DEBUG:
+            #     # not multipart - i.e. plain text, no attachments, keeping fingers crossed
+            #     pprint(body)
 
         else:
             #when the email is just plain text
@@ -371,8 +368,8 @@ class TakeoutEmails(object):
 
         with open(file_path_html, "wb") as f:
             data = f"From: {email_from}{nl}To: {email_to}{nl}Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
-            if DEBUG:
-                logger.info(f"HTML BODY {data}")
+            
+            logger.info(f"HTML BODY {data}")
             f.write(data.encode())
 
         return 
@@ -381,10 +378,10 @@ class TakeoutEmails(object):
 
     def ensure_directory(self, sender_dir_name, sender_sub_dir_name):
         
-        sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
-        if not os.path.exists(sender_sub_dir_txt):
-            logger.info(f"Creating directory TXT messages{sender_sub_dir_txt}")
-            os.makedirs(sender_sub_dir_txt) 
+        # sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
+        # if not os.path.exists(sender_sub_dir_txt):
+        #     logger.info(f"Creating directory TXT messages{sender_sub_dir_txt}")
+        #     os.makedirs(sender_sub_dir_txt) 
         
 
         sender_sub_dir_html = os.path.join(f"{self.email_dir_html}/{sender_dir_name}", sender_sub_dir_name)
@@ -392,7 +389,7 @@ class TakeoutEmails(object):
             logger.info(f"Creating directory HTML messages {sender_sub_dir_html}")
             os.makedirs(sender_sub_dir_html) 
         
-        return sender_sub_dir_txt, sender_sub_dir_html
+        return sender_sub_dir_html
 
 
     def prefix_attachment_name(self, filename, email_uid, email_subject, email_from):
@@ -410,9 +407,4 @@ class TakeoutEmails(object):
 
 
 
-if __name__ == "__main__":
-    user_data_path = "/home/feynman/.Datapod/data"
-    path =f"{user_data_path}/Takeout/Mail/All mail Including Spam and Trash.mbox"  
-    parsed_data_path = "/home/feynman/.Datapod/parsed"
-    instance = GmailsEMTakeout(path, parsed_data_path)
-    instance.download_emails()
+

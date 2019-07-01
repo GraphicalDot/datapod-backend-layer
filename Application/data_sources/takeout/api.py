@@ -26,13 +26,12 @@ TAKEOUT_BP = Blueprint("", url_prefix="/takeout/")
 
 
 
-async def periodic(app, gmail_takeout_path):
+async def periodic(config):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
 
-    await asyncio.sleep(10)
-    instance = TakeoutEmails(gmail_takeout_path, app.config.user_data_path, app.config.db_dir_path)
+    instance = TakeoutEmails(config)
     instance.download_emails()
 
 
@@ -45,19 +44,19 @@ async def parse(request):
     """
     To get all the assets created by the requester
     """
-    request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
-    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    # if not os.path.exists(request.json["path"]):
+    #     raise APIBadRequest("This path doesnt exists")
+    # shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
         
-    #request.app.add_task(periodic(request.app, path))
+    request.app.add_task(periodic(request.app.config))
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": "Takeout data parsing has been completed successfully"
+        "data": "Takeout data parsing has been Started and you will be notified once it is complete"
         })
 
 
