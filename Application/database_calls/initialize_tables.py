@@ -34,10 +34,15 @@ Update query uery = Stat.update(counter=Stat.counter + 1).where(Stat.url == requ
 """
 
 
+from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 
 def intialize_db(path):
-    db = peewee.SqliteDatabase(path,  detect_types=sqlite3.PARSE_DECLTYPES)
+    #db = peewee.SqliteDatabase(path,  detect_types=sqlite3.PARSE_DECLTYPES)
+    pragmas = [
+    ('journal_mode', 'wal'),
+    ('cache_size', -1000 * 32)]
 
+    db = SqliteExtDatabase(path, pragmas=pragmas,  detect_types=sqlite3.PARSE_DECLTYPES)
 
     class BaseModel(peewee.Model):
         class Meta:
@@ -64,6 +69,10 @@ def intialize_db(path):
         refresh_token = peewee.BlobField(null= True)
         salt = peewee.TextField(null= True)
 
+    class FTSEntry(FTSModel):
+        content = peewee.TextField()
+        
+
     class Emails(BaseModel):
         email_id = peewee.CharField(unique=True)
         from_addr = peewee.CharField()
@@ -89,8 +98,8 @@ def intialize_db(path):
         description = peewee.TextField(null=True)
         url = peewee.TextField(null=False, index=True)
         title = peewee.TextField(null=False, index=True)
-        geo_data = peewee.BareField()
         image_path = peewee.TextField(null=True)
+        geo_data = peewee.BareField()
         class Meta:
             indexes = (
                 # create a unique on from/to/date

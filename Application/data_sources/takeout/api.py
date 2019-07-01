@@ -6,7 +6,7 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .parse_emails import GmailsEMTakeout
+from .parse_emails import TakeoutEmails
 from .location import  LocationHistory
 from .purchases_n_reservations import PurchaseReservations
 from sanic.exceptions import SanicException
@@ -32,7 +32,7 @@ async def periodic(app, gmail_takeout_path):
     logger.info('Periodic task has begun execution')
 
     await asyncio.sleep(10)
-    instance = GmailsEMTakeout(gmail_takeout_path, app.config.user_data_path, app.config.db_dir_path)
+    instance = TakeoutEmails(gmail_takeout_path, app.config.user_data_path, app.config.db_dir_path)
     instance.download_emails()
 
 
