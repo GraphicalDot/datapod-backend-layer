@@ -69,20 +69,22 @@ def intialize_db(path):
         refresh_token = peewee.BlobField(null= True)
         salt = peewee.TextField(null= True)
 
-    class FTSEntry(FTSModel):
+    class IndexEmailContent(FTSModel):
         content = peewee.TextField()
-        
-    
+        email_id = peewee.TextField()
+        class Meta:
+            database = db
 
     class Email(BaseModel):
         email_id = peewee.TextField(unique=True)
+        email_id_raw = peewee.TextField(unique=True)
         from_addr = peewee.CharField()
         to_addr = peewee.CharField()
         subject = peewee.TextField()
         content = peewee.TextField()
-        attachments = peewee.BareField()
         date = peewee.DateTimeField()
-
+        path = peewee.TextField()
+        
         class Meta:
             indexes = (
                    # create a unique on from/to/date
@@ -176,7 +178,8 @@ def intialize_db(path):
         CryptoCreds,
         CryptoExgBinance,
         Datasources,
-        EmailAttachment
+        EmailAttachment,
+        IndexEmailContent
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
@@ -191,6 +194,6 @@ def intialize_db(path):
 
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
-        CryptoExgBinance, Datasources, EmailAttachment
+        CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent
 
 
