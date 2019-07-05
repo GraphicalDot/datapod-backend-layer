@@ -123,7 +123,7 @@ class TakeoutEmails(object):
             self.save_email(email_from, email_to, subject, local_message_date, email_message)
             logger.info("\n\n\n")                
             i += 1
-            if i == 50:
+            if i == 500:
                 break
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
@@ -271,8 +271,9 @@ class TakeoutEmails(object):
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
         # Body details
         #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
-        message_type = email_message.get("X-Gmail-Labels").split(",")[0]
-
+        #message_type = email_message.get("X-Gmail-Labels").split(",")[0]
+        message_type = email_message.get("X-Gmail-Labels")
+        logger.error(f"This is the message_type {message_type}")
 
         if message_type not in ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
             message_type = "Inbox"
@@ -408,7 +409,7 @@ class TakeoutEmails(object):
             #logger.info(f"HTML BODY {data}")
             #text = self.remove_html(html_body)
             text = self.get_clean_html(html_body)
-            logger.success(text)
+            #logger.success(text)
             logger.error(f"This is the message type {message_type}")
             f.write(data.encode())
 

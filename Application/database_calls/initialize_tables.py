@@ -72,9 +72,10 @@ def intialize_db(path):
     class FTSEntry(FTSModel):
         content = peewee.TextField()
         
+    
 
-    class Emails(BaseModel):
-        email_id = peewee.CharField(unique=True)
+    class Email(BaseModel):
+        email_id = peewee.TextField(unique=True)
         from_addr = peewee.CharField()
         to_addr = peewee.CharField()
         subject = peewee.TextField()
@@ -88,6 +89,15 @@ def intialize_db(path):
                 (('from_addr', 'to_addr', 'date'), True),
                 (('from_addr', 'to_addr'), False),
             )
+    
+    # class EmailAttachments(BaseModel):
+    #     email = peewee.ForeignKeyField(Email, backref='tweets')
+
+    class EmailAttachment(BaseModel):
+        email_id = peewee.TextField(unique=False, index=True)
+        path = peewee.TextField()
+        name = peewee.TextField()
+        date = peewee.DateTimeField()
 
 
     class Images(BaseModel):
@@ -106,7 +116,12 @@ def intialize_db(path):
                 (('creation_time', 'url', 'title'), True),
             )
 
-        
+    
+    class Datasources(BaseModel):
+        source = peewee.TextField(null=True)
+        name = peewee.TextField(null=True)
+        message = peewee.TextField(null=True)
+        last_updated = peewee.TextField(null=True)
    
 
     class Purchases(BaseModel):
@@ -155,11 +170,13 @@ def intialize_db(path):
         Logs,
         Backups,
         Credentials,
-        Emails,
+        Email,
         Purchases,
         Images,
         CryptoCreds,
-        CryptoExgBinance
+        CryptoExgBinance,
+        Datasources,
+        EmailAttachment
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
@@ -173,7 +190,7 @@ def intialize_db(path):
 
 
 
-    return db, Logs, Backups, Credentials, Emails, Purchases, Images, CryptoCreds,\
-        CryptoExgBinance
+    return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
+        CryptoExgBinance, Datasources, EmailAttachment
 
 

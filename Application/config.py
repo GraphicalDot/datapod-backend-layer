@@ -26,8 +26,8 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance \
-        = intialize_db(os.path.join(DB_PATH, "database.db"))
+DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
+    Datasources, EmailAttachment    = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -97,11 +97,13 @@ class Config:
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
     CREDENTIALS_TBL = Credentials
+    DATASOURCES = Datasources
     EMAILS_TBL = Emails
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
+    Email_Attachment = EmailAttachment
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
