@@ -81,9 +81,11 @@ def intialize_db(path):
         from_addr = peewee.CharField()
         to_addr = peewee.CharField()
         subject = peewee.TextField()
+        message_type = peewee.CharField()
         content = peewee.TextField()
         date = peewee.DateTimeField()
         path = peewee.TextField()
+        attachments = peewee.BooleanField()
         
         class Meta:
             indexes = (
@@ -98,7 +100,7 @@ def intialize_db(path):
     class EmailAttachment(BaseModel):
         email_id = peewee.TextField(unique=False, index=True)
         path = peewee.TextField()
-        name = peewee.TextField()
+        attachment_name = peewee.TextField()
         date = peewee.DateTimeField()
 
 
@@ -191,6 +193,7 @@ def intialize_db(path):
     for person in CryptoCreds.select().dicts():
         print(person)
 
+    #db.drop_tables([Email, IndexEmailContent, EmailAttachment])
 
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\

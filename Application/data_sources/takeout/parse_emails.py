@@ -12,6 +12,7 @@ import asyncio
 import pytz
 from asyncinit import asyncinit
 import time
+import hashlib
 import lxml
 import json
 import bleach
@@ -24,6 +25,8 @@ import email
 import datetime
 from pprint import pprint
 import hashlib
+import datetime
+
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
@@ -136,7 +139,7 @@ class TakeoutEmails(object):
             self.save_email(email_from, email_to, subject,
                             local_message_date, email_message)
             i += 1
-            if i == 5000:
+            if i == 50:
                 break
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
@@ -202,8 +205,6 @@ class TakeoutEmails(object):
     def convert_to_epoch(self, date):
         """
         "Tue, 7 Nov 2017 07:53:50 +0000"
-
-
         """
         if not date:
             return 0
@@ -216,20 +217,7 @@ class TakeoutEmails(object):
                 return 0
         return int(result)
 
-    # def remove_html(self, html_body):
-    #     if isinstance(html_body, bytes):
-    #         html_body = self.handle_encoding(html_body)
-    #     k = bleach.clean(html_body, tags=[], attributes={}, styles=[], strip=True).replace("\n", "")
 
-    #     final_text =  ' '.join(k.split())
-    #     base_patterns = {
-    #         '&[rl]dquo;': '',
-    #         '&[rl]squo;': '',
-    #         '&nbsp;': ''}
-
-    #     for pattern, repl in base_patterns.items():
-    #         final_text = re.sub(pattern, repl, final_text)
-    #     return final_text
 
     def _is_etree(self, tree):
         if not isinstance(tree, lxml.etree.ElementBase):
@@ -271,11 +259,8 @@ class TakeoutEmails(object):
         return re.sub('[^\w\-_\. ]', '_', filename).replace(" ", "")
 
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
-        # Body details
-        #logger.info(f"email_from={email_from}, email_to={email_to}, subject={subject}, local_message_date={local_message_date}")
-        #message_type = email_message.get("X-Gmail-Labels").split(",")[0]
+
         message_type = email_message.get("X-Gmail-Labels")
-        #logger.error(f"This is the message_type {message_type}")
 
         if message_type not in ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
             message_type = "Inbox"
@@ -328,11 +313,6 @@ class TakeoutEmails(object):
 
                     if part.get_filename():
 
-                        #attachment_name = part.get_filename() + "__"+ str(email_uid)
-                        # prefix attachment with TAGS like BANK, CAB,
-                        # _attachment_name = f"{sender_dir_name}_{sender_sub_dir_name}_{epoch}_{part.get_filename()}"
-                        # attachment_name = self.format_filename(
-                        #     _attachment_name)
 
                         attachment_name = part.get_filename()
 
@@ -342,14 +322,7 @@ class TakeoutEmails(object):
                             with open(image_path, "wb") as f:
                                 f.write(part.get_payload(decode=True))
                             attachments.append(image_path)
-                            # image_data = {"path": _image_path,
-                            #               "email_html": file_path_html}
-                            #ins = StoreInChunks("gmail",  image_data, db_instance)
-                            #image_path = ins.image_path
-                            # ins.insert()
-                            # with open(image_path, "wb") as f:
-                            #     f.write(part.get_payload(decode=True))
-
+                            
                         elif ctype == "application/pdf" or ctype == "application/octet-stream":
 
                             pdf_path = os.path.join(
@@ -407,16 +380,43 @@ class TakeoutEmails(object):
                 logger.error(body)
                 return
 
+        email_text = self.get_clean_html(html_body)
         with open(file_path_html, "wb") as f:
             data = f"From: {email_from}{nl}To: {email_to}{nl}Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
-
-            #logger.info(f"HTML BODY {data}")
-            #text = self.remove_html(html_body)
-            text = self.get_clean_html(html_body)
-            # logger.success(text)
-            #logger.error(f"This is the message type {message_type}")
             f.write(data.encode())
 
+        data = {"email_id": hashlib.sha3_256(email_message["Message-ID"].encode()).hexdigest(), 
+                "email_id_raw": email_message["Message-ID"],
+                "from_addr" : email_from,
+                "subject": subject,
+                "to_addr": email_to,
+                "content": email_text,
+                "date": datetime.datetime.utcfromtimestamp(epoch),
+                "path": file_path_html,
+                "attachments": False,
+                "message_type": message_type}
+        
+
+        if attachments:
+            data.update({"attachments": True})
+        
+        data.update({"tbl_object": self.email_table})
+        store_email(**data)
+
+
+        data.update({"tbl_object": self.indexed_email_content_tbl})
+        content = data["content"] + data["subject"]
+        data.update({"content": content})
+        
+        store_email_content(**data)
+    
+        data.update({"tbl_object": self.email_attachements_tbl})
+        for attachment_path in attachments:
+            data.update({"path": attachment_path, "attachment_name" :attachment_name.split("/")[-1]})
+            store_email_attachment(**data)
+
+
+        #logger.error(f"{email_from} -- {email_to}")
         if attachments:
             logger.error(f"This is the attachement array {attachments}")
             
@@ -424,7 +424,6 @@ class TakeoutEmails(object):
         return
 
     def ensure_directory(self, sender_dir_name, sender_sub_dir_name):
-
         # sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
         # if not os.path.exists(sender_sub_dir_txt):
         #     logger.info(f"Creating directory TXT messages{sender_sub_dir_txt}")
@@ -439,15 +438,3 @@ class TakeoutEmails(object):
 
         return sender_sub_dir_html
 
-    def prefix_attachment_name(self, filename, email_uid, email_subject, email_from):
-
-        if BankStatements.is_bank_statement(email_subject):
-            prefix = BankStatements.which_bank(email_subject)
-
-        elif CabService.is_cab_service(email_subject):
-            prefix = CabService.which_cab_service(email_from, email_subject)
-
-        else:
-            prefix = "UNKNOWN"
-
-        return f"{prefix}_{email_uid}_{filename}"

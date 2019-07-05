@@ -10,7 +10,7 @@ logger = logging.getLogger(__file__)
 
 
 
-async def store_email(**data):
+def store_email(**data):
     """
     purchases: a list of purchases dict
     """
@@ -21,18 +21,20 @@ async def store_email(**data):
                         subject=data["subject"],
                         content=data["content"],
                         email_id_raw= data["email_id_raw"],
+                        message_type = data["message_type"],
+                        attachments = data["attachments"],
                        date=data["date"], path=data["path"]).execute()
 
-        logger.success(f"success on insert email_id --{data['email_id']}-- email_id_raw --{daya['email_id_raw']}-- \
+        logger.success(f"Success on insert email_id --{data['email_id']}-- email_id_raw --{data['email_id_raw']}-- \
                                     and path --{data['path']}--")
     except Exception as e:
-        logger.success(f"error on insert email_id --{data['email_id']}-- email_id_raw --{data['email_id_raw']}-- \
+        logger.error(f"Error on insert email_id --{data['email_id']}-- email_id_raw --{data['email_id_raw']}-- \
             and path --{data['path']}-- with error {e}")
     return 
 
 
 
-async def store_email_content(**data):
+def store_email_content(**data):
     """
     purchases: a list of purchases dict
     """
@@ -44,12 +46,12 @@ async def store_email_content(**data):
 
         logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
     except Exception as e:
-        logger.success(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
+        logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
     return 
 
 
 
-async def store_email_attachment(**data):
+def store_email_attachment(**data):
     """
     purchases: a list of purchases dict
     """
@@ -63,7 +65,7 @@ async def store_email_attachment(**data):
         logger.success(f"Success on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}")
     except Exception as e:
-        logger.success(f"Error on insert attachement for  email_id --{data['email_id']}--  \
+        logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}\
                                     with error {e}")
 
