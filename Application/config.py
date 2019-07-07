@@ -97,7 +97,7 @@ class Config:
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
     CREDENTIALS_TBL = Credentials
-    DATASOURCES = Datasources
+    DATASOURCES_TBL = Datasources
     EMAILS_TBL = Emails
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images

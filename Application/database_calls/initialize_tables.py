@@ -125,7 +125,7 @@ def intialize_db(path):
         source = peewee.TextField(null=True)
         name = peewee.TextField(null=True)
         message = peewee.TextField(null=True)
-        last_updated = peewee.TextField(null=True)
+        last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
    
 
     class Purchases(BaseModel):
@@ -195,7 +195,7 @@ def intialize_db(path):
 
 
     #use this to delete tables
-    #db.drop_tables([Email, IndexEmailContent, EmailAttachment])
+    ##db.drop_tables([Email, IndexEmailContent, EmailAttachment])
 
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\

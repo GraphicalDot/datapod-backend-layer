@@ -29,6 +29,8 @@ import hashlib
 import datetime
 
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
+from database_calls.db_profile import store_datasource
+
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 
@@ -39,7 +41,7 @@ logger = logging.getLogger(__file__)
 
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
-
+    __source__ = "google"
     def __init__(self, config):
 
         ##to keep track of all the to_addr email ids and their respective frequencies 
@@ -58,6 +60,7 @@ class TakeoutEmails(object):
         # store subject+content+to_addr in this as a content
         self.indexed_email_content_tbl = config.INDEX_EMAIL_CONTENT_TBL
 
+        self.datasources_tbl = config.DATASOURCES_TBL
         # this is a seperate table which will store the attachments of the
         # the email
         self.email_attachements_tbl = config.EMAIL_ATTACHMENT_TBL
@@ -119,6 +122,23 @@ class TakeoutEmails(object):
                 os.makedirs(self.extra_dir)
         logger.info("App intiation been done")
 
+
+    def __update_source_table(self, email_count):
+        """
+        Update data sources table after successful parsing of takeout and emails 
+        """
+        email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
+
+        data = {"tbl_object": self.datasources_tbl,
+                "name": email_id, 
+                "source": self.__source__, "message": f"{email_count} emails"}
+
+
+        store_datasource(**data)
+        return 
+        
+
+
     def download_emails(self):
         """
         Downloding list of emails from the gmail server
@@ -134,7 +154,7 @@ class TakeoutEmails(object):
         #db_instance = create_db_instance(self.db_dir_path)
         #db_instance = None
 
-        i = 0
+        email_count = 0
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
 
@@ -142,13 +162,15 @@ class TakeoutEmails(object):
                 message["To"], message["Subject"], message["Date"], message
             self.save_email(email_from, email_to, subject,
                             local_message_date, email_message)
-            i += 1
-            # if i == 500:
-            #     break
+            email_count += 1
+            if email_count == 100:
+                break
             
-        logger.info(f"\n\nTotal number of emails {i}\n\n")
-        logger.info(f"\n\n {self._to_addr_dict}\n\n")
-
+        logger.info(f"\n\nTotal number of emails {email_count}\n\n")
+        
+        
+        self.__update_source_table(email_count)
+        
        
         return
 
@@ -249,7 +271,7 @@ class TakeoutEmails(object):
 
     def __add_to_addr_address(self, email_address):
         if self._to_addr_dict.get(email_address):
-            self._to_addr_dict.get[email_address] += 1
+            self._to_addr_dict[email_address] += 1
         else:
             self._to_addr_dict[email_address] = 1
         return 
