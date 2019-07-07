@@ -14,6 +14,7 @@ from pprint import pprint
 import base64
 import  database_calls.db_purchases_n_reservations as q_purchase_db
 import  database_calls.db_images as q_images_db
+from   database_calls.db_emails  import match_text as e_match_text
 
 from .images import ParseGoogleImages
 import datetime
@@ -219,3 +220,42 @@ async def takeout_location_history(request):
         'success': True,
         "data": results
         })
+    
+
+@TAKEOUT_BP.get('email/match_text')
+async def match_text_email(request):
+    
+
+
+    if request.args.get("page"):
+        page = request.args.get("page")
+    else:
+        page = 1
+
+
+    if request.args.get("number"):
+        number = request.args.get("number")
+    else:
+        number = 200
+
+    if not request.args.get("match_string"):
+        raise APIBadRequest("get params match_string is required")
+
+    matching_string = request.args.get("match_string") 
+
+
+    logging.info(request.args)
+    logging.info(f"This is the matching string {matching_string}")
+
+
+    res = e_match_text(request.app.config.EMAILS_TBL, request.app.config.INDEX_EMAIL_CONTENT_TBL, \
+            matching_string , page, number)
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": res
+        })
+    
+

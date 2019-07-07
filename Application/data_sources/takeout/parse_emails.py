@@ -145,39 +145,7 @@ class TakeoutEmails(object):
             
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
-        # ########### logs update for gmail #######
-        # stored_value = get_key("logs", db_instance)
-
-        # value = [{"date": timezone_timestamp(),
-        #         "status": "success",
-        #         "message": "Gmail takeout has been parsed successfully"}]
-
-        # if stored_value:
-        #     value = value+stored_value
-
-        # logger.info(f"value stored against logs is {value}")
-        # insert_key("logs", value, db_instance)
-
-        # ########### services update for gmail #######
-        # value = [{"time": timezone_timestamp(),
-        #     "service": "gmail",
-        #     "message": f"{i} emails present"}]
-
-        # stored_value = get_key("services", db_instance)
-        # logger.info("Stored value against services %s"%stored_value)
-
-        # if stored_value:
-
-        #     for entry in stored_value:
-        #         if entry.get("service") == "gmail":
-        #             break
-        #     stored_value.remove(entry)
-        #     stored_value.extend(value)
-        # else:
-        #     stored_value = value
-
-        # insert_key("services", stored_value, db_instance)
-        # close_db_instance(db_instance)
+       
         return
 
     def extract_email_from(self, message_from):
@@ -263,7 +231,7 @@ class TakeoutEmails(object):
                 logger.error(f"While encoding unicode_Escape {err}")
                 return "The bytes couldnt be decoded"
 
-    def format_filename(self, filename):
+    def __format_filename(self, filename):
         return re.sub('[^\w\-_\. ]', '_', filename).replace(" ", "")
 
     def __message_id(self, email_message):
@@ -330,7 +298,7 @@ class TakeoutEmails(object):
 
 
                         attachment_name = part.get_filename()
-                        attachment_name=self.format_filename(attachment_name)
+                        attachment_name=self.__format_filename(attachment_name)
 
                         if ctype.startswith("image"):
 
@@ -357,12 +325,7 @@ class TakeoutEmails(object):
                                 f.write(part.get_payload(decode=True))
                             attachments.append(extra_path)
                             
-                                # data = {"path": extra_path, "email_html": file_path_html, "email_text": file_path_text}
-                                # ins = StoreInChunks("gmail",  data, db_instance, "gmail_extra")
-                                # ins.insert()
-                        #logger.info(f"Attachment with name {attachment_name} and content_type {ctype} found")
-
-                        #attachments += f"{attachment_name}\n"
+             
                         logger.info(
                             f"Ctype is {ctype} and attachment name is {attachment_name}")
 
@@ -370,9 +333,6 @@ class TakeoutEmails(object):
                         logger.error(
                             f"Mostly junk MIME type {ctype} without a file_name")
 
-            # if DEBUG:
-            #     # not multipart - i.e. plain text, no attachments, keeping fingers crossed
-            #     pprint(body)
 
         else:
             # when the email is just plain text

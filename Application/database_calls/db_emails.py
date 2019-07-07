@@ -32,7 +32,6 @@ def store_email(**data):
     return 
 
 
-
 def store_email_content(**data):
     """
     purchases: a list of purchases dict
@@ -74,27 +73,33 @@ def store_email_attachment(**data):
     return 
 
 
-def filter_date(tbl_object, page, number,  time=None):
+def match_text(email_tbl_object, index_email_obj, matching_string, page, number,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
-  
-    if time:
-        if type(time) != datetime.datetime:
-            raise APIBadRequest("Datetime format is wrong")
-        return tbl_object\
-                .select()\
-                .where(tbl_object.creation_time == time)\
-                .order_by(-tbl_object.time)\
-                .paginate(page, number)\
-                .dicts()
-    else:
-        return tbl_object\
-                .select()\
-                .order_by(-tbl_object.creation_time)\
-                .paginate(page, number)\
-                .dicts()
+    query = (email_tbl_object
+                .select()
+                .join(index_email_obj, on=(email_tbl_object.email_id == index_email_obj.email_id))
+                .where(index_email_obj.match(matching_string))
+                .dicts())
+    return list(query)
+
+        # if time:
+        #     if type(time) != datetime.datetime:
+        #         raise APIBadRequest("Datetime format is wrong")
+        #     return tbl_object\
+        #             .select()\
+        #             .where(tbl_object.creation_time == time)\
+        #             .order_by(-tbl_object.time)\
+        #             .paginate(page, number)\
+        #             .dicts()
+        # else:
+        #     return tbl_object\
+        #             .select()\
+        #             .order_by(-tbl_object.creation_time)\
+        #             .paginate(page, number)\
+        #             .dicts()
 
 
