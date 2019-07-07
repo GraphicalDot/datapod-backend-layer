@@ -41,7 +41,11 @@ class ApiException(SanicException):
             self.message = message
 
 
-
+class DuplicateEntryError(Exception):
+    def __init__(self, unique_key, table_name):
+        self.msg = f"Duplicate key present --{unique_key}-- in table --{table_name}--"
+    def __str__(self):
+        return repr(self.msg)
 
 
 ##Errors related to Account creation

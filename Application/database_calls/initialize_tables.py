@@ -193,6 +193,8 @@ def intialize_db(path):
     for person in CryptoCreds.select().dicts():
         print(person)
 
+
+    #use this to delete tables
     #db.drop_tables([Email, IndexEmailContent, EmailAttachment])
 
 

@@ -2,7 +2,8 @@
 
 import json
 import datetime
-from errors_module.errors import APIBadRequest
+from peewee import IntegrityError
+from errors_module.errors import APIBadRequest, DuplicateEntryError
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -25,11 +26,9 @@ def store_email(**data):
                         attachments = data["attachments"],
                        date=data["date"], path=data["path"]).execute()
 
-        logger.success(f"Success on insert email_id --{data['email_id']}-- email_id_raw --{data['email_id_raw']}-- \
-                                    and path --{data['path']}--")
-    except Exception as e:
-        logger.error(f"Error on insert email_id --{data['email_id']}-- email_id_raw --{data['email_id_raw']}-- \
-            and path --{data['path']}-- with error {e}")
+        logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+    except IntegrityError:
+        raise DuplicateEntryError(data['email_id'], "Email")
     return 
 
 
@@ -45,7 +44,9 @@ def store_email_content(**data):
                         content=data["content"]).execute()
 
         logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
-    except Exception as e:
+
+
+    except IntegrityError as e:
         logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
     return 
 
@@ -64,7 +65,8 @@ def store_email_attachment(**data):
 
         logger.success(f"Success on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}")
-    except Exception as e:
+
+    except IntegrityError as e:
         logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}\
                                     with error {e}")

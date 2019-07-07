@@ -7,6 +7,7 @@ import sys
 import os
 from geopy.geocoders import Nominatim
 from utils.utils import timezone_timestamp, month_aware_time_stamp
+from errors_module.errors import APIBadRequest, DuplicateEntryError
 import concurrent
 import asyncio
 import pytz
@@ -139,8 +140,9 @@ class TakeoutEmails(object):
             self.save_email(email_from, email_to, subject,
                             local_message_date, email_message)
             i += 1
-            if i == 50:
-                break
+            # if i == 500:
+            #     break
+            
         logger.info(f"\n\nTotal number of emails {i}\n\n")
 
         # ########### logs update for gmail #######
@@ -224,25 +226,31 @@ class TakeoutEmails(object):
             raise Exception("you're passing something that's not an etree")
 
     def get_clean_html(self, html_text, text_only=True):
-        etree = lxml.html.document_fromstring(html_text)
+        try:
+            etree = lxml.html.document_fromstring(html_text)
 
-        self._is_etree(etree)
-        # enable filters to remove Javascript and CSS from HTML document
-        cleaner = Cleaner()
-        cleaner.javascript = True
-        cleaner.style = True
-        cleaner.html = True
-        cleaner.page_structure = False
-        cleaner.meta = False
-        cleaner.safe_attrs_only = False
-        cleaner.links = False
+            self._is_etree(etree)
+            # enable filters to remove Javascript and CSS from HTML document
+            cleaner = Cleaner()
+            cleaner.javascript = True
+            cleaner.style = True
+            cleaner.html = True
+            cleaner.page_structure = False
+            cleaner.meta = False
+            cleaner.safe_attrs_only = False
+            cleaner.links = False
 
-        html = cleaner.clean_html(etree)
-        if text_only:
-            return ' '.join(html.text_content().split())
-            # return html.text_content()
+            html = cleaner.clean_html(etree)
+            if text_only:
+                return ' '.join(html.text_content().split())
+                # return html.text_content()
 
-        return lxml.html.tostring(html)
+            res = lxml.html.tostring(html)
+        except Exception as e:
+            logger.error(f"While parsing email in get_clean_html {e}")
+            res = "junk"
+
+        return res 
 
     def handle_encoding(self, data):
         try:
@@ -258,13 +266,20 @@ class TakeoutEmails(object):
     def format_filename(self, filename):
         return re.sub('[^\w\-_\. ]', '_', filename).replace(" ", "")
 
+    def __message_id(self, email_message):
+        try:
+            raw_id = email_message["Message-ID"].encode()
+            message_id = hashlib.sha3_256(raw_id).hexdigest()
+        except:
+            message_id = os.urandom(32).hex()
+            raw_id = "junk"
+        return raw_id, message_id
+
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
 
         message_type = email_message.get("X-Gmail-Labels")
 
-        if message_type not in ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
-            message_type = "Inbox"
-
+        
         sender_dir_name, sender_sub_dir_name = self.extract_email_from(
             email_from)
         self.ensure_directory(sender_dir_name, sender_sub_dir_name)
@@ -315,8 +330,10 @@ class TakeoutEmails(object):
 
 
                         attachment_name = part.get_filename()
+                        attachment_name=self.format_filename(attachment_name)
 
                         if ctype.startswith("image"):
+
                             image_path = os.path.join(
                                 self.image_dir_temp, attachment_name)
                             with open(image_path, "wb") as f:
@@ -324,7 +341,6 @@ class TakeoutEmails(object):
                             attachments.append(image_path)
                             
                         elif ctype == "application/pdf" or ctype == "application/octet-stream":
-
                             pdf_path = os.path.join(
                                 self.pdf_dir, attachment_name)
                             with open(pdf_path, "wb") as f:
@@ -385,8 +401,10 @@ class TakeoutEmails(object):
             data = f"From: {email_from}{nl}To: {email_to}{nl}Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
             f.write(data.encode())
 
-        data = {"email_id": hashlib.sha3_256(email_message["Message-ID"].encode()).hexdigest(), 
-                "email_id_raw": email_message["Message-ID"],
+        raw_id, message_id = self.__message_id(email_message)
+
+        data = {"email_id": message_id, 
+                "email_id_raw": raw_id,
                 "from_addr" : email_from,
                 "subject": subject,
                 "to_addr": email_to,
@@ -399,22 +417,29 @@ class TakeoutEmails(object):
 
         if attachments:
             data.update({"attachments": True})
+
+        self.store(attachments, data)
+        # try:
+        #     data.update({"tbl_object": self.email_table})
+        #     store_email(**data)
+        #     data.update({"tbl_object": self.indexed_email_content_tbl})
+        #     content = data["content"] + data["subject"]
+        #     data.update({"content": content})
+            
+        #     store_email_content(**data)
         
-        data.update({"tbl_object": self.email_table})
-        store_email(**data)
+        #     data.update({"tbl_object": self.email_attachements_tbl})
+        #     for attachment_path in attachments:
+        #         data.update({"path": attachment_path, "attachment_name" :attachment_name.split("/")[-1]})
+        #         store_email_attachment(**data)
 
-
-        data.update({"tbl_object": self.indexed_email_content_tbl})
-        content = data["content"] + data["subject"]
-        data.update({"content": content})
         
-        store_email_content(**data)
-    
-        data.update({"tbl_object": self.email_attachements_tbl})
-        for attachment_path in attachments:
-            data.update({"path": attachment_path, "attachment_name" :attachment_name.split("/")[-1]})
-            store_email_attachment(**data)
+        
+        # except DuplicateEntryError as e:
+        #     logger.error(e)
 
+
+        
 
         #logger.error(f"{email_from} -- {email_to}")
         if attachments:
@@ -422,6 +447,28 @@ class TakeoutEmails(object):
             
 
         return
+
+    def store(self, attachments, data):
+        try:
+            data.update({"tbl_object": self.email_table})
+            store_email(**data)
+            data.update({"tbl_object": self.indexed_email_content_tbl})
+            content = data["content"] + data["subject"]
+            data.update({"content": content})
+            
+            store_email_content(**data)
+        
+            data.update({"tbl_object": self.email_attachements_tbl})
+            for attachment_path in attachments:
+                data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})
+                store_email_attachment(**data)
+
+        
+        
+        except DuplicateEntryError as e:
+            logger.error(e)
+        return 
+
 
     def ensure_directory(self, sender_dir_name, sender_sub_dir_name):
         # sender_sub_dir_txt = os.path.join(f"{self.email_dir_txt}/{sender_dir_name}", sender_sub_dir_name)
