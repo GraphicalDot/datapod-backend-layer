@@ -41,6 +41,9 @@ class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
 
     def __init__(self, config):
+
+        ##to keep track of all the to_addr email ids and their respective frequencies 
+        self._to_addr_dict = {}
         # self.db_dir_path = db_dir_path
         self.email_dir = os.path.join(
             config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
@@ -144,6 +147,7 @@ class TakeoutEmails(object):
             #     break
             
         logger.info(f"\n\nTotal number of emails {i}\n\n")
+        logger.info(f"\n\n {self._to_addr_dict}\n\n")
 
        
         return
@@ -243,7 +247,16 @@ class TakeoutEmails(object):
             raw_id = "junk"
         return raw_id, message_id
 
+    def __add_to_addr_address(self, email_address):
+        if self._to_addr_dict.get(email_address):
+            self._to_addr_dict.get[email_address] += 1
+        else:
+            self._to_addr_dict[email_address] = 1
+        return 
+
     def save_email(self, email_from, email_to, subject, local_message_date, email_message):
+
+        self.__add_to_addr_address(email_to)
 
         message_type = email_message.get("X-Gmail-Labels")
 
@@ -410,6 +423,9 @@ class TakeoutEmails(object):
 
     def store(self, attachments, data):
         try:
+            if attachments:
+                data.update({"attachments": True})
+                
             data.update({"tbl_object": self.email_table})
             store_email(**data)
             data.update({"tbl_object": self.indexed_email_content_tbl})
