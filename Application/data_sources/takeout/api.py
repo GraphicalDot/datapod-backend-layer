@@ -23,21 +23,25 @@ TAKEOUT_BP = Blueprint("", url_prefix="/takeout/")
 
 
 
-async def periodic(config):
+async def parse_takeout(config):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
 
-    instance = TakeoutEmails(config)
-    instance.download_emails()
+    instance = await TakeoutEmails(config)
+    # instance.download_emails()
 
-
+    await asyncio.gather(*[instance.download_emails(), 
+                purchase_n_reservations(config),
+                parse_images(config)])
 
     logger.info('Periodic task has finished execution')
+
+    
     return 
 
 @TAKEOUT_BP.post('parse')
-async def parse(request):
+async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
@@ -45,10 +49,18 @@ async def parse(request):
 
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
+
+    logger.info("Copying and extracting takeout data")
     shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
         
-    request.app.add_task(periodic(request.app.config))
+    request.app.add_task(parse_takeout(request.app.config))
+    # request.app.add_task(purchase_n_reservations(request.app.config))
+    # asyncio.ensure_future(parse_emails(request.app.config))
+    # asyncio.ensure_future(purchase_n_reservations(request.app.config))
+    
+    
+
     return response.json(
         {
         'error': False,
@@ -59,31 +71,32 @@ async def parse(request):
 
 @TAKEOUT_BP.get('purchase_n_reservations')
 @check_production()
-async def purchase_n_reservations(request):
+async def purchase_n_reservations_api(request):
     """
     To get all the assets created by the requester
     """
-    
-    path = os.path.join(request.app.config.RAW_DATA_PATH, "Takeout")
-    
-    if not os.path.exists(path):
-        raise Exception(f"Path {path} doesnt exists")
-    
-    
-    ins = await PurchaseReservations(path, request.app.config)
-    reservations, purchases = await ins.parse()
-    
-    for purchase in purchases:
-        #print (purchase)
-        q_purchase_db.store_purchase(request.app.config.PURCHASES_TBL, purchase)
-
-
+    await purchase_n_reservations(request.app.config)
     return response.json(
         {
         'error': False,
         'success': True,
         "data": "Successful"
         })
+
+
+async def purchase_n_reservations(config):
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+
+    ins = await PurchaseReservations(path, config)
+    reservations, purchases = await ins.parse()
+    
+    for purchase in purchases:
+        #print (purchase)
+        q_purchase_db.store_purchase(config.PURCHASES_TBL, purchase)
+    
+    for reservation in reservations:
+        logger.info(reservation)
+    return 
 
 
 
@@ -169,31 +182,33 @@ async def images_filter(request):
 
 @TAKEOUT_BP.get('images')
 @check_production()
-async def images(request):
+async def parse_images_api(request):
     """
     To get all the assets created by the requester
     """
     
-    path = os.path.join(request.app.config.RAW_DATA_PATH, "Takeout")
-    
-    if not os.path.exists(path):
-        raise Exception(f"Path {path} doesnt exists")
-    
-    
-    ins = await ParseGoogleImages(path, request.app.config)
-    await ins.parse()
-    images_data = ins.images_data
-
-    for image_data in images_data:
-        image_data.update({"tbl_object": request.app.config.IMAGES_TBL}) 
-    
-    await asyncio.gather(*[q_images_db.store(**image_data) for image_data in images_data])
+    await prase_images(request.app.config)
     return response.json(
         {
         'error': False,
         'success': True,
         "data": "Successful"
         })
+
+async def parse_images(config):
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+
+    ins = await ParseGoogleImages(path, config)
+    await ins.parse()
+    images_data = ins.images_data
+
+    for image_data in images_data:
+        image_data.update({"tbl_object": config.IMAGES_TBL}) 
+    
+    await asyncio.gather(*[q_images_db.store(**image_data) for image_data in images_data])
+    return 
+
+
 
 @TAKEOUT_BP.get('location_history')
 @check_production()

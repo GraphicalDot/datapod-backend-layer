@@ -5,11 +5,8 @@ import coloredlogs
 from lxml.html.clean import Cleaner
 import sys
 import os
-from geopy.geocoders import Nominatim
 from utils.utils import timezone_timestamp, month_aware_time_stamp
 from errors_module.errors import APIBadRequest, DuplicateEntryError
-import concurrent
-import asyncio
 import pytz
 from asyncinit import asyncinit
 import time
@@ -24,7 +21,6 @@ import mailbox
 import imaplib
 import email
 import datetime
-from pprint import pprint
 import hashlib
 import datetime
 
@@ -39,10 +35,12 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
+@asyncinit
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
     __source__ = "google"
-    def __init__(self, config):
+    
+    async def __init__(self, config):
 
         ##to keep track of all the to_addr email ids and their respective frequencies 
         self._to_addr_dict = {}
@@ -139,7 +137,7 @@ class TakeoutEmails(object):
         
 
 
-    def download_emails(self):
+    async def download_emails(self):
         """
         Downloding list of emails from the gmail server
         for message in self.email_mbox: 
@@ -160,10 +158,10 @@ class TakeoutEmails(object):
 
             email_from, email_to, subject, local_message_date, email_message = message["From"], \
                 message["To"], message["Subject"], message["Date"], message
-            self.save_email(email_from, email_to, subject,
+            await self.save_email(email_from, email_to, subject,
                             local_message_date, email_message)
             email_count += 1
-            if email_count == 100:
+            if email_count == 5000:
                 break
             
         logger.info(f"\n\nTotal number of emails {email_count}\n\n")
@@ -276,7 +274,7 @@ class TakeoutEmails(object):
             self._to_addr_dict[email_address] = 1
         return 
 
-    def save_email(self, email_from, email_to, subject, local_message_date, email_message):
+    async def save_email(self, email_from, email_to, subject, local_message_date, email_message):
 
         self.__add_to_addr_address(email_to)
 
