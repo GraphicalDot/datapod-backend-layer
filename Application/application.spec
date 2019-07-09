@@ -1,16 +1,17 @@
-# -*- mode: python -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
+
 import distutils
 if distutils.distutils_path.endswith('__init__.py'):
     distutils.distutils_path = os.path.dirname(distutils.distutils_path)
-
+    
 a = Analysis(['application.py'],
              pathex=['/Users/kaali/Programs/datapod-backend-layer/Application'],
              binaries=[],
              datas=[],
-             hiddenimports=[],
-             hookspath=[],
+             hiddenimports=['_striptime'],
+             hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
@@ -30,5 +31,10 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
+          upx_exclude=[],
           runtime_tmpdir=None,
-          console=True )
+          console=False )
+app = BUNDLE(exe,
+             name='application.app',
+             icon=None,
+             bundle_identifier=None)

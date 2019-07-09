@@ -1,0 +1,6 @@
+setup.py
+Datapod.egg-info/PKG-INFO
+Datapod.egg-info/SOURCES.txt
+Datapod.egg-info/dependency_links.txt
+Datapod.egg-info/entry_points.txt
+Datapod.egg-info/top_level.txt
