@@ -107,7 +107,7 @@ class Config:
     INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
+    DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     
@@ -138,6 +138,7 @@ class DevelopmentConfig(Config):
     HOST = "localhost"
     PORT = 8000
     DEBUG = True
+    TESTING_MODE= True ##this mode decides whther it is in Testing stage or not, for production make it False
     VALIDATE_FIELDS = validate_fields
 
 config_object = DevelopmentConfig

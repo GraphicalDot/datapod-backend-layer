@@ -4,6 +4,9 @@
 import pytz
 import datetime
 import os
+from functools import wraps
+from errors_module.errors import APIBadRequest
+
 
 def timezone_timestamp(naive_timestamp, timezone):
     tz_kolkata = pytz.timezone(timezone)
@@ -35,3 +38,23 @@ def folder_size(path='.'):
         elif entry.is_dir(): 
             total += folder_size(entry.path) 
     return total 
+
+
+##This decorator checks whether the app is running in testing or production stage
+##This decorator will be used to ban the usage of some apis in production phase
+def check_production():
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            # run some method that checks the request
+            # for the client's authorization status
+            #is_authorized = check_request_for_authorization_status(request)
+
+            if not request.app.config.TESTING_MODE:
+                raise APIBadRequest("This API cant be executed in Production environment")
+            response = await f(request, *args, **kwargs)
+            return response
+          
+        return decorated_function
+    return decorator
+

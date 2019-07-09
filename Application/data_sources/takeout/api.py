@@ -1,21 +1,17 @@
 import shutil
 import asyncio
-import aiohttp
 from sanic import Blueprint
-from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
 from .parse_emails import TakeoutEmails
 from .location import  LocationHistory
 from .purchases_n_reservations import PurchaseReservations
-from sanic.exceptions import SanicException
-from pprint import pprint
 import base64
 import  database_calls.db_purchases_n_reservations as q_purchase_db
 import  database_calls.db_images as q_images_db
 from   database_calls.db_emails  import match_text as e_match_text
-
+from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
 import coloredlogs, verboselogs, logging
@@ -45,11 +41,11 @@ async def parse(request):
     """
     To get all the assets created by the requester
     """
-    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
-    # if not os.path.exists(request.json["path"]):
-    #     raise APIBadRequest("This path doesnt exists")
-    # shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    if not os.path.exists(request.json["path"]):
+        raise APIBadRequest("This path doesnt exists")
+    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
         
     request.app.add_task(periodic(request.app.config))
@@ -62,7 +58,8 @@ async def parse(request):
 
 
 @TAKEOUT_BP.get('purchase_n_reservations')
-async def gmail_takeout(request):
+@check_production()
+async def purchase_n_reservations(request):
     """
     To get all the assets created by the requester
     """
@@ -97,26 +94,29 @@ async def purchase_n_reservation_filter(request):
     NUmber is the number of items on the page 
     """
     #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-    
-    args = RequestParameters()
 
-    logger.info(f"These are the args {args}")
+    if request.args.get("page"):
+        try:
+            page = int(request.args.get("page"))
+        except:
+            raise APIBadRequest("Invalid page type")
 
-    if args.get("page"):
-        page = request.json.get("page")
     else:
         page = 1
 
 
-    if args.get("number"):
-        number = request.json.get("number")
+    if request.args.get("number"):
+        try:
+            number = int(request.args.get("number"))
+        except:
+            raise APIBadRequest("Invalid Number type")
     else:
-        number = 200
+        number = request.app.config.DEFAULT_ITEMS_NUMBER
 
 
     result =  [q_purchase_db.format(request.app.config, purchase) for purchase in \
                 q_purchase_db.filter_merchant_name(request.app.config.PURCHASES_TBL, 
-                page, number,  args.get("merchant_name"))] 
+                page, number,  request.args.get("merchant_name"))] 
 
     return response.json(
         {
@@ -131,24 +131,19 @@ async def purchase_n_reservation_filter(request):
 
 
 @TAKEOUT_BP.get('images/filter')
-async def filter_images(request):
+async def images_filter(request):
     """
     To get all the assets created by the requester
     """
     #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-    
-    args = RequestParameters()
-
-    logger.info(f"These are the args {args}")
-
-    if args.get("page"):
-        page = request.json.get("page")
+    if request.args.get("page"):
+        page = request.args.get("page")
     else:
         page = 1
 
 
-    if args.get("number"):
-        number = request.json.get("number")
+    if request.args.get("number"):
+        number = request.args.get("number")
     else:
         number = 200
 
@@ -173,6 +168,7 @@ async def filter_images(request):
 
 
 @TAKEOUT_BP.get('images')
+@check_production()
 async def images(request):
     """
     To get all the assets created by the requester
@@ -200,6 +196,7 @@ async def images(request):
         })
 
 @TAKEOUT_BP.get('location_history')
+@check_production()
 async def takeout_location_history(request):
     """
     To get all the assets created by the requester
