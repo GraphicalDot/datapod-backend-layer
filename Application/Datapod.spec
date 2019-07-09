@@ -1,17 +1,13 @@
-# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python -*-
 
 block_cipher = None
 
-import distutils
-if distutils.distutils_path.endswith('__init__.py'):
-    distutils.distutils_path = os.path.dirname(distutils.distutils_path)
-    
 
 a = Analysis(['application.py'],
-             pathex=['/Users/kaali/Programs/datapod-backend-layer/Application'],
+             pathex=['/home/feynman/Programs/datapod-backend-layer/Application'],
              binaries=[],
              datas=[],
-             hiddenimports=['_striptime'],
+             hiddenimports=['_strptime'],
              hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],
              excludes=[],
@@ -27,11 +23,10 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='Datapod.linux',
+          name='Datapod',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          upx_exclude=[],
           runtime_tmpdir=None,
-          console=True )
+          console=True , icon='datapod.ico')

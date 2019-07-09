@@ -19,12 +19,17 @@ PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
 RAW_DATA_PATH = os.path.join(USERDATA_PATH, "raw")
 
 
-
-##Intializing database and intialize the table object of the sqlite db
-
 DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
+
+for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH, DB_PATH, BACKUP_PATH]:
+    if not os.path.exists(path):
+        logger.warning(f"Creating {path} Directory")
+        os.makedirs(path)
+
+##Intializing database and intialize the table object of the sqlite db
+
 
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
     Datasources, EmailAttachment,IndexEmailContent    = intialize_db(os.path.join(DB_PATH, "database.db"))
@@ -50,17 +55,12 @@ def validate_fields(required_fields, request_json):
     except (ValueError, AttributeError):
         raise Exception("Improper JSON format")
 
-for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH, DB_PATH, BACKUP_PATH]:
-    if not os.path.exists(path):
-        logging.warning(f"Creating {path} Directory")
-        os.makedirs(path)
 
-key = generate_aes_key(32)
 
-if not os.path.exists(f"{KEYS_DIR}/encryption.key"):
-    logging.warning("Generating new key for encryption")
-    with open(f"{KEYS_DIR}/encryption.key", "wb") as fileobj:
-        fileobj.write(key)
+# if not os.path.exists(f"{KEYS_DIR}/encryption.key"):
+#     logging.warning("Generating new key for encryption")
+#     with open(f"{KEYS_DIR}/encryption.key", "wb") as fileobj:
+#         fileobj.write(key)
 
 class Config:
     MAIN_DIR = MAIN_DIR
