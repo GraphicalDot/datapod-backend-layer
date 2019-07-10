@@ -52,3 +52,29 @@ success:
 
 ```
 
+Confirm validation code Forgot password
+
+```
+error:
+	{'message': 'Password you have entered is incorrect',
+	'error': True,
+	'success': False}
+
+error:
+
+	{'message': 'Invalid Verification code', 'error': True, 'success': False}
+
+error:
+	{'message': 'Uknown error An error occurred (ExpiredCodeException) when calling the ConfirmForgotPassword operation: Invalid code provided, please request a code again. ',
+	'error': True,
+	'success': False,
+	'Data': None}
+
+
+
+success:
+	{'message': 'Password has been updated successfully',
+	'error': True,
+	'success': False,
+	'Data': None}
+```
