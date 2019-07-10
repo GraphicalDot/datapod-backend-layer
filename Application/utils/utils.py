@@ -20,6 +20,11 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__name__)
 
+def convert_type(value):
+    if isinstance(value, bytes):
+        logging.info(f"{value} is in bytes")
+        value = value.decode()
+    return value
 
 
 def revoke_time_stamp(days=0, hours=0, minutes=0, timezone=None): 
@@ -105,9 +110,9 @@ def id_token_validity():
 
 
             try:
-                id_token = result["id_token"].decode()
-                access_token = result["access_token"].decode()
-                refresh_token = result["refresh_token"].decode()
+                id_token = convert_type(result["id_token"])
+                access_token = convert_type(result["access_token"])
+                refresh_token = convert_type(result["refresh_token"])
                 username = result["username"]
                 request["user_data"] = result
             except Exception as e:
@@ -132,7 +137,7 @@ def id_token_validity():
             if isinstance(id_token, bytes):
                 id_token = id_token.decode()
 
-            response = await f(request, id_token, access_token,  username, *args, **kwargs)
+            response = await f(request, *args, **kwargs)
             return response
           
         return decorated_function

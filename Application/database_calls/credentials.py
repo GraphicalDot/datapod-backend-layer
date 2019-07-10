@@ -7,6 +7,7 @@ logger = logging.getLogger(__file__)
 
 def convert_type(value):
     if isinstance(value, bytes):
+        logging.error(f"{value} is in bytes")
         value = value.decode()
     return value
 
@@ -57,11 +58,28 @@ def update_mnemonic(credentials_tbl_obj, username, mnemonic, salt):
         logger.error(f"Couldnt update mnemonic for credentials_tbl because of {e}")
     return 
 
+def update_password_hash(credentials_tbl_obj, username, password_hash):
+    try:
+        credentials_tbl_obj.update(
+            password_hash=convert_type(password_hash)).\
+        where(credentials_tbl_obj.username==username).\
+        execute()
+
+        logger.success(f"Password hash has been updated in the dataabse {username}")
+    except Exception as e:
+        logger.success(f"Password hash cant be updated in the dataabse because of error {e}")
+
+    return 
+
+
 
 def get_credentials(credentials_tbl_obj):
     try:
         for person in credentials_tbl_obj.select().dicts():
-            return person
+            for key, value in person.items():
+                if isinstance(value, bytes):
+                    person.update({key: value.decode()})
+            return  person
     except Exception as e:
         logging.error(f"Couldnt fetch credentials data  {e}")
     return 

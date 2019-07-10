@@ -8,7 +8,8 @@ from errors_module.errors import APIBadRequest
 
 from .users_helpers import encrypt_mnemonic, decrypt_mnemonic
 from database_calls.credentials import store_credentials, get_credentials,\
-            update_mnemonic
+            update_mnemonic, update_password_hash
+
 
 
 from utils.utils import id_token_validity, username
@@ -76,12 +77,14 @@ async def login(request):
         {
         'error': False,
         'success': True,
-        "message": None,
-        "data": {
-            "id_token": result["data"]["id_token"],
-            "refresh_token": result["data"]["refresh_token"],
-            "access_token": result["data"]["access_token"]
-        }})
+        "message": "Logged in successfully",
+        "data": None, 
+        # {
+        #     "id_token": result["data"]["id_token"],
+        #     "refresh_token": result["data"]["refresh_token"],
+        #     "access_token": result["data"]["access_token"]
+        # }
+        })
 
 
 
@@ -166,22 +169,30 @@ async def confirm_signup(request):
 
 @USERS_BP.post('/change_password')
 @id_token_validity()
-async def change_password(request, id_token, access_token, username):
+async def change_password(request):
     request.app.config.VALIDATE_FIELDS(["previous_password", "proposed_password"], request.json)
+    
+    ##check if the password matches with the password stored in the database
+    password_hash = hashlib.sha3_256(request.json["previous_password"].encode()).hexdigest()
+    
+    if password_hash != request["user_data"]["password_hash"]:
+        raise APIBadRequest("Password you have enetered is incorrect")
 
     r = requests.post(request.app.config.CHANGE_PASSWORD, 
             data=json.dumps({"previous_password": request.json["previous_password"],
                 "proposed_password": request.json["proposed_password"],
-                "access_token": access_token
+                "access_token": request["user_data"]["access_token"]
             }))
-    logger.info(r.text)
+
     result = r.json()
-    logger.info(result)
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
     
 
+    update_password_hash(request.app.config.CREDENTIALS_TBL, 
+            request["user_data"]["username"], password_hash)
+    
     return response.json(
         {
         'error': False,
@@ -192,10 +203,11 @@ async def change_password(request, id_token, access_token, username):
 
 @USERS_BP.get('/forgot_password')
 @username()
-async def forgot_password(request, username):
+async def forgot_password(request):
     logger.info(f"API for forgot password {request.app.config.FORGOT_PASS}")
-    r = requests.post(request.app.config.FORGOT_PASS, data=json.dumps({"username": username}))
-    logger.info(r.text)
+    r = requests.post(request.app.config.FORGOT_PASS, 
+            data=json.dumps({"username": request["userdata"]["username"]}))
+
     result = r.json()
     logger.info(result)
     if result.get("error"):

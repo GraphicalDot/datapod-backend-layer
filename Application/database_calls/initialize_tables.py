@@ -60,7 +60,7 @@ def intialize_db(path):
         success = peewee.BooleanField()
 
     class Credentials(BaseModel):
-
+        ##blocfileds will be stored in bytes
         username = peewee.CharField(unique=True)
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
