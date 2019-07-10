@@ -101,7 +101,7 @@ def id_token_validity():
             #is_authorized = check_request_for_authorization_status(request)
 
             result = get_credentials(request.app.config.CREDENTIALS_TBL)
-            logger.info(f"Data from the credential table in id_token_validity decorator {result}")
+            #logger.info(f"Data from the credential table in id_token_validity decorator {result}")
             if not result:
                 logger.error("Credentials aren't present, Please Login again")
                 raise APIBadRequest("Credentials aren't present, Please Login again")

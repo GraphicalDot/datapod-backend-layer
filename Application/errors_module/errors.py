@@ -94,7 +94,8 @@ def api_json_error(request, exception):
     return json({
         'message': exception.message,
         'error': True,
-        'success': False
+        'success': False,
+        'Data': None
     }, status=exception.status_code)
 
 

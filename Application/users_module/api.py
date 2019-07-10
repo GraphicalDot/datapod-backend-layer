@@ -175,6 +175,11 @@ async def change_password(request):
     ##check if the password matches with the password stored in the database
     password_hash = hashlib.sha3_256(request.json["previous_password"].encode()).hexdigest()
     
+    if request.json["previous_password"] == request.json["proposed_password"]:
+        raise APIBadRequest("Password should be different")
+
+
+
     if password_hash != request["user_data"]["password_hash"]:
         raise APIBadRequest("Password you have enetered is incorrect")
 
@@ -190,8 +195,12 @@ async def change_password(request):
         raise APIBadRequest(result["message"])
     
 
+    ##since the password has been updated on the remote db, 
+    ##this password should also be updated in the localdatabase too
+    new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
+
     update_password_hash(request.app.config.CREDENTIALS_TBL, 
-            request["user_data"]["username"], password_hash)
+            request["user_data"]["username"], new_password_hash)
     
     return response.json(
         {
@@ -202,11 +211,11 @@ async def change_password(request):
         }) 
 
 @USERS_BP.get('/forgot_password')
-@username()
+@id_token_validity()
 async def forgot_password(request):
     logger.info(f"API for forgot password {request.app.config.FORGOT_PASS}")
     r = requests.post(request.app.config.FORGOT_PASS, 
-            data=json.dumps({"username": request["userdata"]["username"]}))
+            data=json.dumps({"username": request["user_data"]["username"]}))
 
     result = r.json()
     logger.info(result)
@@ -219,35 +228,51 @@ async def forgot_password(request):
         {
         'error': False,
         'success': True,
-        "message": None,
-        "data": result["message"]
+        "message": result["message"],
+        "data": None
         }) 
 
 
-@USERS_BP.get('/new_password')
-@username()
+@USERS_BP.post('/confirm_forgot_password')
+@id_token_validity()
 async def set_new_password(request):
-    request.app.config.VALIDATE_FIELDS(["new_password", "validation_code"], request.json)
+    request.app.config.VALIDATE_FIELDS(["proposed_password", "previous_password", "validation_code"], request.json)
+
+    ##check if the password matches with the password stored in the database
+    password_hash = hashlib.sha3_256(request.json["previous_password"].encode()).hexdigest()
+    
+
+    if request.json["previous_password"] == request.json["proposed_password"]:
+        raise APIBadRequest("Password should be different")
+
+    if password_hash != request["user_data"]["password_hash"]:
+        raise APIBadRequest("Password you have enetered is incorrect")
 
     r = requests.post(request.app.config.CONFIRM_FORGOT_PASS, data=json.dumps({
-                "username": request.json["username"], 
-                "password": request.json["new_password"], 
+                "username": request["user_data"]["username"], 
+                "newpassword": request.json["proposed_password"], 
                 "code":  request.json["validation_code"] 
                 }))
 
+    print (r.text)
     result = r.json()
 
     if result.get("error"):
         logger.error(result["message"])
-        raise Exception(result["message"])
+        raise APIBadRequest(result["message"])
     
+    new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
+
+    update_password_hash(request.app.config.CREDENTIALS_TBL, 
+    request["user_data"]["username"], new_password_hash)
+
 
     return response.json(
         {
         'error': False,
         'success': True,
-        "message": None,
-        "data": result["message"]
+        "message": result["message"],
+        "data": None
         }) 
 
 

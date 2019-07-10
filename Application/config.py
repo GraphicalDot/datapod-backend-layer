@@ -128,7 +128,7 @@ class DevelopmentConfig(Config):
     FORGOT_PASS = f"{URL}Production/users/forgot-password"
     RESEND_CODE = f"{URL}Production/users/resend-code"
     CHANGE_PASSWORD = f"{URL}Production/users/change-password"
-    CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirmpassword"
+    CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirm-password"
     PROFILE = f"{URL}Production/users/profile"
     RENEW_REFRESH_TOKEN = f"{URL}Production/users/renew-refresh-token"
     LOGOUT = f"{URL}Production/users/log-out"
