@@ -6,8 +6,8 @@ import os
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
 import datetime
-from users_module.login import id_token_validity, revoke_time_stamp, update_tokens
 
+from utils.utils import revoke_time_stamp, update_tokens, id_token_validity
 from .back import Backup, S3Backup
 verboselogs.install()
 coloredlogs.install()

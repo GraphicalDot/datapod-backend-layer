@@ -6,6 +6,35 @@ import datetime
 import os
 from functools import wraps
 from errors_module.errors import APIBadRequest
+from database_calls.credentials import get_credentials,update_id_and_access_tokens
+import requests
+import json
+from functools import wraps
+
+import pytz
+import datetime
+import dateutil
+from jose import jwt, JWTError 
+import coloredlogs, verboselogs, logging
+verboselogs.install()
+coloredlogs.install()
+logger = logging.getLogger(__name__)
+
+
+
+def revoke_time_stamp(days=0, hours=0, minutes=0, timezone=None): 
+    if not timezone:
+        logger.error("Please specify valid timezone for your servers")
+        raise APIBadRequest("Please specify valid timezone for your servers")
+    tz_kolkata = pytz.timezone(timezone) 
+    time_format = "%Y-%m-%d %H:%M:%S" 
+    naive_timestamp = datetime.datetime.now() 
+    aware_timestamp = tz_kolkata.localize(naive_timestamp) 
+ 
+    ##This actually creates a new instance od datetime with Days and hours 
+    _future = datetime.timedelta(days=days, hours=hours, minutes=minutes) 
+    result = aware_timestamp + _future 
+    return result.timestamp() 
 
 
 def timezone_timestamp(naive_timestamp, timezone):
@@ -58,3 +87,110 @@ def check_production():
         return decorated_function
     return decorator
 
+def id_token_validity():
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            # run some method that checks the request
+            # for the client's authorization status
+            #is_authorized = check_request_for_authorization_status(request)
+
+            result = get_credentials(request.app.config.CREDENTIALS_TBL)
+            logger.info(f"Data from the credential table in id_token_validity decorator {result}")
+            if not result:
+                logger.error("Credentials aren't present, Please Login again")
+                raise APIBadRequest("Credentials aren't present, Please Login again")
+
+
+
+
+            try:
+                id_token = result["id_token"].decode()
+                access_token = result["access_token"].decode()
+                refresh_token = result["refresh_token"].decode()
+                username = result["username"]
+                request["user_data"] = result
+            except Exception as e:
+                
+                logger.error("User must have signed out, Please Login again")
+                raise APIBadRequest("Please Login again")
+
+
+            payload = jwt.get_unverified_claims(id_token)
+
+            time_now = datetime.datetime.fromtimestamp(revoke_time_stamp(timezone=request.app.config.TIMEZONE))
+            time_expiry = datetime.datetime.fromtimestamp(payload["exp"])
+            rd = dateutil.relativedelta.relativedelta (time_expiry, time_now)
+
+            logger.warning("Difference between now and expiry of id_token")
+            logger.warning(f"{rd.years} years, {rd.months} months, {rd.days} days, {rd.hours} hours, {rd.minutes} minutes and {rd.seconds} seconds")
+
+            if rd.minutes < 20:
+                logger.error("Renewing id_token, as it will expire soon")
+                id_token = update_tokens(request.app.config, username, refresh_token)
+          
+            if isinstance(id_token, bytes):
+                id_token = id_token.decode()
+
+            response = await f(request, id_token, access_token,  username, *args, **kwargs)
+            return response
+          
+        return decorated_function
+    return decorator
+
+
+
+
+def username():
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            # run some method that checks the request
+            # for the client's authorization status
+            #is_authorized = check_request_for_authorization_status(request)
+
+            result = get_credentials(request.app.config.CREDENTIALS_TBL)
+            logger.info(f"Data from the credential table in id_token_validity decorator {result}")
+            if not result:
+                logger.error("Credentials aren't present, Please Login again")
+                raise APIBadRequest("Credentials aren't present, Please Login again")
+
+            username = result["username"]
+            if isinstance(username, bytes):
+                username = username.decode()
+            
+            response = await f(request,  username, *args, **kwargs)
+            return response
+          
+        return decorated_function
+    return decorator
+
+
+
+def update_tokens(config, username, refresh_token):
+    logger.warning("Updating tokens for the user with the help of refresh token")
+    # result = get_credentials(request.app.config.CREDENTIALS_TBL)
+    # logger.info(result)
+    # if not result:
+    #     logger.error("Credentials aren't present, Please Login again")
+    logger.info(username)
+    logger.info(refresh_token)
+        
+    r = requests.post(config.RENEW_REFRESH_TOKEN, data=json.dumps({"username": username, "refresh_token": refresh_token}))
+    logging.info(r.text)
+    result = r.json()
+    logger.info(result)
+
+    if result.get("error"):
+        logger.error(result["message"])
+        raise APIBadRequest("Please login again")
+    
+
+    ##Updating credentials table of the user
+    update_id_and_access_tokens(config.CREDENTIALS_TBL, 
+                username,
+               result["data"]["id_token"], 
+                result["data"]["access_token"])
+    
+    logger.success("tokens are renewed")
+    return result["data"]["id_token"]

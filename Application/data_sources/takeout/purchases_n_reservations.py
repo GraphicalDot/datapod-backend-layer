@@ -49,7 +49,8 @@ class PurchaseReservations(object):
         #self.db_instance = create_db_instance(db_dir_path)
         self.app_config = app_config
         if not os.path.exists(self.path):
-            raise Exception("Reservations and purchase data doesnt exists")
+            logger.error("Reservations and purchase data doesnt exists")
+        return
 
 
     async def parse(self):
