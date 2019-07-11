@@ -210,12 +210,25 @@ async def change_password(request):
         "data": result["message"]
         }) 
 
-@USERS_BP.get('/forgot_password')
-@id_token_validity()
+@USERS_BP.post('/forgot_password')
 async def forgot_password(request):
     logger.info(f"API for forgot password {request.app.config.FORGOT_PASS}")
+    request.app.config.VALIDATE_FIELDS(["username"], request.json)
+
+    ##if the username entered is different from the username stored in the 
+    ##database 
+    result = get_credentials(request.app.config.CREDENTIALS_TBL)
+    if result:
+        logger.info("Credentials are present in the database")
+        if result["username"] != request.json["username"]:
+            logger.error("Regenerating password for a different username\
+                                     is not allowed and not recommended")
+
+
+
+
     r = requests.post(request.app.config.FORGOT_PASS, 
-            data=json.dumps({"username": request["user_data"]["username"]}))
+            data=json.dumps({"username": request.json["username"]}))
 
     result = r.json()
     logger.info(result)
@@ -234,24 +247,15 @@ async def forgot_password(request):
 
 
 @USERS_BP.post('/confirm_forgot_password')
-@id_token_validity()
 async def set_new_password(request):
-    request.app.config.VALIDATE_FIELDS(["proposed_password", "previous_password", "validation_code"], request.json)
+    request.app.config.VALIDATE_FIELDS(["proposed_password", "validation_code"], request.json)
 
     ##check if the password matches with the password stored in the database
-    password_hash = hashlib.sha3_256(request.json["previous_password"].encode()).hexdigest()
-    
-
-    if request.json["previous_password"] == request.json["proposed_password"]:
-        raise APIBadRequest("Password should be different")
-
-    if password_hash != request["user_data"]["password_hash"]:
-        raise APIBadRequest("Password you have enetered is incorrect")
 
     r = requests.post(request.app.config.CONFIRM_FORGOT_PASS, data=json.dumps({
-                "username": request["user_data"]["username"], 
+                "username": request.json["username"], 
                 "newpassword": request.json["proposed_password"], 
-                "code":  request.json["validation_code"] 
+                "code":  str(request.json["validation_code"])
                 }))
 
     print (r.text)
@@ -264,7 +268,7 @@ async def set_new_password(request):
     new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
 
     update_password_hash(request.app.config.CREDENTIALS_TBL, 
-    request["user_data"]["username"], new_password_hash)
+    request.json["username"], new_password_hash)
 
 
     return response.json(

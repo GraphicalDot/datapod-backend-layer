@@ -41,7 +41,7 @@ response:
 Forgot password
 
 ```
-r = requests.get("http://localhost:8000/user/forgot_password")
+r = requests.post("http://localhost:8000/user/forgot_password", data=json.dumps({"username": "graphicaldot"}))
 
 success: 
 	{'error': False,
@@ -55,6 +55,9 @@ success:
 Confirm validation code Forgot password
 
 ```
+ r = requests.post("http://localhost:8000/user/confirm_forgot_password", data=json.dumps({"username": "graphicaldot", "proposed_password": "BIg98@#", "validation_c
+    ...: ode": 611414}))
+
 error:
 	{'message': 'Password you have entered is incorrect',
 	'error': True,
