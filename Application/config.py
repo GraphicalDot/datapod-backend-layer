@@ -126,6 +126,8 @@ class DevelopmentConfig(Config):
     POST_LOGIN_MFA = f"{URL}Production/users/post-login-mfa"
     AWS_CREDS = f"{URL}Production/users/temp-credentials"
     FORGOT_PASS = f"{URL}Production/users/forgot-password"
+    CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic" ##required username and mnemonic_sha_256 with auth token
+
     RESEND_CODE = f"{URL}Production/users/resend-code"
     CHANGE_PASSWORD = f"{URL}Production/users/change-password"
     CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirm-password"

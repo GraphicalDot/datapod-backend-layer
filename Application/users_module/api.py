@@ -381,12 +381,11 @@ async def update_user(request):
     will be used to encrypt the user mnemonic
     """
 
-    request.app.config.VALIDATE_FIELDS(["mnemonic", "password", "public_key"], request.json)
+    request.app.config.VALIDATE_FIELDS(["mnemonic", "password"], request.json)
     mnemonic = request.json["mnemonic"]
-    if len(mnemonic.split(" ")) != 12:
+    if len(mnemonic.split()) != 12:
         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
 
-    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
     ###check if the stored pass_hash is same as the password_hash of the password 
     ##given by the user
@@ -397,46 +396,62 @@ async def update_user(request):
 
 
     if request["user_data"].get("mnemonic"):
-        raise APIBadRequest("The mnemonic ia already present")
+        raise APIBadRequest("The mnemonic is already present")
 
-    ##check if the length of the menmonic is 12 or not
-    if len(request.json["mnemonic"]) != 12:
-        raise APIBadRequest("Mnemonic of length 12 is expected")
 
-    ##check if the length of the public key is 12 
-    if len(request.json["public_key"]) != 12:
-        raise APIBadRequest("Public key must be hex encoded and its length must be 12")
-    
+
+    mnemonic_keys = child_keys(request.json["mnemonic"], 0)
+    logger.info(mnemonic_keys)
+
+    ##check mnemonic hash stored against user on the dynamodb
+    mnemonic_sha_256=hashlib.sha3_256(request.json["mnemonic"].encode()).hexdigest()
+    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
+                "username": request["user_data"]["username"], 
+                "mnemonic_sha_256": mnemonic_sha_256,
+                }), headers={"Authorization": request["user_data"]["id_token"]})
+
+    if r.json()["error"]:
+        raise APIBadRequest(r.json()["message"])
+
 
     ##Encrypting user mnemonic with the scrypt key generated from the users password
     hex_salt, encrypted_menmonic = encrypt_mnemonic(request.json["password"], mnemonic)
 
-
     mnemonic_sha3_256 = hashlib.sha3_256(request.json["mnemonic"].encode()).hexdigest()
     mnemonic_sha3_512 = hashlib.sha3_512(request.json["mnemonic"].encode()).hexdigest()
 
-    ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
-    r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
-                "public_key": request.json["public_key"], 
-                "username": username, 
-                "sha3_256": mnemonic_sha3_256,
-                "sha3_512": mnemonic_sha3_512
-                }), headers={"Authorization": id_token})
-    
-    result = r.json()
-    logging.info(result)
+    if not r.json()["data"]:
+        ##this implies that the mnemonic of the user has not been saved in the clod dynamodb
+        ##we need to make an api call to save data of the user 
+        logging.info("Saving user mnemonic hash on the dynamodb")
 
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+        ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
+        r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
+                    "public_key": mnemonic_keys["public_key"], 
+                    "username": request["user_data"]["username"], 
+                    "sha3_256": mnemonic_sha3_256,
+                    "sha3_512": mnemonic_sha3_512
+                    }), headers={"Authorization": request["user_data"]["id_token"]})
+    
+        result = r.json()
+        logging.info(result)
+
+        if result.get("error"):
+            logger.error(result["message"])
+            raise APIBadRequest(result["message"])
 
 
     update_mnemonic(request.app.config.CREDENTIALS_TBL, 
-                username, 
+                request["user_data"]["username"], 
                 encrypted_menmonic, 
                 hex_salt)
 
-
+    return response.json({
+        "error": True, 
+        "success": False,
+        "message": "Mnemonic has been saved and updated",
+        "data": None
+    })
 
 
 @USERS_BP.post('/decrypt_mnemonic')

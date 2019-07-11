@@ -26,9 +26,9 @@ def child_keys(mnemonic, index):
     seed = mnemoniclib.Mnemonic.to_seed(mnemonic)
     rootkey = BIP32Key.fromEntropy(seed)
 
-    childkey_object = rootkey.ChildKey(44 + bip32utils.BIP32_HARDEN)\
-            .ChildKey(index + bip32utils.BIP32_HARDEN)\
-            .ChildKey(index + bip32utils.BIP32_HARDEN)\
+    childkey_object = rootkey.ChildKey(44 + BIP32_HARDEN)\
+            .ChildKey(index + BIP32_HARDEN)\
+            .ChildKey(index + BIP32_HARDEN)\
             .ChildKey(index).ChildKey(index)
 
     return {"private_key": childkey_object.WalletImportFormat(), 
