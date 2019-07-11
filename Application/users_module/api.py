@@ -13,7 +13,7 @@ from database_calls.credentials import store_credentials, get_credentials,\
 
 
 from utils.utils import id_token_validity, username
-
+from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys
 import hashlib
 import coloredlogs, verboselogs, logging
 verboselogs.install()
@@ -258,7 +258,6 @@ async def set_new_password(request):
                 "code":  str(request.json["validation_code"])
                 }))
 
-    print (r.text)
     result = r.json()
 
     if result.get("error"):
@@ -355,9 +354,22 @@ async def post_login_mfa(request):
 
 
 
+@USERS_BP.get('/new_mnemonic')
+async def new_mnemonic(request):
+    return response.json({
+        "error": True, 
+        "success": False,
+        "message": None,
+        "data": {
+            "mnemonic": generate_mnemonic(request.app.config.LANGUAGE)
+        } 
+    })
+
+ 
+
 @USERS_BP.post('/update_user')
 @id_token_validity()
-async def update_user(request, id_token, username):
+async def update_user(request):
     """
     When the user is trying to access the feature of backup, 
     THe user has to finalize a mnemonic, whose hash will then be upload 
@@ -374,14 +386,26 @@ async def update_user(request, id_token, username):
     if len(mnemonic.split(" ")) != 12:
         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
 
-    credentials = get_credentials(request.app.config.CREDENTIALS_TBL)
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
-    if credentials.get("mnemonic"):
+    ###check if the stored pass_hash is same as the password_hash of the password 
+    ##given by the user
+    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
+    if password_hash != request["user_data"]["password_hash"]:
+        raise APIBadRequest("Password do not match with the sotred password")
+
+
+
+    if request["user_data"].get("mnemonic"):
         raise APIBadRequest("The mnemonic ia already present")
 
-    if password_hash != credentials["password_hash"]:
-        raise APIBadRequest("The password you have enetered is wrong")
+    ##check if the length of the menmonic is 12 or not
+    if len(request.json["mnemonic"]) != 12:
+        raise APIBadRequest("Mnemonic of length 12 is expected")
+
+    ##check if the length of the public key is 12 
+    if len(request.json["public_key"]) != 12:
+        raise APIBadRequest("Public key must be hex encoded and its length must be 12")
     
 
     ##Encrypting user mnemonic with the scrypt key generated from the users password

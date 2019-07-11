@@ -81,3 +81,17 @@ success:
 	'success': False,
 	'Data': None}
 ```
+
+Generate New Mnemonic
+
+```
+r = requests.get("http://localhost:8000/user/new_mnemonic")
+
+{'error': True,
+ 'success': False,
+ 'message': None,
+ 'data': {'mnemonic': 'access ankle vocal butter matter genuine assume diamond forward rack stage buzz'}}
+
+ ```
+
+ 

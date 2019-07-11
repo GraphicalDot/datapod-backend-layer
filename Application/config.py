@@ -110,7 +110,7 @@ class Config:
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
-    
+    LANGUAGE = "english"
 
 
 
