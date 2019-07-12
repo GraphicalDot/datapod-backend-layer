@@ -40,7 +40,6 @@ from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
 from users_module import USERS_BP
 from backup import BACKUP_BP
- 
 
 #from secrets.aws_secret_manager import get_secrets
 
@@ -50,7 +49,17 @@ CORS(app, automatic_options=True)
 @app.listener('before_server_start')
 async def before_start(app, uvloop):
     sem = await asyncio.Semaphore(100, loop=uvloop)
+    app.loop = uvloop
+#     app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
+# @app.listener('before_server_start')
+# def init(app, loop):
+#     app.aiohttp_session = aiohttp.ClientSession(loop=loop)
+
+# @app.listener('after_server_stop')
+# def finish(app, loop):
+#     loop.run_until_complete(app.aiohttp_session.close())
+#     loop.close()
 
 
 
@@ -80,7 +89,7 @@ def main():
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(

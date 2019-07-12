@@ -99,21 +99,26 @@ r = requests.get("http://localhost:8000/user/new_mnemonic")
  ```
  r = requests.post("http://localhost:8000/user/update_user", data=json.dumps({"mnemonic": "dsdsd dsdsd", "password": "@#"}))
 
- {'message': 'Please enter a mnemonic of length 12, Invalid Mnemonic',
- 'error': True,
- 'success': False,
- 'Data': None}
+ error: {'message': 'Please enter a mnemonic of length 12, Invalid Mnemonic',
+ 		'error': True,
+ 		'success': False,
+ 		'Data': None}
 
 
- {'message': 'Password do not match with the sotred password',
- 'error': True,
- 'success': False,
- 'Data': None}
+ error: {'message': 'Password do not match with the sotred password',
+ 		'error': True,
+ 		'success': False,
+ 		'Data': None}
 
 
-{'message': 'sha3_256 hash of mnemonic didnt match',
- 'error': True,
- 'success': False,
- 'Data': None}
+error: {'message': 'sha3_256 hash of mnemonic didnt match',
+ 		'error': True,
+ 		'success': False,
+ 		'Data': None}
+
+success: {'error': True,
+ 			'success': False,
+ 			'message': 'Mnemonic has been saved and updated',
+ 			'data': None}
 
  ```

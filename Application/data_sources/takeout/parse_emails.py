@@ -23,6 +23,8 @@ import email
 import datetime
 import hashlib
 import datetime
+import asyncio
+import functools
 
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.db_profile import store_datasource
@@ -35,12 +37,11 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
-@asyncinit
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
     __source__ = "google"
     
-    async def __init__(self, config):
+    def __init__(self, config):
 
         ##to keep track of all the to_addr email ids and their respective frequencies 
         self._to_addr_dict = {}
@@ -137,7 +138,7 @@ class TakeoutEmails(object):
         
 
 
-    async def download_emails(self):
+    async def download_emails(self, loop, executor):
         """
         Downloding list of emails from the gmail server
         for message in self.email_mbox: 
@@ -152,22 +153,26 @@ class TakeoutEmails(object):
         #db_instance = create_db_instance(self.db_dir_path)
         #db_instance = None
 
-        email_count = 0
-        for message in self.email_mbox:
-            #email_uid = self.emails[0].split()[x]
+        self.email_count = 0
 
-            email_from, email_to, subject, local_message_date, email_message = message["From"], \
-                message["To"], message["Subject"], message["Date"], message
-            await self.save_email(email_from, email_to, subject,
-                            local_message_date, email_message)
-            email_count += 1
-            if email_count == 5000:
-                break
+        _, _ = await asyncio.wait(
+            fs=[loop.run_in_executor(executor,  
+                functools.partial(self.save_email, message)) for message in self.email_mbox],
+            return_when=asyncio.ALL_COMPLETED)
+
+
+        # for message in self.email_mbox:
+        #     #email_uid = self.emails[0].split()[x]
+
+        #     email_from, email_to, subject, local_message_date, email_message = message["From"], \
+        #         message["To"], message["Subject"], message["Date"], message
+        #     await self.save_email(email_from, email_to, subject,
+        #                     local_message_date, email_message)
             
-        logger.info(f"\n\nTotal number of emails {email_count}\n\n")
+        # logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
         
-        self.__update_source_table(email_count)
+        self.__update_source_table(self.email_count)
         
        
         return
@@ -274,7 +279,12 @@ class TakeoutEmails(object):
             self._to_addr_dict[email_address] = 1
         return 
 
-    async def save_email(self, email_from, email_to, subject, local_message_date, email_message):
+    def save_email(self, email_message):
+        time.sleep(0.0001)
+        email_from = email_message["From"]
+        email_to = email_message["To"]
+        subject = email_message["Subject"]
+        local_message_date = email_message["Date"]
 
         self.__add_to_addr_address(email_to)
 
@@ -437,8 +447,8 @@ class TakeoutEmails(object):
         #logger.error(f"{email_from} -- {email_to}")
         if attachments:
             logger.error(f"This is the attachement array {attachments}")
-            
-
+        self.email_count +=1 
+        logging.info(f"The email count at this stage is {self.email_count}")
         return
 
     def store(self, attachments, data):

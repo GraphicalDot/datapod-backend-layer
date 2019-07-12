@@ -14,7 +14,12 @@ from   database_calls.db_emails  import match_text as e_match_text
 from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
+import asyncio
+import functools
 import coloredlogs, verboselogs, logging
+from functools import partial
+import concurrent.futures
+
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
@@ -22,18 +27,53 @@ TAKEOUT_BP = Blueprint("", url_prefix="/takeout/")
 
 
 
+async def parse_images(config, loop, executor):
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-async def parse_takeout(config):
+    ins = await ParseGoogleImages(path, config)
+    await ins.parse()
+    images_data = ins.images_data
+
+    for image_data in images_data:
+        image_data.update({"tbl_object": config.IMAGES_TBL}) 
+        logging.info(image_data)
+        
+    _, _ = await asyncio.wait(
+            fs=[loop.run_in_executor(executor, 
+                    functools.partial(q_images_db.store, **args)) for args in images_data],
+            return_when=asyncio.ALL_COMPLETED
+        )
+
+    return 
+
+async def purchase_n_reservations(config, loop, executor):
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+
+    ins = await PurchaseReservations(path, config)
+    reservations, purchases = await ins.parse()
+    
+    
+    for image_data in purchases:
+        image_data.update({"tbl_object": config.PURCHASES_TBL}) 
+
+    _, _ = await asyncio.wait(
+            fs=[loop.run_in_executor(executor,  
+                functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
+            return_when=asyncio.ALL_COMPLETED)
+
+    return 
+
+
+async def parse_takeout(config, loop, executor):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
 
-    instance = await TakeoutEmails(config)
-    # instance.download_emails()
+    instance = TakeoutEmails(config)
 
-    await asyncio.gather(*[instance.download_emails(), 
-                purchase_n_reservations(config),
-                parse_images(config)])
+    await asyncio.gather(*[instance.download_emails(loop, executor), 
+                 parse_images(config, loop, executor),
+                 purchase_n_reservations(config, loop, executor)])
 
     logger.info('Periodic task has finished execution')
 
@@ -51,15 +91,12 @@ async def parse_takeout_api(request):
         raise APIBadRequest("This path doesnt exists")
 
     logger.info("Copying and extracting takeout data")
-    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    #shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
-        
-    request.app.add_task(parse_takeout(request.app.config))
-    # request.app.add_task(purchase_n_reservations(request.app.config))
-    # asyncio.ensure_future(parse_emails(request.app.config))
-    # asyncio.ensure_future(purchase_n_reservations(request.app.config))
-    
-    
+    loop = asyncio.get_event_loop()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+
+    request.app.add_task(parse_takeout(request.app.config, loop, executor))
 
     return response.json(
         {
@@ -75,7 +112,10 @@ async def purchase_n_reservations_api(request):
     """
     To get all the assets created by the requester
     """
-    await purchase_n_reservations(request.app.config)
+    loop = asyncio.get_event_loop()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+
+    await purchase_n_reservations(request.app.config, loop, executor)
     return response.json(
         {
         'error': False,
@@ -84,19 +124,7 @@ async def purchase_n_reservations_api(request):
         })
 
 
-async def purchase_n_reservations(config):
-    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    ins = await PurchaseReservations(path, config)
-    reservations, purchases = await ins.parse()
-    
-    for purchase in purchases:
-        #print (purchase)
-        q_purchase_db.store_purchase(config.PURCHASES_TBL, purchase)
-    
-    for reservation in reservations:
-        logger.info(reservation)
-    return 
 
 
 
@@ -186,6 +214,8 @@ async def parse_images_api(request):
     """
     To get all the assets created by the requester
     """
+    loop = asyncio.get_event_loop()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     
     await prase_images(request.app.config)
     return response.json(
@@ -195,18 +225,7 @@ async def parse_images_api(request):
         "data": "Successful"
         })
 
-async def parse_images(config):
-    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    ins = await ParseGoogleImages(path, config)
-    await ins.parse()
-    images_data = ins.images_data
-
-    for image_data in images_data:
-        image_data.update({"tbl_object": config.IMAGES_TBL}) 
-    
-    await asyncio.gather(*[q_images_db.store(**image_data) for image_data in images_data])
-    return 
 
 
 

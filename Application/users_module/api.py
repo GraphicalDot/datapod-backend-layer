@@ -478,39 +478,44 @@ async def decrypt_user_mnemonic(request):
         "error": True, 
         "success": False,
         "message": "Mnemonic has been decrypted successfully",
-        "mnemonic": mnemonic
+        "data": {"mnemonic": mnemonic}
     })
 
 
-@USERS_BP.post('/check_mnemonic')
-@id_token_validity()
-async def check_mnemonic(request, id_token, username):
-    """
+# @USERS_BP.post('/check_mnemonic')
+# @id_token_validity()
+# async def check_mnemonic(request):
+#     """
 
-    """
-    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
-    mnemonic = request.json["mnemonic"]
-    if len(mnemonic.split(" ")) != 12:
-        raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
+#     """
+#     request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
+#     mnemonic = request.json["mnemonic"]
+#     if len(mnemonic.split(" ")) != 12:
+#         raise APIBadRequest("Please enter a mnemonic of length 12, Invalid Mnemonic")
+
+#     ##check mnemonic hash stored against user on the dynamodb
+#     mnemonic_sha_256=hashlib.sha3_256(request.json["mnemonic"].encode()).hexdigest()
+#     r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
+#                 "username": request["user_data"]["username"], 
+#                 "mnemonic_sha_256": mnemonic_sha_256,
+#                 }), headers={"Authorization": request["user_data"]["id_token"]})
+
+#     if r.json()["error"]:
+#         raise APIBadRequest(r.json()["message"])
 
 
-    mnemonic_sha_256 = hashlib.sha3_256(mnemonic.encode()).hexdigest()
+#     try:
+#         result = r.json()
+#     except Exception as e:
+#         raise APIBadRequest(f"Errror in checking mnemonic sanctity {e.__str__()}")
 
-    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({"username": username, 
-        "mnemonic_sha_256": mnemonic_sha_256}), headers={"Authorization": id_token})
-
-    try:
-        result = r.json()
-    except Exception as e:
-        raise APIBadRequest(f"Errror in checking mnemonic sanctity {e.__str__()}")
-
-    update_mnemonic(request.app.config.CREDENTIALS_TBL, username, mnemonic)
+#     update_mnemonic(request.app.config.CREDENTIALS_TBL, username, mnemonic)
     
-    return response.json({
-        'error': False,
-        'success': True,
-        "data": result["message"]
-       })
+#     return response.json({
+#         'error': False,
+#         'success': True,
+#         "data": result["message"]
+#        })
 
 
 @USERS_BP.post('/child_keys')

@@ -8,11 +8,14 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
-async def store(tbl_object, source, creation_time, modification_time,
+def store(tbl_object, source, creation_time, modification_time,
             photo_taken_time, description, url, title, geo_data, image_path):
     """
     purchases: a list of purchases dict
     """
+    logging.info("This is the table object %s"%tbl_object)
+    logging.info(type(tbl_object))
+
     try:
         geo_data = json.dumps(geo_data)
         tbl_object.insert(source=source, creation_time=creation_time, 

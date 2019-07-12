@@ -7,20 +7,21 @@ verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
-def store_purchase(tbl_object, purchase):
+def store(tbl_object, products, merchant_name, source, time):
     """
     purchases: a list of purchases dict
     """
-    try:
-        products = json.dumps(purchase["products"])
-        tbl_object.insert(merchant_name=purchase["merchant_name"],  
-                                    products=products, 
-                                    source= purchase["source"], 
-                                    time=purchase["time"]).execute()
 
-        logger.info(f"On insert the purchase for  {purchase['merchant_name']}")
+    try:
+        products = json.dumps(products)
+        tbl_object.insert(merchant_name=merchant_name,  
+                                    products=products, 
+                                    source=source, 
+                                    time=time).execute()
+
+        logger.info(f"On insert the purchase for  {merchant_name}")
     except Exception as e:
-        logger.error(f"Couldnt save purchase data {purchase}  because of {e}")
+        logger.error(f"Couldnt save purchase data {merchant_name}  because of {e}")
     return 
 
 
