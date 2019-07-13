@@ -25,7 +25,7 @@ import hashlib
 import datetime
 import asyncio
 import functools
-
+from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.db_profile import store_datasource
 
@@ -157,7 +157,7 @@ class TakeoutEmails(object):
 
         _, _ = await asyncio.wait(
             fs=[loop.run_in_executor(executor,  
-                functools.partial(self.save_email, message)) for message in self.email_mbox],
+                functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
             return_when=asyncio.ALL_COMPLETED)
 
 
@@ -279,8 +279,7 @@ class TakeoutEmails(object):
             self._to_addr_dict[email_address] = 1
         return 
 
-    def save_email(self, email_message):
-        time.sleep(0.0001)
+    def save_email(self, email_message, number):
         email_from = email_message["From"]
         email_to = email_message["To"]
         subject = email_message["Subject"]
@@ -448,7 +447,7 @@ class TakeoutEmails(object):
         if attachments:
             logger.error(f"This is the attachement array {attachments}")
         self.email_count +=1 
-        logging.info(f"The email count at this stage is {self.email_count}")
+        logging.info(f"The email count at this stage is {self.email_count} and the number is {number}")
         return
 
     def store(self, attachments, data):

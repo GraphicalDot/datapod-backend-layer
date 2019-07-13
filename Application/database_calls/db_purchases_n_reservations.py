@@ -1,12 +1,15 @@
 #-*- coding: utf-8 -*-
 
-
+from tenacity import *
+import peewee
 import json
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
+
+@retry(stop=stop_after_attempt(2))
 def store(tbl_object, products, merchant_name, source, time):
     """
     purchases: a list of purchases dict
@@ -20,8 +23,9 @@ def store(tbl_object, products, merchant_name, source, time):
                                     time=time).execute()
 
         logger.info(f"On insert the purchase for  {merchant_name}")
-    except Exception as e:
+    except peewee.OperationalError  as e:
         logger.error(f"Couldnt save purchase data {merchant_name}  because of {e}")
+        raise 
     return 
 
 

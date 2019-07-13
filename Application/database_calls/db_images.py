@@ -4,17 +4,18 @@ import json
 import datetime
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
+from tenacity import *
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
+
+@retry(stop=stop_after_attempt(7))
 def store(tbl_object, source, creation_time, modification_time,
             photo_taken_time, description, url, title, geo_data, image_path):
     """
     purchases: a list of purchases dict
     """
-    logging.info("This is the table object %s"%tbl_object)
-    logging.info(type(tbl_object))
 
     try:
         geo_data = json.dumps(geo_data)
@@ -28,6 +29,8 @@ def store(tbl_object, source, creation_time, modification_time,
         logger.success(f"success on insert {source} image {image_path}")
     except Exception as e:
         logger.error(f"Error on insert image {source} imge {image_path}  because of {e}")
+        raise Exception()
+
     return 
 
 def filter_date(tbl_object, page, number,  time=None):

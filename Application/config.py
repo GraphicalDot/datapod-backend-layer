@@ -32,7 +32,7 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 
 
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
-    Datasources, EmailAttachment,IndexEmailContent    = intialize_db(os.path.join(DB_PATH, "database.db"))
+    Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -105,6 +105,8 @@ class Config:
     CRYPTO_EXG_BINANCE = CryptoExgBinance
     EMAIL_ATTACHMENT_TBL = EmailAttachment
     INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
+    RESERVATIONS_TBL = Reservations
+
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api

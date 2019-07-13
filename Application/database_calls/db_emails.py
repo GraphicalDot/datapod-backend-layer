@@ -5,12 +5,14 @@ import datetime
 from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 import coloredlogs, verboselogs, logging
+from tenacity import *
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
 
+@retry(stop=stop_after_attempt(2))
 def store_email(**data):
     """
     purchases: a list of purchases dict
@@ -32,6 +34,7 @@ def store_email(**data):
     return 
 
 
+@retry(stop=stop_after_attempt(2))
 def store_email_content(**data):
     """
     purchases: a list of purchases dict
@@ -47,10 +50,12 @@ def store_email_content(**data):
 
     except IntegrityError as e:
         logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
-    return 
+        raise 
+    return
 
 
 
+@retry(stop=stop_after_attempt(2))
 def store_email_attachment(**data):
     """
     purchases: a list of purchases dict
@@ -69,7 +74,7 @@ def store_email_attachment(**data):
         logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}\
                                     with error {e}")
-
+        raise
     return 
 
 

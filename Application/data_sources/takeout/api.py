@@ -36,8 +36,8 @@ async def parse_images(config, loop, executor):
 
     for image_data in images_data:
         image_data.update({"tbl_object": config.IMAGES_TBL}) 
-        logging.info(image_data)
         
+
     _, _ = await asyncio.wait(
             fs=[loop.run_in_executor(executor, 
                     functools.partial(q_images_db.store, **args)) for args in images_data],
@@ -52,7 +52,8 @@ async def purchase_n_reservations(config, loop, executor):
     ins = await PurchaseReservations(path, config)
     reservations, purchases = await ins.parse()
     
-    
+    logger.info(reservations)
+    """
     for image_data in purchases:
         image_data.update({"tbl_object": config.PURCHASES_TBL}) 
 
@@ -60,7 +61,7 @@ async def purchase_n_reservations(config, loop, executor):
             fs=[loop.run_in_executor(executor,  
                 functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
             return_when=asyncio.ALL_COMPLETED)
-
+    """
     return 
 
 
@@ -71,9 +72,11 @@ async def parse_takeout(config, loop, executor):
 
     instance = TakeoutEmails(config)
 
-    await asyncio.gather(*[instance.download_emails(loop, executor), 
-                 parse_images(config, loop, executor),
-                 purchase_n_reservations(config, loop, executor)])
+    await asyncio.gather(*[
+                #instance.download_emails(loop, executor), 
+                #parse_images(config, loop, executor),
+                purchase_n_reservations(config, loop, executor)
+                ])
 
     logger.info('Periodic task has finished execution')
 
@@ -87,16 +90,21 @@ async def parse_takeout_api(request):
     """
     request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
+
+
+
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
+
+
 
     logger.info("Copying and extracting takeout data")
     #shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
-    loop = asyncio.get_event_loop()
+    #loop = asyncio.get_event_loop()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
-    request.app.add_task(parse_takeout(request.app.config, loop, executor))
+    request.app.add_task(parse_takeout(request.app.config, request.app.loop, executor))
 
     return response.json(
         {

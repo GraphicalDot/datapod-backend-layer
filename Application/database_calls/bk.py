@@ -34,8 +34,9 @@ Update query uery = Stat.update(counter=Stat.counter + 1).where(Stat.url == requ
 """
 
 
-from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
-#from playhouse.apsw_ext import APSWDatabase
+from playhouse.sqlite_ext import SqliteExtDatabase, FTS5Model
+from playhouse.apsw_ext import APSWDatabase
+import playhouse.apsw_ext
 
 def intialize_db(path):
     #db = peewee.SqliteDatabase(path,  detect_types=sqlite3.PARSE_DECLTYPES)
@@ -43,22 +44,23 @@ def intialize_db(path):
     ('journal_mode', 'wal2'),
     ('cache_size', -1024*64)]
 
-    db = SqliteExtDatabase(path, pragmas=pragmas,  detect_types=sqlite3.PARSE_DECLTYPES)
+    # db = SqliteExtDatabase(path, pragmas=pragmas,  detect_types=sqlite3.PARSE_DECLTYPES)
+    db = APSWDatabase(path, pragmas=pragmas)
 
     class BaseModel(peewee.Model):
         class Meta:
             database = db
 
     class Logs(BaseModel):
-        timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-        message = peewee.TextField()
-        error = peewee.BooleanField()
-        success = peewee.BooleanField()
+        timestamp = playhouse.apsw_ext.DateTimeField(default=datetime.datetime.now)
+        message = playhouse.apsw_ext.TextField()
+        error = playhouse.apsw_ext.BooleanField()
+        success = playhouse.apsw_ext.BooleanField()
 
     class Backups(BaseModel):
-        timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-        Level = peewee.SmallIntegerField()
-        success = peewee.BooleanField()
+        timestamp = playhouse.apsw_ext.DateTimeField(default=datetime.datetime.now)
+        Level = playhouse.apsw_ext.SmallIntegerField()
+        success = playhouse.apsw_ext.BooleanField()
 
     class Credentials(BaseModel):
         ##blocfileds will be stored in bytes
@@ -70,7 +72,7 @@ def intialize_db(path):
         refresh_token = peewee.BlobField(null= True)
         salt = peewee.TextField(null= True)
 
-    class IndexEmailContent(FTSModel):
+    class IndexEmailContent(FTS5Model):
         content = peewee.TextField()
         email_id = peewee.TextField()
         class Meta:
@@ -141,21 +143,6 @@ def intialize_db(path):
 
             )
     
-    class Reservations(BaseModel):
-        merchant_name = peewee.CharField(index=True, null=False)
-        dest = peewee.CharField(index=True, null=False)
-        src = peewee.CharField(index=True, null=False)
-        source = peewee.CharField(index=True, null=False)
-        time = peewee.DateTimeField(index=True, null=False)
-        class Meta:
-            indexes = (
-            # create a unique on from/to/date
-            (('dest', 'src', 'time', 'merchant_name'), True),
-
-            )
-    
-
-
     class CryptoCreds(BaseModel):
         exchange = peewee.CharField(index=True, null=False)
         api_key = peewee.CharField(index=True, null=False)
@@ -215,6 +202,6 @@ def intialize_db(path):
 
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
-        CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations
+        CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent
 
 

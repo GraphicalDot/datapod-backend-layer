@@ -40,7 +40,7 @@ from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
 from users_module import USERS_BP
 from backup import BACKUP_BP
-
+import concurrent.futures
 #from secrets.aws_secret_manager import get_secrets
 
 app = Sanic(__name__)
@@ -49,18 +49,25 @@ CORS(app, automatic_options=True)
 @app.listener('before_server_start')
 async def before_start(app, uvloop):
     sem = await asyncio.Semaphore(100, loop=uvloop)
-    app.loop = uvloop
-#     app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    logger.info("Closing database connections")
+    # logger.info("Nacking outstanding messages")
+    # tasks = [t for t in asyncio.all_tasks() if t is not
+    #          asyncio.current_task()]
 
-# @app.listener('before_server_start')
-# def init(app, loop):
-#     app.aiohttp_session = aiohttp.ClientSession(loop=loop)
+    # [task.cancel() for task in tasks]
 
-# @app.listener('after_server_stop')
-# def finish(app, loop):
-#     loop.run_until_complete(app.aiohttp_session.close())
-#     loop.close()
-
+    # logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+    # await asyncio.gather(*tasks, return_exceptions=True)
+    # logger.info(f"Flushing metrics")
+    #app.loop = uvloop
+    #app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    return
+    
+@app.listener('after_server_stop')
+def finish(app, loop):
+    #loop.run_until_complete(app.aiohttp_session.close())
+    loop.close()
+    return 
 
 
 def main():
