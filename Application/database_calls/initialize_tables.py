@@ -197,7 +197,8 @@ def intialize_db(path):
         CryptoExgBinance,
         Datasources,
         EmailAttachment,
-        IndexEmailContent
+        IndexEmailContent,
+        Reservations
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)

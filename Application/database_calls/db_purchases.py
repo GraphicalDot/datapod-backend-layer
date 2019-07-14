@@ -9,23 +9,25 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
-@retry(stop=stop_after_attempt(2))
+#@retry(stop=stop_after_attempt(2))
 def store(tbl_object, products, merchant_name, source, time):
     """
     purchases: a list of purchases dict
     """
-
     try:
         products = json.dumps(products)
         tbl_object.insert(merchant_name=merchant_name,  
                                     products=products, 
                                     source=source, 
                                     time=time).execute()
-
         logger.info(f"On insert the purchase for  {merchant_name}")
     except peewee.OperationalError  as e:
-        logger.error(f"Couldnt save purchase data {merchant_name}  because of {e}")
+        logger.error(f"PURCHASES: Couldnt save purchase data {merchant_name}  because of {e}")
         raise 
+    
+    except peewee.IntegrityError as e:
+        logger.error(f"PURCHASES: Duplicate key exists {merchant_name}  because of {e}")
+    
     return 
 
 

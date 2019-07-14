@@ -8,7 +8,8 @@ from .parse_emails import TakeoutEmails
 from .location import  LocationHistory
 from .purchases_n_reservations import PurchaseReservations
 import base64
-import  database_calls.db_purchases_n_reservations as q_purchase_db
+import  database_calls.db_purchases as q_purchase_db
+import  database_calls.db_reservations as q_reservation_db
 import  database_calls.db_images as q_images_db
 from   database_calls.db_emails  import match_text as e_match_text
 from utils.utils import check_production
@@ -52,16 +53,28 @@ async def purchase_n_reservations(config, loop, executor):
     ins = await PurchaseReservations(path, config)
     reservations, purchases = await ins.parse()
     
-    logger.info(reservations)
-    """
-    for image_data in purchases:
-        image_data.update({"tbl_object": config.PURCHASES_TBL}) 
 
-    _, _ = await asyncio.wait(
+    for purchase in purchases:
+        purchase.update({"tbl_object": config.PURCHASES_TBL}) 
+
+    for reservation in reservations:
+        reservation.pop("products")
+        reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
+
+
+    await asyncio.wait(
             fs=[loop.run_in_executor(executor,  
                 functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
             return_when=asyncio.ALL_COMPLETED)
-    """
+    
+    await asyncio.wait(
+            fs=[loop.run_in_executor(executor,  
+                functools.partial(q_reservation_db.store, **reservation)) for reservation in reservations],
+            return_when=asyncio.ALL_COMPLETED)
+    
+
+
+
     return 
 
 
@@ -74,7 +87,7 @@ async def parse_takeout(config, loop, executor):
 
     await asyncio.gather(*[
                 #instance.download_emails(loop, executor), 
-                #parse_images(config, loop, executor),
+                parse_images(config, loop, executor),
                 purchase_n_reservations(config, loop, executor)
                 ])
 

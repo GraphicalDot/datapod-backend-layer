@@ -5,6 +5,7 @@ import datetime
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
 from tenacity import *
+import peewee
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
@@ -26,10 +27,17 @@ def store(tbl_object, source, creation_time, modification_time,
                         url=url, title=title, geo_data=geo_data, 
                         image_path=image_path).execute()
 
-        logger.success(f"success on insert {source} image {image_path}")
+        logger.success(f"IMAGES: success on insert {source} image {image_path}")
+
+    except peewee.OperationalError  as e:
+        logger.error(f"IMAGES: Couldnt save reservations data {source}  because of {e}")
+        raise 
+
+    except peewee.IntegrityError as e:
+        logger.error(f"IMAGES: Duplicate key exists {source}  because of {e}")
+
     except Exception as e:
-        logger.error(f"Error on insert image {source} imge {image_path}  because of {e}")
-        raise Exception()
+        logger.error(f"IMAGES: {source}  because of {e}")
 
     return 
 

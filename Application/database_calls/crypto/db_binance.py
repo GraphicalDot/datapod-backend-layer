@@ -3,6 +3,7 @@ import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
 logger = logging.getLogger(__file__)
+import peewee
 
 def store(tbl_obj, api_key, api_secret):
     try:
@@ -54,8 +55,11 @@ def store_pairs(db_object, tbl_obj, pair_orders):
                 tbl_obj.create(**interm)
                 logger.success(f"success in inserting {order['symbol']}")
 
-    except Exception as e:
+    except peewee.OperationalError  as e:
         logger.error(f"Couldnt store binance order pair {order['symbol']} because of {e}")
+
+    except peewee.IntegrityError as e:
+        logger.error(f" Duplicate key exists {merchant_name}  because of {e}")
 
     return 
 
