@@ -12,7 +12,7 @@ def convert_type(value):
     return value
 
 
-def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token):
+def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
 
     
 
@@ -21,7 +21,10 @@ def store_credentials(credentials_tbl_obj, username, password_hash, id_token, ac
                                     password_hash=convert_type(password_hash),
                                     id_token=convert_type(id_token), 
                                     access_token= convert_type(access_token), 
-                                    refresh_token=convert_type(refresh_token))
+                                    refresh_token=convert_type(refresh_token),
+                                    name = name, 
+                                    email=email
+                                    )
            .on_conflict_replace()
            .execute())
 
@@ -86,10 +89,11 @@ def get_credentials(credentials_tbl_obj):
 
 
 
-def update_datasources_status(datasources_tbl_obj, source, name, message):
+def update_datasources_status(datasources_tbl_obj, source, name, code, message):
     try:
-        user_id = datasources_tbl_obj.insert(source=source,  
+        datasources_tbl_obj.insert(source=source,  
                                     name=name,
+                                    code=code,
                                     message=message).on_conflict_replace().execute()
 
         logger.info(f"On insert new datasource is {source}")

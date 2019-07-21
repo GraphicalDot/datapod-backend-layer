@@ -8,7 +8,8 @@ from errors_module.errors import APIBadRequest
 
 from .users_helpers import encrypt_mnemonic, decrypt_mnemonic
 from database_calls.credentials import store_credentials, get_credentials,\
-            update_mnemonic, update_password_hash
+            update_mnemonic, update_password_hash, get_datasources_status,\
+                update_datasources_status
 
 
 
@@ -60,11 +61,11 @@ async def is_logged_in(request):
     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
     logger.info(creds)
     if not creds:
-        raise APIBadRequest("User is not looged in")
+        raise APIBadRequest("User is not logged in")
     
 
     if not creds.get("id_token"):
-        raise APIBadRequest("User is not looged in")
+        raise APIBadRequest("User is not logged in")
     
 
     return response.json({
@@ -91,14 +92,24 @@ async def login(request):
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
     store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], password_hash, result["data"]["id_token"], 
-                 result["data"]["access_token"], result["data"]["refresh_token"])
+                 result["data"]["access_token"], result["data"]["refresh_token"], result["data"]["name"], result["data"]["email"])
     
+    #update_datasources_status(request.app.config.DATASOURCES_TBL, "Takeout", "PURCHASES", request.app.config.DATASOURCES_CODE["PURCHASES"], "Purchase parse completed")
+    res = get_datasources_status(request.app.config.DATASOURCES_TBL)
+
+    logger.info(list(res))
+
     return response.json(
         {
         'error': False,
         'success': True,
         "message": "Logged in successfully",
-        "data": None, 
+        "data": {
+            "name": result["data"]["name"], 
+            "email": result["data"]["email"],
+            "username": request.json["username"],
+            "datasources": list(res)
+        }
         # {
         #     "id_token": result["data"]["id_token"],
         #     "refresh_token": result["data"]["refresh_token"],

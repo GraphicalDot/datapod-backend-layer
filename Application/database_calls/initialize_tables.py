@@ -64,6 +64,8 @@ def intialize_db(path):
 
     class Credentials(BaseModel):
         ##blocfileds will be stored in bytes
+        name = peewee.TextField(null=True)
+        email = peewee.TextField(null=True)
         username = peewee.CharField(unique=True)
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
@@ -127,6 +129,7 @@ def intialize_db(path):
     class Datasources(BaseModel):
         source = peewee.TextField(null=True)
         name = peewee.TextField(null=True)
+        code = peewee.IntegerField()
         message = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
    
@@ -204,10 +207,6 @@ def intialize_db(path):
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
-    print (result)
-    for person in Credentials.select().dicts():
-        print(person)
-    print ("\n\n")
 
     for person in CryptoCreds.select().dicts():
         print(person)
@@ -215,8 +214,12 @@ def intialize_db(path):
 
     #use this to delete tables
     logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
-    #db.drop_tables([Credentials])
-    Credentials.delete()
+    #db.drop_tables([Datasources])
+    # for person in Credentials.select().dicts():
+    #     print(person)
+    # print ("\n\n")
+
+    #Credentials.delete()
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
         CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations
