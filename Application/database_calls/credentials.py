@@ -1,16 +1,21 @@
 
 #-*- coding: utf-8 -*-
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 def convert_type(value):
     if isinstance(value, bytes):
-        logging.error(f"{value} is in bytes")
+        logger.error(f"{value} is in bytes")
         value = value.decode()
     return value
 
+def logout(credentials_tbl_obj):
+    try:
+        credentials_tbl_obj.delete().execute()
+        logger.info("Flushing creds table")
+    except Exception as e:
+        logger.error(f"Couldntflush credentials_tbl because of {e}")
+        raise 
+    return 
 
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
 

@@ -9,7 +9,7 @@ from errors_module.errors import APIBadRequest
 from .users_helpers import encrypt_mnemonic, decrypt_mnemonic
 from database_calls.credentials import store_credentials, get_credentials,\
             update_mnemonic, update_password_hash, get_datasources_status,\
-                update_datasources_status
+                update_datasources_status, logout
 
 
 
@@ -59,19 +59,26 @@ async def is_logged_in(request):
     username is the username of the user
     """
     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
-    logger.info(creds)
     if not creds:
         raise APIBadRequest("User is not logged in")
     
 
+
     if not creds.get("id_token"):
         raise APIBadRequest("User is not logged in")
     
+    res = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
+    logger.info(list(res))
     return response.json({
         'error': False,
         'success': True,
-        "data": None, 
+        "data": {
+            "name": creds["name"],
+            "email": creds["email"],
+            "username": creds["username"],
+            "datasources": list(res)
+        }, 
         "message": "User is logged in"
        })
 
@@ -610,9 +617,9 @@ async def profile(request, id_token, username):
         "data": result["data"]
        })
 
-@USERS_BP.post('/logout')
+@USERS_BP.get('/logout')
 @id_token_validity()
-async def logout(request, id_token, username):
+async def user_logout(request):
     
     """
     session is the session which you will get after enabling MFA and calling login api
@@ -620,19 +627,21 @@ async def logout(request, id_token, username):
     username is the username of the user
     """
 
-    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": username}), 
-        headers={"Authorization": id_token})
+    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": request["user_data"]["username"]}), 
+        headers={"Authorization": request["user_data"]["id_token"]})
     
     result = r.json()
-    if r.json["error"]:
-        raise APIBadRequest(result["message"])
+    if r.json()["error"]:
+        logger.error(f'Logout api raised request cognito result["message"]')
 
-    store_credentials(request.app.config.CREDENTIALS_TBL, username, 
-               result["data"]["id_token"], 
-                "", "")
-    
+    try:
+        logout(request.app.config.CREDENTIALS_TBL)
+    except:
+        raise APIBadRequest("Couldnt logout user")
+
     return response.json({
         'error': False,
         'success': True,
-        "data": result["data"]
+        "data": None, 
+        "message": "user logged out"
        })
