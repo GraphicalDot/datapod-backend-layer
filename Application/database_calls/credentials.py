@@ -83,3 +83,30 @@ def get_credentials(credentials_tbl_obj):
     except Exception as e:
         logging.error(f"Couldnt fetch credentials data  {e}")
     return 
+
+
+
+def update_datasources_status(datasources_tbl_obj, source, name, message):
+    try:
+        user_id = datasources_tbl_obj.insert(source=source,  
+                                    name=name,
+                                    message=message).on_conflict_replace().execute()
+
+        logger.info(f"On insert new datasource is {source}")
+    except Exception as e:
+        logger.error(f"Couldnt new datasource source updated because of {e}")
+    return 
+
+
+def get_datasources_status(datasources_tbl_obj):
+    """
+
+    To get status of all the datasources that have been 
+    fetched till now
+    """
+    try:
+        return datasources_tbl_obj.select().dicts()
+    
+    except Exception as e:
+        logging.error(f"Couldnt fetch credentials data  {e}")
+    return 

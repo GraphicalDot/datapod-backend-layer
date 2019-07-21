@@ -3,7 +3,7 @@
 import peewee
 import datetime
 import sqlite3
-
+from loguru import logger
 
 """
 class User(Model):
@@ -48,6 +48,8 @@ def intialize_db(path):
     class BaseModel(peewee.Model):
         class Meta:
             database = db
+
+
 
     class Logs(BaseModel):
         timestamp = peewee.DateTimeField(default=datetime.datetime.now)
@@ -212,8 +214,9 @@ def intialize_db(path):
 
 
     #use this to delete tables
-    ##db.drop_tables([Email, IndexEmailContent, EmailAttachment])
-
+    logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
+    #db.drop_tables([Credentials])
+    Credentials.delete()
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
         CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations
