@@ -113,7 +113,8 @@ class Config:
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
-    DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
+    #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
+    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": 6}
 
 
 

@@ -23,7 +23,6 @@ def store(tbl_object, products, merchant_name, source, time):
         logger.info(f"On insert the purchase for  {merchant_name}")
     except peewee.OperationalError  as e:
         logger.error(f"PURCHASES: Couldnt save purchase data {merchant_name}  because of {e}")
-        raise 
     
     except peewee.IntegrityError as e:
         logger.error(f"PURCHASES: Duplicate key exists {merchant_name}  because of {e}")

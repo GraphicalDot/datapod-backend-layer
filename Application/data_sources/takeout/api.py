@@ -78,7 +78,7 @@ async def purchase_n_reservations(config, loop, executor):
     return 
 
 
-async def parse_takeout(config, loop, executor):
+async def asyncparse_takeout(config, loop, executor):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
@@ -86,7 +86,7 @@ async def parse_takeout(config, loop, executor):
     instance = TakeoutEmails(config)
 
     await asyncio.gather(*[
-                #instance.download_emails(loop, executor), 
+                instance.download_emails(loop, executor), 
                 parse_images(config, loop, executor),
                 purchase_n_reservations(config, loop, executor)
                 ])
@@ -96,11 +96,51 @@ async def parse_takeout(config, loop, executor):
     
     return 
 
+
+async def parse_takeout(config, loop, executor):
+    ##add this if this has to executed periodically
+    ##while True:
+    logger.info('Periodic task has begun execution')
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+
+    instance = TakeoutEmails(config)
+    await instance.download_emails() 
+
+    ins = await ParseGoogleImages(path, config)
+    await ins.parse()
+    images_data = ins.images_data
+
+    for image_data in images_data:
+        image_data.update({"tbl_object": config.IMAGES_TBL}) 
+        q_images_db.store(**image_data)
+
+
+
+    ins = await PurchaseReservations(path, config)
+    reservations, purchases = await ins.parse()
+    
+
+    for purchase in purchases:
+        purchase.update({"tbl_object": config.PURCHASES_TBL}) 
+        q_purchase_db.store(**purchase)
+
+    for reservation in reservations:
+        reservation.pop("products")
+        reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
+        q_reservation_db.store(**reservation)
+        
+    logger.info('Periodic task has finished execution')
+
+    
+    return 
+
+
 @TAKEOUT_BP.post('parse')
 async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
+    import zipfile
     request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
@@ -109,11 +149,30 @@ async def parse_takeout_api(request):
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
 
+    try:
+        the_zip_file = zipfile.ZipFile(request.json["path"])
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
+
+
+    logger.info(f"Testing zip {request.json['path']} file")
+    ret = the_zip_file.testzip()
+
+    if ret is not None:
+        raise APIBadRequest("Invalid zip takeout file")
+
+    ##check if mbox file exists or not
+
 
 
     logger.info("Copying and extracting takeout data")
-    #shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
     
+    mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+    if not os.path.exists(mbox_file):
+        raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
+
+
     #loop = asyncio.get_event_loop()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 

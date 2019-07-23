@@ -94,9 +94,9 @@ def get_credentials(credentials_tbl_obj):
 
 
 
-def update_datasources_status(datasources_tbl_obj, source, name, code, message):
+def update_datasources_status(tbl_object, source, name, code, message):
     try:
-        datasources_tbl_obj.insert(source=source,  
+        tbl_object.insert(source=source,  
                                     name=name,
                                     code=code,
                                     message=message).on_conflict_replace().execute()
@@ -117,5 +117,5 @@ def get_datasources_status(datasources_tbl_obj):
         return datasources_tbl_obj.select().dicts()
     
     except Exception as e:
-        logging.error(f"Couldnt fetch credentials data  {e}")
+        logger.error(f"Couldnt fetch credentials data  {e}")
     return 

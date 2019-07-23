@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 
 
 
-@retry(stop=stop_after_attempt(2))
+#@retry(stop=stop_after_attempt(2))
 def store_email(**data):
     """
     purchases: a list of purchases dict
@@ -30,11 +30,19 @@ def store_email(**data):
 
         logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
     except IntegrityError:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
         raise DuplicateEntryError(data['email_id'], "Email")
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Email data insertion failed {data['email_id']} with {e}")
+
+ 
     return 
 
 
-@retry(stop=stop_after_attempt(2))
 def store_email_content(**data):
     """
     purchases: a list of purchases dict
@@ -43,19 +51,24 @@ def store_email_content(**data):
 
     try:
         index_email_content_table.insert(email_id=data["email_id"], 
-                        content=data["content"]).execute()
+                        content=data["content"],
+                        content_hash=data["content_hash"]).execute()
 
         logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
 
 
     except IntegrityError as e:
         logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
-        raise 
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Email content insertion failed {data['email_id']} with {e}")
+
     return
 
 
 
-@retry(stop=stop_after_attempt(2))
+#@retry(stop=stop_after_attempt(2))
 def store_email_attachment(**data):
     """
     purchases: a list of purchases dict
@@ -74,7 +87,11 @@ def store_email_attachment(**data):
         logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
                                     path --{data['path']}-- and attachement name {data['attachment_name']}\
                                     with error {e}")
-        raise
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Email sttachment insertion failed {data['email_id']} with {e}")
+
     return 
 
 

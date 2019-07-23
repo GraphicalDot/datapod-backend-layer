@@ -77,6 +77,7 @@ def intialize_db(path):
     class IndexEmailContent(FTSModel):
         content = peewee.TextField()
         email_id = peewee.TextField()
+        content_hash = peewee.TextField()
         class Meta:
             database = db
 
@@ -214,7 +215,7 @@ def intialize_db(path):
 
     #use this to delete tables
     logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
-    #db.drop_tables([Datasources])
+    #db.drop_tables([Datasources, IndexEmailContent])
     # for person in Credentials.select().dicts():
     #     print(person)
     # print ("\n\n")

@@ -11,7 +11,7 @@ coloredlogs.install()
 logger = logging.getLogger(__file__)
 
 
-@retry(stop=stop_after_attempt(7))
+#@retry(stop=stop_after_attempt(7))
 def store(tbl_object, source, creation_time, modification_time,
             photo_taken_time, description, url, title, geo_data, image_path):
     """
@@ -31,7 +31,6 @@ def store(tbl_object, source, creation_time, modification_time,
 
     except peewee.OperationalError  as e:
         logger.error(f"IMAGES: Couldnt save reservations data {source}  because of {e}")
-        raise 
 
     except peewee.IntegrityError as e:
         logger.error(f"IMAGES: Duplicate key exists {source}  because of {e}")

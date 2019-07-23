@@ -27,7 +27,7 @@ import asyncio
 import functools
 from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
-from database_calls.db_profile import store_datasource
+from database_calls.credentials import update_datasources_status
 
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
@@ -39,7 +39,7 @@ logger = logging.getLogger(__file__)
 
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
-    __source__ = "google"
+    __source__ = "TAKEOUT"
     
     def __init__(self, config):
 
@@ -54,7 +54,7 @@ class TakeoutEmails(object):
             config.PARSED_DATA_PATH, "mails/gmail/email_html")
 
         self.email_table = config.EMAILS_TBL
-
+        self.config = config
         # this wil store the content of the email to be searchable through content
         # store subject+content+to_addr in this as a content
         self.indexed_email_content_tbl = config.INDEX_EMAIL_CONTENT_TBL
@@ -122,23 +122,24 @@ class TakeoutEmails(object):
         logger.info("App intiation been done")
 
 
-    def __update_source_table(self, email_count):
+    def __update_datasource_table(self, email_count):
         """
         Update data sources table after successful parsing of takeout and emails 
         """
         email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
-
         data = {"tbl_object": self.datasources_tbl,
                 "name": email_id, 
-                "source": self.__source__, "message": f"{email_count} emails"}
+                "source": self.__source__, "message": f"{email_count} emails",
+                "code": self.config.DATASOURCES_CODE[self.__source__] }
 
 
-        store_datasource(**data)
+        update_datasources_status(**data)
         return 
         
 
 
-    async def download_emails(self, loop, executor):
+    #async def download_emails(self, loop, executor):
+    async def download_emails(self):
         """
         Downloding list of emails from the gmail server
         for message in self.email_mbox: 
@@ -155,24 +156,22 @@ class TakeoutEmails(object):
 
         self.email_count = 0
 
-        _, _ = await asyncio.wait(
-            fs=[loop.run_in_executor(executor,  
-                functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
-            return_when=asyncio.ALL_COMPLETED)
+        # _, _ = await asyncio.wait(
+        #     fs=[loop.run_in_executor(executor,  
+        #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
+        #     return_when=asyncio.ALL_COMPLETED)
 
-
-        # for message in self.email_mbox:
-        #     #email_uid = self.emails[0].split()[x]
-
-        #     email_from, email_to, subject, local_message_date, email_message = message["From"], \
-        #         message["To"], message["Subject"], message["Date"], message
-        #     await self.save_email(email_from, email_to, subject,
-        #                     local_message_date, email_message)
-            
-        # logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
+        i = 0
+        for message in self.email_mbox:
+            #email_uid = self.emails[0].split()[x]
+            i += 1
+            self.save_email(message)
+            # if i == 1:
+            #     break
+        logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
         
-        self.__update_source_table(self.email_count)
+        self.__update_datasource_table(self.email_count)
         
        
         return
@@ -279,7 +278,7 @@ class TakeoutEmails(object):
             self._to_addr_dict[email_address] = 1
         return 
 
-    def save_email(self, email_message, number):
+    def save_email(self, email_message):
         email_from = email_message["From"]
         email_to = email_message["To"]
         subject = email_message["Subject"]
@@ -447,31 +446,38 @@ class TakeoutEmails(object):
         if attachments:
             logger.error(f"This is the attachement array {attachments}")
         self.email_count +=1 
-        logging.info(f"The email count at this stage is {self.email_count} and the number is {number}")
+        logging.info(f"The email count at this stage is {self.email_count}")
         return
 
     def store(self, attachments, data):
+        if attachments:
+            data.update({"attachments": True})
+            
         try:
-            if attachments:
-                data.update({"attachments": True})
-                
+    
             data.update({"tbl_object": self.email_table})
             store_email(**data)
+
+            ##storing email content in different table, make searchable
+            ##if only insertion of email is successful, insertion of indexed content 
+            ##will happem , indexing on FTS5 table is not allowed so we have to adopt this 
+            ##stategy nby making assumption that if a key for email exists so is the indexed content
             data.update({"tbl_object": self.indexed_email_content_tbl})
             content = data["content"] + data["subject"]
-            data.update({"content": content})
-            
+            content_hash = hashlib.sha256(content.encode()).hexdigest()
+            data.update({"content": content, "content_hash": content_hash})
+        
             store_email_content(**data)
-        
-            data.update({"tbl_object": self.email_attachements_tbl})
-            for attachment_path in attachments:
-                data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})
-                store_email_attachment(**data)
-
-        
-        
         except DuplicateEntryError as e:
             logger.error(e)
+            logger.info("Skipping indexed email content entry")
+    
+        data.update({"tbl_object": self.email_attachements_tbl})
+        for attachment_path in attachments:
+            data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})
+            store_email_attachment(**data)
+
+        
         return 
 
 
