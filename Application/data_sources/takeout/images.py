@@ -15,7 +15,7 @@ class ParseGoogleImages(object):
         #self.db_instance = create_db_instance(db_dir_path)
         self.app_config = app_config
         if not os.path.exists(self.path):
-            raise Exception("Reservations and purchase data doesnt exists")
+            raise Exception("Images data doesnt exists")
         self.images = []
         self.videos = []
         self.images_data = []

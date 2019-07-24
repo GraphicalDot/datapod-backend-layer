@@ -50,6 +50,7 @@ class PurchaseReservations(object):
         self.app_config = app_config
         if not os.path.exists(self.path):
             logger.error("Reservations and purchase data doesnt exists")
+            raise Exception("Reservations and purchase data doesnt exists")
         return
 
 

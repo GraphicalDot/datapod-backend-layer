@@ -20,6 +20,7 @@ import functools
 import coloredlogs, verboselogs, logging
 from functools import partial
 import concurrent.futures
+from sanic.websocket import WebSocketProtocol
 
 verboselogs.install()
 coloredlogs.install()
@@ -50,7 +51,10 @@ async def parse_images(config, loop, executor):
 async def purchase_n_reservations(config, loop, executor):
     path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    ins = await PurchaseReservations(path, config)
+    try:
+        ins = await PurchaseReservations(path, config)
+    except Exception as e:
+        logger.error(f"Parsing of purchases and reservations failed {e}")
     reservations, purchases = await ins.parse()
     
 
@@ -104,21 +108,29 @@ async def parse_takeout(config, loop, executor):
     path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
     instance = TakeoutEmails(config)
-    await instance.download_emails() 
-
-    ins = await ParseGoogleImages(path, config)
-    await ins.parse()
-    images_data = ins.images_data
-
-    for image_data in images_data:
-        image_data.update({"tbl_object": config.IMAGES_TBL}) 
-        q_images_db.store(**image_data)
+    async for i in instance.download_emails():
+        logger.info(f"Result from Parsing Email {i}") 
 
 
+    try:
+        ins = await ParseGoogleImages(path, config)
+        await ins.parse()
+        images_data = ins.images_data
 
-    ins = await PurchaseReservations(path, config)
-    reservations, purchases = await ins.parse()
-    
+        for image_data in images_data:
+            image_data.update({"tbl_object": config.IMAGES_TBL}) 
+            q_images_db.store(**image_data)
+    except Exception as e:
+        logger.error(f"Parsing Image data Failed {e}")    
+        pass
+
+
+    try:
+        ins = await PurchaseReservations(path, config)
+        reservations, purchases = await ins.parse()
+    except Exception as e:
+        logger.error(f"Purchases and reservation parsing failed {e}")    
+        return 
 
     for purchase in purchases:
         purchase.update({"tbl_object": config.PURCHASES_TBL}) 
@@ -134,7 +146,7 @@ async def parse_takeout(config, loop, executor):
     
     return 
 
-
+#@TAKEOUT_BP.websocket('parse')
 @TAKEOUT_BP.post('parse')
 async def parse_takeout_api(request):
     """
@@ -166,8 +178,13 @@ async def parse_takeout_api(request):
 
 
     logger.info("Copying and extracting takeout data")
-    shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
-    
+
+    try:
+        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
+
+
     mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
     if not os.path.exists(mbox_file):
         raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
@@ -182,7 +199,8 @@ async def parse_takeout_api(request):
         {
         'error': False,
         'success': True,
-        "data": "Takeout data parsing has been Started and you will be notified once it is complete"
+        "message": "Takeout data parsing has been Started and you will be notified once it is complete", 
+        "data": None
         })
 
 

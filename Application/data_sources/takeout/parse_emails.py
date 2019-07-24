@@ -49,6 +49,7 @@ class TakeoutEmails(object):
         self.email_dir = os.path.join(
             config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
         self.email_mbox = mailbox.mbox(self.email_dir)
+        self.total_emails = self.email_mbox.keys()
 
         self.email_dir_html = os.path.join(
             config.PARSED_DATA_PATH, "mails/gmail/email_html")
@@ -156,23 +157,29 @@ class TakeoutEmails(object):
 
         self.email_count = 0
 
+        if len(self.total_emails) > 100:
+            completion_percentage = [int(len(self.total_emails)/100) for i in range(0, 99)]
+            k.append(self.total_emails)
+        else:
+            completion_percentage = list(range(0, len(self.total_emails)))
+
         # _, _ = await asyncio.wait(
         #     fs=[loop.run_in_executor(executor,  
         #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
         #     return_when=asyncio.ALL_COMPLETED)
-
         i = 0
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             i += 1
             self.save_email(message)
+            if i in completion_percentage:
+                yield f"{completion_percentage.index(i)}%"
             # if i == 1:
             #     break
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
-        
+        yield f"100%"
         
         self.__update_datasource_table(self.email_count)
-        
        
         return
 
@@ -358,8 +365,8 @@ class TakeoutEmails(object):
                             
 
                         else:
-                            logger.error(
-                                f" MIME type {ctype} with a file_name {attachment_name}")
+                            # logger.error(
+                            #     f" MIME type {ctype} with a file_name {attachment_name}")
                             extra_path = os.path.join(
                                 self.extra_dir, attachment_name)
                             with open(extra_path, "wb") as f:
@@ -367,13 +374,13 @@ class TakeoutEmails(object):
                             attachments.append(extra_path)
                             
              
-                        logger.info(
-                            f"Ctype is {ctype} and attachment name is {attachment_name}")
+                        # logger.info(
+                        #     f"Ctype is {ctype} and attachment name is {attachment_name}")
 
                     else:
-                        logger.error(
-                            f"Mostly junk MIME type {ctype} without a file_name")
-
+                        # logger.error(
+                        #     f"Mostly junk MIME type {ctype} without a file_name")
+                        pass
 
         else:
             # when the email is just plain text
@@ -420,34 +427,11 @@ class TakeoutEmails(object):
             data.update({"attachments": True})
 
         self.store(attachments, data)
-        # try:
-        #     data.update({"tbl_object": self.email_table})
-        #     store_email(**data)
-        #     data.update({"tbl_object": self.indexed_email_content_tbl})
-        #     content = data["content"] + data["subject"]
-        #     data.update({"content": content})
-            
-        #     store_email_content(**data)
-        
-        #     data.update({"tbl_object": self.email_attachements_tbl})
-        #     for attachment_path in attachments:
-        #         data.update({"path": attachment_path, "attachment_name" :attachment_name.split("/")[-1]})
-        #         store_email_attachment(**data)
 
-        
-        
-        # except DuplicateEntryError as e:
-        #     logger.error(e)
-
-
-        
-
-        #logger.error(f"{email_from} -- {email_to}")
         if attachments:
-            logger.error(f"This is the attachement array {attachments}")
+            logger.info(f"This is the attachement array {attachments}")
         self.email_count +=1 
-        logging.info(f"The email count at this stage is {self.email_count}")
-        return
+        return 
 
     def store(self, attachments, data):
         if attachments:
