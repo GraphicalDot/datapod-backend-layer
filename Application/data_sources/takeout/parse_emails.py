@@ -159,7 +159,7 @@ class TakeoutEmails(object):
 
         if len(self.total_emails) > 100:
             completion_percentage = [int(len(self.total_emails)/100) for i in range(0, 99)]
-            k.append(self.total_emails)
+            completion_percentage.append(self.total_emails)
         else:
             completion_percentage = list(range(0, len(self.total_emails)))
 
@@ -174,8 +174,8 @@ class TakeoutEmails(object):
             self.save_email(message)
             if i in completion_percentage:
                 yield f"{completion_percentage.index(i)}%"
-            # if i == 1:
-            #     break
+            if i == 2500:
+                break
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         yield f"100%"
         
