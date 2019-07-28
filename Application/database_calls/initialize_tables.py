@@ -220,7 +220,7 @@ def intialize_db(path):
     #     print(person)
     # print ("\n\n")
 
-    #Credentials.delete()
+    #Credentials.delete().execute()
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
         CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations

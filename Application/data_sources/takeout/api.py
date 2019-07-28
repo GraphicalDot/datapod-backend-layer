@@ -226,8 +226,8 @@ async def purchase_n_reservations_api(request):
 
 
 
-@TAKEOUT_BP.get('purchase_n_reservations/filter')
-async def purchase_n_reservation_filter(request):
+@TAKEOUT_BP.get('purchases/filter')
+async def purchase_filter(request):
     """
     Page is the page number 
     NUmber is the number of items on the page 
@@ -264,6 +264,47 @@ async def purchase_n_reservation_filter(request):
         "data": result,
         "message": None
         })
+
+
+@TAKEOUT_BP.get('reservations/filter')
+async def reservations_filter(request):
+    """
+    Page is the page number 
+    NUmber is the number of items on the page 
+    """
+    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+
+    if request.args.get("page"):
+        try:
+            page = int(request.args.get("page"))
+        except:
+            raise APIBadRequest("Invalid page type")
+
+    else:
+        page = 1
+
+
+    if request.args.get("number"):
+        try:
+            number = int(request.args.get("number"))
+        except:
+            raise APIBadRequest("Invalid Number type")
+    else:
+        number = request.app.config.DEFAULT_ITEMS_NUMBER
+
+
+    result =  [purchase for purchase in \
+                q_reservation_db.filter_merchant_name(request.app.config.RESERVATIONS_TBL, 
+                page, number,  request.args.get("merchant_name"))] 
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": result,
+        "message": None
+        })
+
 
 
 
@@ -306,22 +347,22 @@ async def images_filter(request):
 
 
 
-@TAKEOUT_BP.get('images')
-@check_production()
-async def parse_images_api(request):
-    """
-    To get all the assets created by the requester
-    """
-    loop = asyncio.get_event_loop()
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+# @TAKEOUT_BP.get('images')
+# @check_production()
+# async def parse_images_api(request):
+#     """
+#     To get all the assets created by the requester
+#     """
+#     loop = asyncio.get_event_loop()
+#     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     
-    await prase_images(request.app.config)
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "data": "Successful"
-        })
+#     await prase_images(request.app.config)
+#     return response.json(
+#         {
+#         'error': False,
+#         'success': True,
+#         "data": "Successful"
+#         })
 
 
 
