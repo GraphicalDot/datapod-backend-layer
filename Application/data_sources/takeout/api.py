@@ -21,6 +21,13 @@ import coloredlogs, verboselogs, logging
 from functools import partial
 import concurrent.futures
 from sanic.websocket import WebSocketProtocol
+from websockets.exceptions import ConnectionClosed
+
+
+
+import string
+import random
+import time
 
 verboselogs.install()
 coloredlogs.install()
@@ -145,6 +152,41 @@ async def parse_takeout(config, loop, executor):
 
     
     return 
+
+
+
+@TAKEOUT_BP.websocket('feed')
+async def feed(request, ws):
+    characters = list(string.ascii_lowercase)
+    while True:
+        try:
+            data = await ws.recv()
+        except (ConnectionClosed):
+            print("Connection is Closed")
+            data = None
+            break
+        
+        print('Received: ' + data)
+
+    
+        try:
+            for _ in range(10):
+                random.shuffle(characters)
+                time.sleep(2)
+                data = "".join(characters)
+                logger.info(f"Data being sent is {data}")
+                logger.info(f'Sending: {data}')
+                await ws.send(data)
+        except ConnectionClosed:
+            logger.error("Connection has been closed abruptly")
+        #data = await ws.recv()
+        #print('Received: ' + data)
+
+
+
+
+
+
 
 #@TAKEOUT_BP.websocket('parse')
 @TAKEOUT_BP.post('parse')
