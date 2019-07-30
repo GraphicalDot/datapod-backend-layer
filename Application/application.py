@@ -48,7 +48,7 @@ CORS(app, automatic_options=True)
 
 @app.listener('before_server_start')
 async def before_start(app, uvloop):
-    sem = await asyncio.Semaphore(100, loop=uvloop)
+    #sem = await  asyncio.Semaphore(100, loop=uvloop)
     logger.info("Closing database connections")
     # logger.info("Nacking outstanding messages")
     # tasks = [t for t in asyncio.all_tasks() if t is not
@@ -96,7 +96,7 @@ def main():
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=2)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(

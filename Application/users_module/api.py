@@ -626,11 +626,12 @@ async def user_logout(request):
     code is the code generated from the MFA device
     username is the username of the user
     """
-
+    logger.info("The logout function has been clicked")
     r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": request["user_data"]["username"]}), 
         headers={"Authorization": request["user_data"]["id_token"]})
     
     result = r.json()
+    logger.info(f"The result of the logout function {result}")
     if r.json()["error"]:
         logger.error(f'Logout api raised request cognito result["message"]')
 
