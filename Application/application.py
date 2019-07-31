@@ -27,6 +27,7 @@ from zmq.asyncio import ZMQEventLoop
 
 
 
+from spf import SanicPluginsFramework
 
 
 import coloredlogs, verboselogs, logging
@@ -41,15 +42,98 @@ from errors_module import ERRORS_BP
 from users_module import USERS_BP
 from backup import BACKUP_BP
 import concurrent.futures
+from sanic.websocket import WebSocketProtocol
+from websockets.exceptions import ConnectionClosed
+import string
+from sanic import Blueprint
+from sanic import response
+import random
+import time
 #from secrets.aws_secret_manager import get_secrets
 
+
+import socketio
+
+sio = socketio.AsyncServer(async_mode='sanic', cors_allowed_origins=["http://localhost:4200"])
 app = Sanic(__name__)
-CORS(app, automatic_options=True)
+
+
+app.config['CORS_AUTOMATIC_OPTIONS'] = True
+cors = CORS(app)
+sio.attach(app)
+
+
+
+SOCKETS_BP = Blueprint("sockets", url_prefix="")
+
+
+
+
+
+
+@SOCKETS_BP.websocket('socks')
+async def feed(request, ws):
+    characters = list(string.ascii_uppercase)
+    while True:
+        try:
+            data = await ws.recv()
+        except (ConnectionClosed):
+            print("Connection is Closed")
+            data = None
+            break
+        
+        print('Received: ' + data)
+
+    
+        try:
+            for _ in range(10):
+                random.shuffle(characters)
+                time.sleep(2)
+                data = "".join(characters)
+                logger.info(f"Data being sent is {data}")
+                logger.info(f'Sending: {data}')
+                r = await ws.send(data)
+                logger.info(r)
+        except ConnectionClosed:
+            logger.error("Connection has been closed abruptly")
+
+
+async def background_task():
+    """Example of how to send server generated events to clients."""
+    count = 0
+    while True:
+        await sio.sleep(10)
+        count += 1
+        await sio.emit('message', {'data': 'Server generated event'})
+
+
+@sio.event
+async def my_event(sid, message):
+    await sio.emit('message', {'data': message['data']}, room=sid)
+
+
+@sio.event
+async def my_broadcast_event(sid, message):
+    await sio.emit('message', {'data': message['data']})
+
+
+
+@sio.event
+def connect(sid, environ):
+    print('connect ', sid)
+
+
+
+
+
+
 
 @app.listener('before_server_start')
 async def before_start(app, uvloop):
     #sem = await  asyncio.Semaphore(100, loop=uvloop)
     logger.info("Closing database connections")
+    sio.start_background_task(background_task)
+
     # logger.info("Nacking outstanding messages")
     # tasks = [t for t in asyncio.all_tasks() if t is not
     #          asyncio.current_task()]
@@ -78,6 +162,7 @@ def main():
     app.blueprint(ERRORS_BP)
     app.blueprint(USERS_BP)
     app.blueprint(BACKUP_BP)
+    app.blueprint(SOCKETS_BP)
 
     #app.blueprint(UPLOAD_BP)
     #app.blueprint(USER_ACCOUNTS_BP)

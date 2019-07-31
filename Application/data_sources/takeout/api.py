@@ -176,7 +176,8 @@ async def feed(request, ws):
                 data = "".join(characters)
                 logger.info(f"Data being sent is {data}")
                 logger.info(f'Sending: {data}')
-                await ws.send(data)
+                r = await ws.send(data)
+                logger.info(r)
         except ConnectionClosed:
             logger.error("Connection has been closed abruptly")
         #data = await ws.recv()
