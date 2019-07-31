@@ -168,13 +168,15 @@ class TakeoutEmails(object):
         #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
         #     return_when=asyncio.ALL_COMPLETED)
         i = 0
+        
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             i += 1
             self.save_email(message)
-            if i in completion_percentage:
-                yield f"{completion_percentage.index(i)}%"
-            if i == 2500:
+            #if i in completion_percentage:
+            await self.config.SIO.emit("takeout", f"Completion is {i}%")
+
+            if i == 2000:
                 break
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         yield f"100%"

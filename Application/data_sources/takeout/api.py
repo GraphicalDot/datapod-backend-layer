@@ -119,73 +119,39 @@ async def parse_takeout(config, loop, executor):
         logger.info(f"Result from Parsing Email {i}") 
 
 
-    try:
-        ins = await ParseGoogleImages(path, config)
-        await ins.parse()
-        images_data = ins.images_data
+    # try:
+    #     ins = await ParseGoogleImages(path, config)
+    #     await ins.parse()
+    #     images_data = ins.images_data
 
-        for image_data in images_data:
-            image_data.update({"tbl_object": config.IMAGES_TBL}) 
-            q_images_db.store(**image_data)
-    except Exception as e:
-        logger.error(f"Parsing Image data Failed {e}")    
-        pass
+    #     for image_data in images_data:
+    #         image_data.update({"tbl_object": config.IMAGES_TBL}) 
+    #         q_images_db.store(**image_data)
+    # except Exception as e:
+    #     logger.error(f"Parsing Image data Failed {e}")    
+    #     pass
 
 
-    try:
-        ins = await PurchaseReservations(path, config)
-        reservations, purchases = await ins.parse()
-    except Exception as e:
-        logger.error(f"Purchases and reservation parsing failed {e}")    
-        return 
+    # try:
+    #     ins = await PurchaseReservations(path, config)
+    #     reservations, purchases = await ins.parse()
+    # except Exception as e:
+    #     logger.error(f"Purchases and reservation parsing failed {e}")    
+    #     return                                                                        
 
-    for purchase in purchases:
-        purchase.update({"tbl_object": config.PURCHASES_TBL}) 
-        q_purchase_db.store(**purchase)
+    # for purchase in purchases:
+    #     purchase.update({"tbl_object": config.PURCHASES_TBL}) 
+    #     q_purchase_db.store(**purchase)
 
-    for reservation in reservations:
-        reservation.pop("products")
-        reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
-        q_reservation_db.store(**reservation)
+    # for reservation in reservations:
+    #     reservation.pop("products")
+    #     reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
+    #     q_reservation_db.store(**reservation)
         
     logger.info('Periodic task has finished execution')
 
     
     return 
-
-
-
-@TAKEOUT_BP.websocket('feed')
-async def feed(request, ws):
-    characters = list(string.ascii_lowercase)
-    while True:
-        try:
-            data = await ws.recv()
-        except (ConnectionClosed):
-            print("Connection is Closed")
-            data = None
-            break
-        
-        print('Received: ' + data)
-
-    
-        try:
-            for _ in range(10):
-                random.shuffle(characters)
-                time.sleep(2)
-                data = "".join(characters)
-                logger.info(f"Data being sent is {data}")
-                logger.info(f'Sending: {data}')
-                r = await ws.send(data)
-                logger.info(r)
-        except ConnectionClosed:
-            logger.error("Connection has been closed abruptly")
-        #data = await ws.recv()
-        #print('Received: ' + data)
-
-
-
-
 
 
 
@@ -195,42 +161,42 @@ async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
-    import zipfile
-    request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    # import zipfile
+    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
 
 
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
+    # if not os.path.exists(request.json["path"]):
+    #     raise APIBadRequest("This path doesnt exists")
 
-    try:
-        the_zip_file = zipfile.ZipFile(request.json["path"])
-    except:
-        raise APIBadRequest("Invalid zip takeout file")
-
-
-    logger.info(f"Testing zip {request.json['path']} file")
-    ret = the_zip_file.testzip()
-
-    if ret is not None:
-        raise APIBadRequest("Invalid zip takeout file")
-
-    ##check if mbox file exists or not
+    # try:
+    #     the_zip_file = zipfile.ZipFile(request.json["path"])
+    # except:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
 
+    # logger.info(f"Testing zip {request.json['path']} file")
+    # ret = the_zip_file.testzip()
 
-    logger.info("Copying and extracting takeout data")
+    # if ret is not None:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
-    try:
-        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
-    except:
-        raise APIBadRequest("Invalid zip takeout file")
+    # ##check if mbox file exists or not
 
 
-    mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
-    if not os.path.exists(mbox_file):
-        raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
+
+    # logger.info("Copying and extracting takeout data")
+
+    # try:
+    #     shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    # except:
+    #     raise APIBadRequest("Invalid zip takeout file")
+
+
+    # mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+    # if not os.path.exists(mbox_file):
+    #     raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
 
 
     #loop = asyncio.get_event_loop()

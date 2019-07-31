@@ -51,10 +51,10 @@ import random
 import time
 #from secrets.aws_secret_manager import get_secrets
 
-
+from data_sources.takeout.parse_emails import TakeoutEmails
 import socketio
 
-sio = socketio.AsyncServer(async_mode='sanic', cors_allowed_origins=["http://localhost:4200"])
+sio = socketio.AsyncServer(async_mode='sanic', ping_timeout=30, logger=False, cors_allowed_origins=["http://localhost:4200"])
 app = Sanic(__name__)
 
 
@@ -67,35 +67,41 @@ sio.attach(app)
 SOCKETS_BP = Blueprint("sockets", url_prefix="")
 
 
+start_timer = None
 
 
 
 
-@SOCKETS_BP.websocket('socks')
-async def feed(request, ws):
-    characters = list(string.ascii_uppercase)
-    while True:
-        try:
-            data = await ws.recv()
-        except (ConnectionClosed):
-            print("Connection is Closed")
-            data = None
-            break
+@SOCKETS_BP.get('socks')
+async def feed(request):
+
+    # characters = list(string.ascii_uppercase)
+    # while True:
+    #     try:
+    #         data = await ws.recv()
+    #     except (ConnectionClosed):
+    #         print("Connection is Closed")
+    #         data = None
+    #         break
         
-        print('Received: ' + data)
+    #     print('Received: ' + data)
 
     
-        try:
-            for _ in range(10):
-                random.shuffle(characters)
-                time.sleep(2)
-                data = "".join(characters)
-                logger.info(f"Data being sent is {data}")
-                logger.info(f'Sending: {data}')
-                r = await ws.send(data)
-                logger.info(r)
-        except ConnectionClosed:
-            logger.error("Connection has been closed abruptly")
+    #     try:
+    #         for _ in range(10):
+    #             random.shuffle(characters)
+    #             time.sleep(2)
+    #             data = "".join(characters)
+    #             logger.info(f"Data being sent is {data}")
+    #             logger.info(f'Sending: {data}')
+    #             r = await ws.send(data)
+    #             logger.info(r)
+    #     except ConnectionClosed:
+    #         logger.error("Connection has been closed abruptly")
+    
+    for i in range(100):
+        await request.app.config.SIO.emit('takeout', {'data': f"Progress of the takeout is {i*10}"})
+        time.sleep(2)
 
 
 async def background_task():
@@ -103,8 +109,8 @@ async def background_task():
     count = 0
     while True:
         await sio.sleep(10)
-        count += 1
-        await sio.emit('message', {'data': 'Server generated event'})
+        count += 10
+        await sio.emit('message', {'data': f'Progress of the app is {count}'})
 
 
 @sio.event
@@ -114,14 +120,41 @@ async def my_event(sid, message):
 
 @sio.event
 async def my_broadcast_event(sid, message):
-    await sio.emit('message', {'data': message['data']})
+    await sio.emit('datapod_message', {'data': message['data']})
 
 
 
 @sio.event
-def connect(sid, environ):
-    print('connect ', sid)
+async def takeout(sid, message):
+    logger.info(f"Data received is {message}")
+    for i in range(0, 11):
+        await sio.emit('takeout', {'data': f"Progress of the takeout is {i*10}"})
+        time.sleep(2)
 
+
+
+
+
+
+async def send_ping():
+    global start_timer
+    start_timer = time.time()
+    await sio.emit('ping', None)
+
+
+@sio.event
+async def connect(sid, environ):
+    print('connected to server')
+    await send_ping()
+
+
+@sio.event
+async def pong_from_server(data):
+    global start_timer
+    latency = time.time() - start_timer
+    print('latency is {0:.2f} ms'.format(latency * 1000))
+    await sio.sleep(1)
+    await send_ping()
 
 
 
@@ -132,7 +165,7 @@ def connect(sid, environ):
 async def before_start(app, uvloop):
     #sem = await  asyncio.Semaphore(100, loop=uvloop)
     logger.info("Closing database connections")
-    sio.start_background_task(background_task)
+    #sio.start_background_task(background_task)
 
     # logger.info("Nacking outstanding messages")
     # tasks = [t for t in asyncio.all_tasks() if t is not
@@ -177,11 +210,12 @@ def main():
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
+    app.config["SIO"] = sio
     import pprint 
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=2)
 
     """
     server = app.create_server(
