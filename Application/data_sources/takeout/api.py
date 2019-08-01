@@ -108,16 +108,32 @@ async def asyncparse_takeout(config, loop, executor):
     return 
 
 
-async def parse_takeout(config, loop, executor):
+async def broadcast(config, message):
+    broadcast = config.SIO.emit("takeout_response", {'data': message }, namespace="/takeout")
+
+    #broadcasts = [ws.send(message) for ws in app.ws_clients]
+    #for result in asyncio.as_completed(broadcasts):
+    try:
+        await asyncio.run(broadcast)
+    
+    except Exception as ex:
+        template = f"An exception of type {ex} occurred"
+        logger.error(template)
+    return 
+
+async def parse_takeout(config):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
     path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
     instance = TakeoutEmails(config)
+
     async for i in instance.download_emails():
         logger.info(f"Result from Parsing Email {i}") 
-
+        #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
+        await broadcast(config, i)
+    #await sio.emit('takeout', {'data': "Progress of the takeout is scasca"})
 
     # try:
     #     ins = await ParseGoogleImages(path, config)
@@ -200,9 +216,10 @@ async def parse_takeout_api(request):
 
 
     #loop = asyncio.get_event_loop()
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    #executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    request.app.config.SIO.start_background_task(parse_takeout, request.app.config)
 
-    request.app.add_task(parse_takeout(request.app.config, request.app.loop, executor))
+    #request.app.add_task(parse_takeout(request.app.config, request.app.loop, executor))
 
     return response.json(
         {

@@ -28,7 +28,7 @@ def store_email(**data):
                         attachments = data["attachments"],
                        date=data["date"], path=data["path"]).execute()
 
-        logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
     except IntegrityError:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
@@ -37,8 +37,8 @@ def store_email(**data):
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Email data insertion failed {data['email_id']} with {e}")
-
+        #logger.error(f"Email data insertion failed {data['email_id']} with {e}")
+        pass
  
     return 
 
@@ -54,16 +54,17 @@ def store_email_content(**data):
                         content=data["content"],
                         content_hash=data["content_hash"]).execute()
 
-        logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
+        #logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
 
 
     except IntegrityError as e:
-        logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
+        #logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
+        pass
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Email content insertion failed {data['email_id']} with {e}")
-
+        #logger.error(f"Email content insertion failed {data['email_id']} with {e}")
+        pass
     return
 
 
@@ -80,18 +81,19 @@ def store_email_attachment(**data):
                         attachment_name=data["attachment_name"], 
                        date=data["date"]).execute()
 
-        logger.success(f"Success on insert attachement for  email_id --{data['email_id']}--  \
-                                    path --{data['path']}-- and attachement name {data['attachment_name']}")
+        # logger.success(f"Success on insert attachement for  email_id --{data['email_id']}--  \
+        #                             path --{data['path']}-- and attachement name {data['attachment_name']}")
 
     except IntegrityError as e:
-        logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
-                                    path --{data['path']}-- and attachement name {data['attachment_name']}\
-                                    with error {e}")
+        # logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
+        #                             path --{data['path']}-- and attachement name {data['attachment_name']}\
+        #                             with error {e}")
+        pass
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Email sttachment insertion failed {data['email_id']} with {e}")
-
+        #logger.error(f"Email sttachment insertion failed {data['email_id']} with {e}")
+        pass
     return 
 
 

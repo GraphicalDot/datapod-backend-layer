@@ -49,7 +49,7 @@ class TakeoutEmails(object):
         self.email_dir = os.path.join(
             config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
         self.email_mbox = mailbox.mbox(self.email_dir)
-        self.total_emails = self.email_mbox.keys()
+        self.total_emails_number = len(self.email_mbox.keys())
 
         self.email_dir_html = os.path.join(
             config.PARSED_DATA_PATH, "mails/gmail/email_html")
@@ -157,27 +157,32 @@ class TakeoutEmails(object):
 
         self.email_count = 0
 
-        if len(self.total_emails) > 100:
-            completion_percentage = [int(len(self.total_emails)/100) for i in range(0, 99)]
-            completion_percentage.append(self.total_emails)
+        if self.total_emails_number > 100:
+            completion_percentage  = list(range(1, self.total_emails_number, int(self.total_emails_number /98)))          
+            completion_percentage.append(self.total_emails_number)
         else:
-            completion_percentage = list(range(0, len(self.total_emails)))
+            completion_percentage = None
 
         # _, _ = await asyncio.wait(
         #     fs=[loop.run_in_executor(executor,  
         #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
         #     return_when=asyncio.ALL_COMPLETED)
         i = 0
-        
+        logger.info(completion_percentage)
+        time.sleep(20)
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             i += 1
             self.save_email(message)
             #if i in completion_percentage:
-            await self.config.SIO.emit("takeout", f"Completion is {i}%")
+            if completion_percentage:
+                if i in completion_percentage:
+                    logger.info(f"I found {i}")
+                    yield f"Parse email progress is  {i}"
 
-            if i == 2000:
+            if i  == 1000:
                 break
+
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         yield f"100%"
         
@@ -430,8 +435,8 @@ class TakeoutEmails(object):
 
         self.store(attachments, data)
 
-        if attachments:
-            logger.info(f"This is the attachement array {attachments}")
+        # if attachments:
+        #     logger.info(f"This is the attachement array {attachments}")
         self.email_count +=1 
         return 
 
@@ -455,9 +460,9 @@ class TakeoutEmails(object):
         
             store_email_content(**data)
         except DuplicateEntryError as e:
-            logger.error(e)
-            logger.info("Skipping indexed email content entry")
-    
+            # logger.error(e)
+            # logger.info("Skipping indexed email content entry")
+            pass
         data.update({"tbl_object": self.email_attachements_tbl})
         for attachment_path in attachments:
             data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})

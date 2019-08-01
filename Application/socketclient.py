@@ -25,7 +25,7 @@ def my_event(data):
 
 
 
-@sio.event
+@sio.on("message")
 def message(data):
     print(f'Data from the server is {data}')
 
@@ -35,6 +35,7 @@ def message(data):
 async def takeout(data):
     print(f'Data from Takeout {data}')
     
+
 
 
 
@@ -48,6 +49,12 @@ def disconnect():
 
 
 
+@sio.on("takeout_response", namespace='/takeout')
+async def handle_takeout_response(data):
+    print(f"Response received form the server is {data}")
+    #await send_ping()
+
+
 async def send_ping():
     global start_timer
     start_timer = time.time()
@@ -57,11 +64,18 @@ async def send_ping():
 @sio.event
 async def connect():
     print('connected to server')
+    #await send_ping()
+
+
+@sio.on('connect', namespace='/takeout')
+async def on_connect():
+    print("I'm connected to the /takeout namespace!")
+    await sio.emit('initiate_takeout', {'data': "Initiate takeout"},  namespace='/takeout')
+    
     await send_ping()
 
-
 @sio.event
-async def pong_from_server(data):
+async def pong(data):
     global start_timer
     latency = time.time() - start_timer
     print('latency is {0:.2f} ms'.format(latency * 1000))
@@ -70,10 +84,9 @@ async def pong_from_server(data):
 
 
 async def start_client():
-    await sio.connect('http://localhost:8000')
-    await sio.emit('takeout', {'data': "Progress of the takeout is scasca"})
+    await sio.connect('http://localhost:8000',  namespaces=['/takeout'])
     await sio.wait()
-
+    
 
 
 if __name__ == '__main__':

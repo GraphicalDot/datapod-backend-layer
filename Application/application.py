@@ -49,17 +49,16 @@ from sanic import Blueprint
 from sanic import response
 import random
 import time
+from sockets.sockets import sio
 #from secrets.aws_secret_manager import get_secrets
 
-from data_sources.takeout.parse_emails import TakeoutEmails
-import socketio
 
-sio = socketio.AsyncServer(async_mode='sanic', ping_timeout=30, logger=False, cors_allowed_origins=["http://localhost:4200"])
 app = Sanic(__name__)
 
 
 app.config['CORS_AUTOMATIC_OPTIONS'] = True
 cors = CORS(app)
+
 sio.attach(app)
 
 
@@ -68,93 +67,6 @@ SOCKETS_BP = Blueprint("sockets", url_prefix="")
 
 
 start_timer = None
-
-
-
-
-@SOCKETS_BP.get('socks')
-async def feed(request):
-
-    # characters = list(string.ascii_uppercase)
-    # while True:
-    #     try:
-    #         data = await ws.recv()
-    #     except (ConnectionClosed):
-    #         print("Connection is Closed")
-    #         data = None
-    #         break
-        
-    #     print('Received: ' + data)
-
-    
-    #     try:
-    #         for _ in range(10):
-    #             random.shuffle(characters)
-    #             time.sleep(2)
-    #             data = "".join(characters)
-    #             logger.info(f"Data being sent is {data}")
-    #             logger.info(f'Sending: {data}')
-    #             r = await ws.send(data)
-    #             logger.info(r)
-    #     except ConnectionClosed:
-    #         logger.error("Connection has been closed abruptly")
-    
-    for i in range(100):
-        await request.app.config.SIO.emit('takeout', {'data': f"Progress of the takeout is {i*10}"})
-        time.sleep(2)
-
-
-async def background_task():
-    """Example of how to send server generated events to clients."""
-    count = 0
-    while True:
-        await sio.sleep(10)
-        count += 10
-        await sio.emit('message', {'data': f'Progress of the app is {count}'})
-
-
-@sio.event
-async def my_event(sid, message):
-    await sio.emit('message', {'data': message['data']}, room=sid)
-
-
-@sio.event
-async def my_broadcast_event(sid, message):
-    await sio.emit('datapod_message', {'data': message['data']})
-
-
-
-@sio.event
-async def takeout(sid, message):
-    logger.info(f"Data received is {message}")
-    for i in range(0, 11):
-        await sio.emit('takeout', {'data': f"Progress of the takeout is {i*10}"})
-        time.sleep(2)
-
-
-
-
-
-
-async def send_ping():
-    global start_timer
-    start_timer = time.time()
-    await sio.emit('ping', None)
-
-
-@sio.event
-async def connect(sid, environ):
-    print('connected to server')
-    await send_ping()
-
-
-@sio.event
-async def pong_from_server(data):
-    global start_timer
-    latency = time.time() - start_timer
-    print('latency is {0:.2f} ms'.format(latency * 1000))
-    await sio.sleep(1)
-    await send_ping()
 
 
 
