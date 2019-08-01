@@ -70,7 +70,7 @@ async def connect():
 @sio.on('connect', namespace='/takeout')
 async def on_connect():
     print("I'm connected to the /takeout namespace!")
-    await sio.emit('initiate_takeout', {'data': "Initiate takeout"},  namespace='/takeout')
+    #await sio.emit('initiate_takeout', {'data': "Initiate takeout"},  namespace='/takeout')
     
     await send_ping()
 

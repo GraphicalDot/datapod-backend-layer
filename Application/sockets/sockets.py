@@ -62,3 +62,17 @@ async def pong_from_server(data):
     await send_ping()
 
 
+@sio.event
+async def broadcast(message):
+    await sio.emit("takeout_response", {'data': message }, namespace="/takeout")
+
+    # #broadcasts = [ws.send(message) for ws in app.ws_clients]
+    # #for result in asyncio.as_completed(broadcasts):
+    # try:
+    #     await asyncio.wait(broadcast)
+    #     logger.info(f"completed {message}")
+    
+    # except Exception as ex:
+    #     template = f"An exception of type {ex} occurred"
+    #     logger.error(template)
+    # return 

@@ -24,7 +24,7 @@ from sanic.websocket import WebSocketProtocol
 from websockets.exceptions import ConnectionClosed
 
 
-
+from sockets.sockets import broadcast
 import string
 import random
 import time
@@ -108,18 +108,21 @@ async def asyncparse_takeout(config, loop, executor):
     return 
 
 
-async def broadcast(config, message):
-    broadcast = config.SIO.emit("takeout_response", {'data': message }, namespace="/takeout")
+# async def broadcast(config, message):
+#     broadcast = config.SIO.emit("takeout_response", {'data': message }, namespace="/takeout")
 
-    #broadcasts = [ws.send(message) for ws in app.ws_clients]
-    #for result in asyncio.as_completed(broadcasts):
-    try:
-        await asyncio.run(broadcast)
+#     #broadcasts = [ws.send(message) for ws in app.ws_clients]
+#     #for result in asyncio.as_completed(broadcasts):
+#     try:
+#         await asyncio.wait(broadcast)
+#         logger.info(f"completed {message}")
     
-    except Exception as ex:
-        template = f"An exception of type {ex} occurred"
-        logger.error(template)
-    return 
+#     except Exception as ex:
+#         template = f"An exception of type {ex} occurred"
+#         logger.error(template)
+#     return 
+
+
 
 async def parse_takeout(config):
     ##add this if this has to executed periodically
@@ -169,6 +172,24 @@ async def parse_takeout(config):
     
     return 
 
+
+async def test_socket_i(config):
+    ##add this if this has to executed periodically
+    ##while True:
+    logger.info('Periodic task has begun execution')
+
+
+    for i in range(10):
+        time.sleep(5)
+        logger.info(f"Result from Parsing Email {i}") 
+        #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
+        await broadcast(i)
+
+
+
+@TAKEOUT_BP.get('test_socket')
+async def test_socket(request):
+    request.app.config.SIO.start_background_task(test_socket_i, request.app.config)
 
 
 #@TAKEOUT_BP.websocket('parse')
