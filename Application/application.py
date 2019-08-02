@@ -56,10 +56,19 @@ from sockets.sockets import sio
 app = Sanic(__name__)
 
 
-app.config['CORS_AUTOMATIC_OPTIONS'] = True
-cors = CORS(app)
+# app.config['CORS_AUTOMATIC_OPTIONS'] = True
+# app.config['CORS_SUPPORTS_CREDENTIALS'] = True
+#app.config['CORS_ALLOW_CREDENTIALS'] = True
+
+##cors = CORS(app, resources={r"*": {"origins": "*"}})
+app.config['CORS_SUPPORTS_CREDENTIALS'] = True
+
+CORS(app, resources={r"/*": {"origins": "*"}}, automatic_options=True)
+
+logging.getLogger('sanic_cors').level = logging.DEBUG
 
 sio.attach(app)
+
 
 
 
@@ -127,7 +136,7 @@ def main():
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=2)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(

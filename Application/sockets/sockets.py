@@ -5,8 +5,9 @@ from loguru import logger
 import time
 
 
+sio = socketio.AsyncServer(async_mode='sanic', cors_allowed_origins=[])
 
-sio = socketio.AsyncServer(async_mode='sanic', ping_timeout=30, logger=False, cors_allowed_origins=["http://localhost:4200"])
+#sio = socketio.AsyncServer(async_mode='sanic', ping_timeout=30, logger=False, cors_allowed_origins=[])
 
 # async def background_task():
 #     """Example of how to send server generated events to clients."""
