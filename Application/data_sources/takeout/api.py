@@ -20,7 +20,6 @@ import functools
 import coloredlogs, verboselogs, logging
 from functools import partial
 import concurrent.futures
-from sanic.websocket import WebSocketProtocol
 from websockets.exceptions import ConnectionClosed
 
 
@@ -135,7 +134,7 @@ async def parse_takeout(config):
     async for i in instance.download_emails():
         logger.info(f"Result from Parsing Email {i}") 
         #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
-        await broadcast(config, i)
+        #await broadcast(config, i)
     #await sio.emit('takeout', {'data': "Progress of the takeout is scasca"})
 
     # try:
@@ -198,42 +197,42 @@ async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
-    # import zipfile
-    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    import zipfile
+    request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
 
 
-    # if not os.path.exists(request.json["path"]):
-    #     raise APIBadRequest("This path doesnt exists")
+    if not os.path.exists(request.json["path"]):
+        raise APIBadRequest("This path doesnt exists")
 
-    # try:
-    #     the_zip_file = zipfile.ZipFile(request.json["path"])
-    # except:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-
-    # logger.info(f"Testing zip {request.json['path']} file")
-    # ret = the_zip_file.testzip()
-
-    # if ret is not None:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-    # ##check if mbox file exists or not
+    try:
+        the_zip_file = zipfile.ZipFile(request.json["path"])
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
 
 
+    logger.info(f"Testing zip {request.json['path']} file")
+    ret = the_zip_file.testzip()
 
-    # logger.info("Copying and extracting takeout data")
+    if ret is not None:
+        raise APIBadRequest("Invalid zip takeout file")
 
-    # try:
-    #     shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
-    # except:
-    #     raise APIBadRequest("Invalid zip takeout file")
+    ##check if mbox file exists or not
 
 
-    # mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
-    # if not os.path.exists(mbox_file):
-    #     raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
+
+    logger.info("Copying and extracting takeout data")
+
+    try:
+        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
+
+
+    mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+    if not os.path.exists(mbox_file):
+        raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
 
 
     #loop = asyncio.get_event_loop()

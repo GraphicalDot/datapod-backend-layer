@@ -25,6 +25,8 @@ import hashlib
 import datetime
 import asyncio
 import functools
+from sockets.sockets import broadcast
+
 from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
@@ -175,10 +177,12 @@ class TakeoutEmails(object):
             i += 1
             self.save_email(message)
             #if i in completion_percentage:
-            if completion_percentage:
-                if i in completion_percentage:
-                    logger.info(f"I found {i}")
-                    yield f"Parse email progress is  {i}"
+            # if completion_percentage:
+            #     if i in completion_percentage:
+            #         logger.info(f"I found {i}")
+            await broadcast(i)
+
+                    #yield f"Parse email progress is  {i}"
 
             if i  == 1000:
                 break
