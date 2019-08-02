@@ -63,7 +63,7 @@ app = Sanic(__name__)
 ##cors = CORS(app, resources={r"*": {"origins": "*"}})
 app.config['CORS_SUPPORTS_CREDENTIALS'] = True
 
-CORS(app, resources={r"/*": {"origins": "*"}}, automatic_options=True)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 logging.getLogger('sanic_cors').level = logging.DEBUG
 
@@ -136,7 +136,7 @@ def main():
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
+    app.run(host="localhost", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(
