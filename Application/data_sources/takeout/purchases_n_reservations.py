@@ -43,11 +43,13 @@ from utils.utils import timezone_timestamp
 @asyncinit
 class PurchaseReservations(object):
     __source__ = "takeout"
-    def __init__(self, gmail_takeout_path, app_config):
+    def __init__(self, config):
         #self.db_dir_path = db_dir_path
-        self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
+        #self.path = os.path.join(gmail_takeout_path, "Purchases _ Reservations")
+        self.path = os.path.join(config.RAW_DATA_PATH,  "Takeout/Purchases _ Reservations")
+
         #self.db_instance = create_db_instance(db_dir_path)
-        self.app_config = app_config
+        self.app_config = config
         if not os.path.exists(self.path):
             logger.error("Reservations and purchase data doesnt exists")
             raise Exception("Reservations and purchase data doesnt exists")

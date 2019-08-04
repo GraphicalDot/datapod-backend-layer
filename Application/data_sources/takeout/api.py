@@ -120,52 +120,57 @@ async def asyncparse_takeout(config, loop, executor):
 
 
 
+
 async def parse_takeout(config):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
     #path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    instance = TakeoutEmails(config)
+    email_parsing_instance = TakeoutEmails(config)
 
-    await instance.download_emails()
-    # logger.info(f"Result from Parsing Email {i}") 
-    # #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
-    # #await broadcast(config, i)
-    #await sio.emit('takeout', {'data': "Progress of the takeout is scasca"})
+    ##parsing all the email data from the takeout
+    await email_parsing_instance.download_emails()
+    #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
+    #await broadcast(config, i)
 
-    # try:
-    #     ins = await ParseGoogleImages(#path, config)
-    #     await ins.parse()
-    #     images_data = ins.images_data
+    try:
+        ins = await ParseGoogleImages(config)
+        await ins.parse()
+        images_data = ins.images_data
 
-    #     for image_data in images_data:
-    #         image_data.update({"tbl_object": config.IMAGES_TBL}) 
-    #         q_images_db.store(**image_data)
-    # except Exception as e:
-    #     logger.error(f"Parsing Image data Failed {e}")    
-    #     pass
+        for image_data in images_data:
+            image_data.update({"tbl_object": config.IMAGES_TBL}) 
+            q_images_db.store(**image_data)
+    except Exception as e:
+        logger.error(f"Parsing Image data Failed {e}")    
+        pass
+    await email_parsing_instance.send_sse_message(99)
 
 
-    # try:
-    #     ins = await PurchaseReservations(path, config)
-    #     reservations, purchases = await ins.parse()
-    # except Exception as e:
-    #     logger.error(f"Purchases and reservation parsing failed {e}")    
-    #     return                                                                        
+    try:
+        ins = await PurchaseReservations(config)
+        reservations, purchases = await ins.parse()
+    except Exception as e:
+        logger.error(f"Purchases and reservation parsing failed {e}")    
+        return                                                                        
 
-    # for purchase in purchases:
-    #     purchase.update({"tbl_object": config.PURCHASES_TBL}) 
-    #     q_purchase_db.store(**purchase)
+    for purchase in purchases:
+        purchase.update({"tbl_object": config.PURCHASES_TBL}) 
+        q_purchase_db.store(**purchase)
 
-    # for reservation in reservations:
-    #     reservation.pop("products")
-    #     reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
-    #     q_reservation_db.store(**reservation)
+    for reservation in reservations:
+        reservation.pop("products")
+        reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
+        q_reservation_db.store(**reservation)
         
     logger.info('Periodic task has finished execution')
 
-    
+    await email_parsing_instance.send_sse_message(100)
+
+    ##updating datasources table with the status that parsing of the takeout is completed
+    email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
+
     return 
 
 

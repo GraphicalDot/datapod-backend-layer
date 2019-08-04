@@ -9,11 +9,12 @@ import datetime
 class ParseGoogleImages(object):
     __source__ = "takeout"
     
-    def __init__(self, gmail_takeout_path, app_config):
+    def __init__(self, config):
         #self.db_dir_path = db_dir_path
-        self.path = os.path.join(gmail_takeout_path, "Google Photos")
+        self.path = os.path.join(config.RAW_DATA_PATH,  "Takeout/Google Photos")
+        #self.path = os.path.join(gmail_takeout_path, "Google Photos")
         #self.db_instance = create_db_instance(db_dir_path)
-        self.app_config = app_config
+        self.app_config = config
         if not os.path.exists(self.path):
             raise Exception("Images data doesnt exists")
         self.images = []

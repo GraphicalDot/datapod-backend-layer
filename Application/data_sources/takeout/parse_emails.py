@@ -131,9 +131,9 @@ class TakeoutEmails(object):
 
         ##Since the takeout has started we need to update the datasources table in DB eith
         ## the flag Progress
-        self.__update_datasource_table("PROGRESS")
+        self.update_datasource_table("PROGRESS")
 
-    def __update_datasource_table(self, status, email_count=None):
+    def update_datasource_table(self, status, email_count=None):
         """
         Update data sources table after successful parsing of takeout and emails 
         """
@@ -151,7 +151,7 @@ class TakeoutEmails(object):
         update_datasources_status(**data)
         return 
     
-    async def __send_sse_message(self, percentage):
+    async def send_sse_message(self, percentage):
         url = f"http://{self.config.HOST}:{self.config.PORT}/send"
         logger.info(f"Sending sse message {percentage} at url {url}")
         async with aiohttp.ClientSession() as session:
@@ -188,8 +188,10 @@ class TakeoutEmails(object):
         self.email_count = 0
 
         if self.total_emails_number > 100:
-            completion_percentage  = list(range(1, self.total_emails_number, int(self.total_emails_number /98)))          
-            completion_percentage.append(self.total_emails_number)
+            ##the length of the list will be 98, the rest two points will be sent when image parsing will be done 
+            ##and when purchases and reservation will be done
+            completion_percentage  = list(range(1, self.total_emails_number, int(self.total_emails_number /97)))          
+            #completion_percentage.append(self.total_emails_number)
         else:
             completion_percentage = None
 
@@ -207,16 +209,15 @@ class TakeoutEmails(object):
                     #logger.info(f"I found {i}")
                     percentage = f"{completion_percentage.index(i) +1 }"
                     logger.info(f"Percentage of completion {percentage}% at {i} emails")
-                    await self.__send_sse_message(percentage)
+                    await self.send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
-
-            if i  == 10000:
+            if i == 3000:
+                await self.send_sse_message(95)
                 break
-
+            
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
-        self.__update_datasource_table("COMPLETED",self.email_count)
        
         return
 
