@@ -37,8 +37,7 @@ def store_email(**data):
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        #logger.error(f"Email data insertion failed {data['email_id']} with {e}")
-        pass
+        logger.error(f"Email data insertion failed {data['email_id']} with {e}")
  
     return 
 
@@ -58,13 +57,11 @@ def store_email_content(**data):
 
 
     except IntegrityError as e:
-        #logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
-        pass
+        logger.error(f"Error on insert indexed content for  email_id --{data['email_id']}-- with error {e}")
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        #logger.error(f"Email content insertion failed {data['email_id']} with {e}")
-        pass
+        logger.error(f"Email content insertion failed {data['email_id']} with {e}")
     return
 
 
@@ -85,15 +82,13 @@ def store_email_attachment(**data):
         #                             path --{data['path']}-- and attachement name {data['attachment_name']}")
 
     except IntegrityError as e:
-        # logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
-        #                             path --{data['path']}-- and attachement name {data['attachment_name']}\
-        #                             with error {e}")
-        pass
+        logger.error(f"Error on insert attachement for  email_id --{data['email_id']}--  \
+                                    path --{data['path']}-- and attachement name {data['attachment_name']}\
+                                    with error {e}")
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        #logger.error(f"Email sttachment insertion failed {data['email_id']} with {e}")
-        pass
+        logger.error(f"Email sttachment insertion failed {data['email_id']} with {e}")
     return 
 
 

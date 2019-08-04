@@ -23,14 +23,11 @@ import concurrent.futures
 from websockets.exceptions import ConnectionClosed
 
 
-from sockets.sockets import broadcast
 import string
 import random
 import time
+from loguru import logger
 
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
 TAKEOUT_BP = Blueprint("", url_prefix="/takeout/")
 
 
@@ -127,18 +124,18 @@ async def parse_takeout(config):
     ##add this if this has to executed periodically
     ##while True:
     logger.info('Periodic task has begun execution')
-    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+    #path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
     instance = TakeoutEmails(config)
 
-    async for i in instance.download_emails():
-        logger.info(f"Result from Parsing Email {i}") 
-        #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
-        #await broadcast(config, i)
+    await instance.download_emails()
+    # logger.info(f"Result from Parsing Email {i}") 
+    # #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
+    # #await broadcast(config, i)
     #await sio.emit('takeout', {'data': "Progress of the takeout is scasca"})
 
     # try:
-    #     ins = await ParseGoogleImages(path, config)
+    #     ins = await ParseGoogleImages(#path, config)
     #     await ins.parse()
     #     images_data = ins.images_data
 
@@ -172,23 +169,8 @@ async def parse_takeout(config):
     return 
 
 
-async def test_socket_i(config):
-    ##add this if this has to executed periodically
-    ##while True:
-    logger.info('Periodic task has begun execution')
 
 
-    for i in range(10):
-        time.sleep(5)
-        logger.info(f"Result from Parsing Email {i}") 
-        #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
-        await broadcast(i)
-
-
-
-@TAKEOUT_BP.get('test_socket')
-async def test_socket(request):
-    request.app.config.SIO.start_background_task(test_socket_i, request.app.config)
 
 
 #@TAKEOUT_BP.websocket('parse')
@@ -235,11 +217,8 @@ async def parse_takeout_api(request):
         raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
 
 
-    #loop = asyncio.get_event_loop()
-    #executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-    request.app.config.SIO.start_background_task(parse_takeout, request.app.config)
 
-    #request.app.add_task(parse_takeout(request.app.config, request.app.loop, executor))
+    request.app.add_task(parse_takeout(request.app.config))
 
     return response.json(
         {
@@ -473,5 +452,10 @@ async def match_text_email(request):
         'success': True,
         "data": res
         })
-    
 
+    # while True:
+    #     data = 'hello!'
+    #     print('Sending: ' + data)
+    #     await ws.send(data)
+    #     data = await ws.recv()
+    #     print('Received: ' + data)

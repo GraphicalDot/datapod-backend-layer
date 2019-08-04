@@ -64,7 +64,7 @@ async def pong_from_server(data):
 
 
 @sio.event
-async def broadcast(message):
+async def takeout_email_parse_progress_broadcast(message):
     await sio.emit("takeout_response", {'data': message }, namespace="/takeout")
 
     # #broadcasts = [ws.send(message) for ws in app.ws_clients]
@@ -77,3 +77,13 @@ async def broadcast(message):
     #     template = f"An exception of type {ex} occurred"
     #     logger.error(template)
     # return 
+
+
+@sio.event
+async def broadcast(message):
+    await sio.emit("takeout_response", {'data': message }, namespace="/takeout")
+
+
+@sio.event
+async def takeout_reser_purc_parse_progress_broadcast(message):
+    await sio.emit("takeout_reser_pur_progress", {'data': message }, namespace="/takeout")

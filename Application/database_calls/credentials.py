@@ -89,16 +89,17 @@ def get_credentials(credentials_tbl_obj):
                     person.update({key: value.decode()})
             return  person
     except Exception as e:
-        logging.error(f"Couldnt fetch credentials data  {e}")
+        logger.error(f"Couldnt fetch credentials data  {e}")
     return 
 
 
 
-def update_datasources_status(tbl_object, source, name, code, message):
+def update_datasources_status(tbl_object, source, name, code, message, status):
     try:
         tbl_object.insert(source=source,  
                                     name=name,
                                     code=code,
+                                    status=status,
                                     message=message).on_conflict_replace().execute()
 
         logger.info(f"On insert new datasource is {source}")

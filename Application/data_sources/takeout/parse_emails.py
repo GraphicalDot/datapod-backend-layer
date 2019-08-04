@@ -4,6 +4,7 @@ import verboselogs
 import coloredlogs
 from lxml.html.clean import Cleaner
 import sys
+import requests
 import os
 from utils.utils import timezone_timestamp, month_aware_time_stamp
 from errors_module.errors import APIBadRequest, DuplicateEntryError
@@ -25,8 +26,9 @@ import hashlib
 import datetime
 import asyncio
 import functools
+import aiohttp
 from sockets.sockets import broadcast
-
+import concurrent.futures
 from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
@@ -42,6 +44,7 @@ logger = logging.getLogger(__file__)
 class TakeoutEmails(object):
     message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
     __source__ = "TAKEOUT"
+    __channel_id__ = "TAKEOUT_EMAIL_PROGRESS"
     
     def __init__(self, config):
 
@@ -50,9 +53,11 @@ class TakeoutEmails(object):
         # self.db_dir_path = db_dir_path
         self.email_dir = os.path.join(
             config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+
         self.email_mbox = mailbox.mbox(self.email_dir)
         self.total_emails_number = len(self.email_mbox.keys())
 
+        
         self.email_dir_html = os.path.join(
             config.PARSED_DATA_PATH, "mails/gmail/email_html")
 
@@ -124,22 +129,45 @@ class TakeoutEmails(object):
                 os.makedirs(self.extra_dir)
         logger.info("App intiation been done")
 
+        ##Since the takeout has started we need to update the datasources table in DB eith
+        ## the flag Progress
+        self.__update_datasource_table("PROGRESS")
 
-    def __update_datasource_table(self, email_count):
+    def __update_datasource_table(self, status, email_count=None):
         """
         Update data sources table after successful parsing of takeout and emails 
         """
-        email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
+        if status == "PROGRESS":
+            email_id= ""
+        else:
+            email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
         data = {"tbl_object": self.datasources_tbl,
                 "name": email_id, 
                 "source": self.__source__, "message": f"{email_count} emails",
-                "code": self.config.DATASOURCES_CODE[self.__source__] }
+                "code": self.config.DATASOURCES_CODE[self.__source__],
+                "status": status }
 
 
         update_datasources_status(**data)
         return 
+    
+    async def __send_sse_message(self, percentage):
+        url = f"http://{self.config.HOST}:{self.config.PORT}/send"
+        logger.info(f"Sending sse message {percentage} at url {url}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=json.dumps({"message": percentage, "channel_id": self.__channel_id__})) as response:
+                result =  await response.json()
         
+        #r = requests.post(url, )
 
+        logger.info(f"Result sse message {result}")
+
+        if result["error"]:
+            logger.error(result["message"])
+            return 
+
+        logger.success(result["message"])
+        return 
 
     #async def download_emails(self, loop, executor):
     async def download_emails(self):
@@ -170,17 +198,16 @@ class TakeoutEmails(object):
         #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
         #     return_when=asyncio.ALL_COMPLETED)
         i = 0
-        logger.info(completion_percentage)
-        time.sleep(20)
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             i += 1
             self.save_email(message)
-            #if i in completion_percentage:
-            # if completion_percentage:
-            #     if i in completion_percentage:
-            #         logger.info(f"I found {i}")
-            await broadcast(i)
+            if completion_percentage:
+                if i in completion_percentage:
+                    #logger.info(f"I found {i}")
+                    percentage = f"{completion_percentage.index(i)}%"
+                    logger.info(f"Percentage of completion {percentage}")
+                    await self.__send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
 
@@ -188,9 +215,8 @@ class TakeoutEmails(object):
                 break
 
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
-        yield f"100%"
         
-        self.__update_datasource_table(self.email_count)
+        self.__update_datasource_table("COMPLETED",self.email_count)
        
         return
 

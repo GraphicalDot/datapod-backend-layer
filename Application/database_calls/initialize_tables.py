@@ -128,11 +128,12 @@ def intialize_db(path):
 
     
     class Datasources(BaseModel):
-        source = peewee.TextField(null=True)
+        source = peewee.TextField(null=True, index=True)
         name = peewee.TextField(null=True)
         code = peewee.IntegerField()
         message = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
+        status = peewee.TextField(null=True)
    
 
     class Purchases(BaseModel):

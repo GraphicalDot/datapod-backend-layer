@@ -30,11 +30,8 @@ from zmq.asyncio import ZMQEventLoop
 from spf import SanicPluginsFramework
 
 
-import coloredlogs, verboselogs, logging
 import config
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+
 
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
@@ -49,7 +46,13 @@ from sanic import Blueprint
 from sanic import response
 import random
 import time
-from sockets.sockets import sio
+  
+from sanic.response import json, json_dumps
+from sanic.exceptions import abort
+from sanic_sse import Sse
+from http import HTTPStatus
+#from sockets.sockets import sio
+from loguru import logger
 #from secrets.aws_secret_manager import get_secrets
 
 
@@ -63,11 +66,10 @@ app = Sanic(__name__)
 ##cors = CORS(app, resources={r"*": {"origins": "*"}})
 app.config['CORS_SUPPORTS_CREDENTIALS'] = True
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, automatic_options=True)
 
-logging.getLogger('sanic_cors').level = logging.DEBUG
 
-sio.attach(app)
+#sio.attach(app)
 
 
 
@@ -79,6 +81,50 @@ start_timer = None
 
 
 
+
+
+  
+
+
+async def before_sse_request(request):
+    if request.headers.get("Auth", "") != "some_token":
+        pass
+        #abort(HTTPStatus.UNAUTHORIZED, "Bad auth token")
+
+
+#sanic_app = Sanic()
+
+# The default sse url is /sse but you can set it via init argument url.
+Sse(
+    app, url="/events", before_request_func=before_sse_request
+)  # or you can use init_app method
+
+
+
+
+@SOCKETS_BP.post('send')
+async def send_event(request):
+
+    # if channel_id is None than event will be send to all subscribers
+    channel_id = request.json.get("channel_id")
+    logger.error(request.json)
+    logger.error(f"This is the channel id {channel_id}")
+
+    # optional arguments: event_id - str, event - str, retry - int
+    # data should always be str
+    # also you can use sse_send_nowait for send event without waiting
+    try:
+        await request.app.sse_send(json_dumps(request.json), channel_id=channel_id)
+    except KeyError:
+        logger.error("channel not found, No subscribers found")
+        return json({"error": True, 
+                    "succes": False,
+                    "message": "No subscribers found"})
+
+    return json({"error": False, 
+                    "succes": True,
+                    "message": "subscribers found and message sent"})
+    
 
 
 
@@ -131,7 +177,7 @@ def main():
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
-    app.config["SIO"] = sio
+    #app.config["SIO"] = sio
     import pprint 
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
