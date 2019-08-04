@@ -101,6 +101,7 @@ def update_datasources_status(tbl_object, source, name, code, message, status):
                                     code=code,
                                     status=status,
                                     message=message).on_conflict_replace().execute()
+                                    
 
         logger.info(f"On insert new datasource is {source}")
     except Exception as e:

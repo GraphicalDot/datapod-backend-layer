@@ -128,7 +128,7 @@ def intialize_db(path):
 
     
     class Datasources(BaseModel):
-        source = peewee.TextField(null=True, index=True)
+        source = peewee.TextField(null=True, index=True, unique=True)
         name = peewee.TextField(null=True)
         code = peewee.IntegerField()
         message = peewee.TextField(null=True)

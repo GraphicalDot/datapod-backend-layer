@@ -206,12 +206,12 @@ class TakeoutEmails(object):
                 if i in completion_percentage:
                     #logger.info(f"I found {i}")
                     percentage = f"{completion_percentage.index(i) +1 }"
-                    logger.info(f"Percentage of completion {percentage}%")
+                    logger.info(f"Percentage of completion {percentage}% at {i} emails")
                     await self.__send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
 
-            if i  == 1000:
+            if i  == 10000:
                 break
 
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
