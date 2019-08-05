@@ -402,13 +402,17 @@ async def post_login_mfa(request):
 
 @USERS_BP.get('/new_mnemonic')
 async def new_mnemonic(request):
+
+    mnemonic =  generate_mnemonic(request.app.config.LANGUAGE)
+    result = {}
+    for (index, word) in enumerate(mnemonic.split(" ")):
+        result.update({f"mnemonic_phrase_{index}": word})
+
     return response.json({
         "error": True, 
         "success": False,
         "message": None,
-        "data": {
-            "mnemonic": generate_mnemonic(request.app.config.LANGUAGE)
-        } 
+        "data": result
     })
 
  

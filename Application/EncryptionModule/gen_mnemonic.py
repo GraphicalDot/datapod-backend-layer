@@ -7,7 +7,7 @@ import os
 
 
 def generate_entropy():
-    strength_bits = 128
+    strength_bits = 256
     entropy = os.urandom(strength_bits // 8)
     return entropy
 
