@@ -125,17 +125,19 @@ async def make_backup(request):
     archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
 
     try:
-        instance = Backup(request)
-        async for msg in instance.create(archival_name):
-            logger.info(msg)
+        instance = Backup(request.app.config)
+        #await instance.create(archival_name)
             
-        new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
-        new_log_entry.save()
+
+        request.app.add_task(instance.create(archival_name))
+
+        # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
+        # new_log_entry.save()
 
     except Exception as e:
         logger.error(e.__str__())
-        new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival failed because of {e.__str__()} on {archival_name}", error=1, success=0)
-        new_log_entry.save()
+        # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival failed because of {e.__str__()} on {archival_name}", error=1, success=0)
+        # new_log_entry.save()
 
 
     return response.json(

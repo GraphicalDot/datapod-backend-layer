@@ -8,7 +8,9 @@ import time
 import datetime
 import platform
 import tempfile
-
+import requests
+import json
+import aiohttp
 import coloredlogs, verboselogs, logging
 verboselogs.install()
 coloredlogs.install()
@@ -35,8 +37,8 @@ class cd:
 
 
 class Backup(object):
-
-    def __init__(self, request):
+    __channel_id__ = "BACKUP_PROGRESS"
+    def __init__(self, config):
         # self.datapod_dir = datapod_dir
         # self.user_index = f""
 
@@ -49,24 +51,42 @@ class Backup(object):
         # ##the file inside the datapod_dir which will have the encryption keys of 
         # ##the user
         # self.encryption_file_name = os.path.join(datapod_dir, "keys/encryption.key")
-        self.request = request
-        self.userdata_path = self.request.app.config.USERDATA_PATH
+        self.config = config
+        self.userdata_path = self.config.USERDATA_PATH
         
         ##file which keeps tracks of the data that has been backup last time
-        self.user_index = self.request.app.config.USER_INDEX
+        self.user_index = self.config.USER_INDEX
 
 
         ##subdirectories in userdata path which deals with raw, parsed and database path 
         ##for the userdata.
-        self.parsed_data_path = self.request.app.config.PARSED_DATA_PATH
+        self.parsed_data_path = self.config.PARSED_DATA_PATH
         
         
-        #self.raw_data_path = os.path.join(self.request.app.config.RAW_DATA_PATH, "facebook")
-        self.raw_data_path = self.request.app.config.RAW_DATA_PATH
+        #self.raw_data_path = os.path.join(self.config.RAW_DATA_PATH, "facebook")
+        self.raw_data_path = self.config.RAW_DATA_PATH
 
-        self.db_path = self.request.app.config.DB_PATH
-        self.backup_path = self.request.app.config.BACKUP_PATH
+        self.db_path = self.config.DB_PATH
+        self.backup_path = self.config.BACKUP_PATH
 
+
+    async def send_sse_message(self, message):
+        url = f"http://{self.config.HOST}:{self.config.PORT}/send"
+        logger.info(f"Sending sse message {message} at url {url}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=json.dumps({"message": message, "channel_id": self.__channel_id__})) as response:
+                result =  await response.json()
+        
+        #r = requests.post(url, )
+
+        logger.info(f"Result sse message {result}")
+
+        if result["error"]:
+            logger.error(result["message"])
+            return 
+
+        logger.success(result["message"])
+        return 
 
     async def create(self, archival_name):
         """
@@ -111,11 +131,11 @@ class Backup(object):
 
         #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
 
-        for out in self.request.app.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
-            yield (f"Archiving {out.split('/')[-1]}")
+        for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
+            await self.send_sse_message(f"Archiving {out.split('/')[-1]}")
             
         async for msg in self.split(backup_path_dir, temp.name):
-            yield msg
+            await self.send_sse_message(msg)
         
         self.remove_temporary_archive(temp.name)
     
@@ -136,26 +156,26 @@ class Backup(object):
         with cd(backup_path_dir):
             logging.info(f"THe directory where split is taking place {backup_path_dir}")
             if platform.system() == "Linux":
-                #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
-                command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.request.app.config.TAR_SPLIT_SIZE, file_path)
+                #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.config.TAR_SPLIT_SIZE, dir_name, file_name)
+                command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.config.TAR_SPLIT_SIZE, file_path)
             elif platform.system() == "Darwin":
-                command = "split -b %sm %s backup.tar.gz.1"%(self.request.app.config.TAR_SPLIT_SIZE, file_path)
+                command = "split -b %sm %s backup.tar.gz.1"%(self.config.TAR_SPLIT_SIZE, file_path)
                 
-                #command = "gtar --tape-length=%s -cMv --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.request.app.config.TAR_SPLIT_SIZE, dir_name, file_name)
+                #command = "gtar --tape-length=%s -cMv --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.config.TAR_SPLIT_SIZE, dir_name, file_name)
             else:
                 raise APIBadRequest("The platform is not available for this os distribution")
 
             logging.warning(f"Splitting command is {command}")
-            for out in self.request.app.config.OS_COMMAND_OUTPUT(command, "Split"):
+            for out in self.config.OS_COMMAND_OUTPUT(command, "Split"):
                 yield (f"Archiving {out[-70:]}")
 
             for name in os.listdir("."):
                 logger.info(f"Creating sha checksum for backup split file {name}")
-                for out in self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {name} > {name}.sha512", "sha checksum"):
+                for out in self.config.OS_COMMAND_OUTPUT(f"sha512sum {name} > {name}.sha512", "sha checksum"):
                     yield (f"Creating sha checksum {out}")
         
             ##calculating the whole backup file tar 
-            for out in self.request.app.config.OS_COMMAND_OUTPUT(f"sha512sum {file_path} > backup.sha512", "sha checksum"):
+            for out in self.config.OS_COMMAND_OUTPUT(f"sha512sum {file_path} > backup.sha512", "sha checksum"):
                 yield (f"Creating sha checksum {out}")
 
         return 
