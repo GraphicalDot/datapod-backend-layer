@@ -94,6 +94,7 @@ class Config:
     GRACEFUL_SHUTDOWN_TIMEOUT = 15.0
     ACCESS_LOG = True   
     OS_COMMAND_OUTPUT  = os_command_output
+    DB_OBJECT = DB_Object
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
     CREDENTIALS_TBL = Credentials
@@ -122,6 +123,7 @@ class Config:
 class DevelopmentConfig(Config):   
     URL = "https://jadrlk2ok9.execute-api.ap-south-1.amazonaws.com/"
     LOGIN = f"{URL}Production/users/login"
+    DELETE_USER = f"{URL}Production/users/delete_user"
     SIGNUP = f"{URL}Production/users/signup" 
     CONFIRM_SIGN_UP = f"{URL}Production/users/confirm-signup"
     CHANGE_MFA_SETINGS = f"{URL}Production/users/mfa-settings"

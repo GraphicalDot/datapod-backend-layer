@@ -155,7 +155,11 @@ async def signup(request):
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
-    
+
+
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
 
     return response.json(
         {
@@ -178,6 +182,12 @@ async def confirm_signup(request):
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
+
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
+
+
     return response.json(
         {
         'error': False,
@@ -240,6 +250,9 @@ async def change_password(request):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
     
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
 
     ##since the password has been updated on the remote db, 
     ##this password should also be updated in the localdatabase too
@@ -281,6 +294,9 @@ async def forgot_password(request):
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
     
 
     return response.json(
@@ -309,7 +325,13 @@ async def set_new_password(request):
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
-    
+
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
+
+
+
     new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
 
     update_password_hash(request.app.config.CREDENTIALS_TBL, 
@@ -362,6 +384,9 @@ async def verify_mfa(request):
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
     
 
     return response.json({
@@ -391,6 +416,10 @@ async def post_login_mfa(request):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
     
+    if result.get("errorMessage"):
+        logger.error(result["errorMessage"])
+        raise APIBadRequest(result["errorMessage"])
+
 
     return response.json({
         'error': False,
@@ -416,6 +445,36 @@ async def new_mnemonic(request):
     })
 
  
+
+@USERS_BP.post('/delete_user')
+@id_token_validity()
+async def delete_user(request):
+    
+    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
+                "username": request["user_data"]["username"], 
+                }), headers={"Authorization": request["user_data"]["id_token"]})
+    
+    if r.json()["status_code"] != 200 or r.json()["error"] == True:
+        logger.error("Error in deleting user {r.json()['message']}")
+        raise APIBadRequest("Error in deleteing user")
+
+    if r.json().get("errorMessage"):
+        logger.error(r.json()["errorMessage"])
+        raise APIBadRequest(r.json()["errorMessage"])
+
+
+    #db.drop_tables([Datasources, IndexEmailContent])
+    request.app.config.DB_OBJECT.drop_tables([request.app.config.CREDENTIALS_TBL])
+    return response.json({
+        "error": False, 
+        "success": True,
+        "message": "user has been deleted successfully",
+        "data": None
+    })
+
+
+
+
 
 @USERS_BP.post('/update_user')
 @id_token_validity()
