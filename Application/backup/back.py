@@ -11,12 +11,14 @@ import tempfile
 import requests
 import json
 import aiohttp
+from asyncinit import asyncinit
 import coloredlogs, verboselogs, logging
+from errors_module.errors import MnemonicRequiredError
 verboselogs.install()
 coloredlogs.install()
 from errors_module.errors import APIBadRequest, PathDoesntExists
 logger = logging.getLogger(__file__)
-
+from database_calls.credentials import get_credentials
 
 
 class cd:
@@ -137,8 +139,13 @@ class Backup(object):
         async for msg in self.split(backup_path_dir, temp.name):
             await self.send_sse_message(msg)
         
+        await self.send_sse_message(f"Removing Temporary file {temp.name}")
+        
         self.remove_temporary_archive(temp.name)
+        await self.send_sse_message(f"Temporary file {temp.name} Removed")
+
     
+
         return 
 
     def remove_temporary_archive(self, file_name):
@@ -182,24 +189,52 @@ class Backup(object):
 
 
 
-
+@asyncinit
 class S3Backup(object):
 
 
-    async def check_size():
-        size_command = "aws s3 s3://{config.AWS_S3['bucket_name']}/{identity_id} s3://mybucket --recursive --human-readable --summarize"
-        for out in config.OS_COMMAND_OUTPUT(size_command, "Files are in Sync"):
-            yield (out)
+    async def __init__(self, config, id_token):
+        self.config = config
+        self.id_token = id_token
+        self.credentials = get_credentials(config.CREDENTIALS_TBL)
+        self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt', delete=False)
+        logger.error(self.encryption_key_file.name)
+
+        ##in this temporary file, private key is now written
+        logger.info(self.credentials)
+
+        if not self.credentials["encryption_key"]:
+            raise MnemonicRequiredError()
+
+        with open(self.encryption_key_file.name, "wb") as f:
+            f.write(self.credentials["encryption_key"].encode())
+
+
+
+        self.identity_id, self.access_key, self.secret_key, self.session_token =  await self.aws_temp_creds()
+        
+        logger.info(f"Access key for AWS <<{self.access_key}>>")
+        logger.info(f"Secret key for AWS <<{self.secret_key}>>")
+        logger.info(f"Session Token  for AWS <<{self.session_token}>>")
+        # async for msg in S3Backup.sync_backup(request.app.config, identity_id, access_key, secret_key, session_token):
+        #     logger.info(msg)
+
+        os.environ['AWS_ACCESS_KEY_ID'] = self.access_key # visible in this process + all children
+        os.environ['AWS_SECRET_ACCESS_KEY'] = self.secret_key # visible in this process + all children
+        os.environ['AWS_SESSION_TOKEN'] = self.session_token # visible in this process + all children
+        os.environ["AWS_DEFAULT_REGION"] = self.config.AWS_S3["default_region"]
+
+    async def check_size(self):
+        size_command = f"aws s3 ls --recursive --human-readable --summarize s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
+        logger.info(size_command)
+
+        for out in self.config.OS_COMMAND_OUTPUT(size_command, "Files are in Sync"):
+            logger.info(out)
         return
 
 
-    @staticmethod
-    async def sync_backup(config, identity_id, access_key, secret_key, session_token):
+    async def sync_backup(self):
 
-        os.environ['AWS_ACCESS_KEY_ID'] = access_key # visible in this process + all children
-        os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key # visible in this process + all children
-        os.environ['AWS_SESSION_TOKEN'] = session_token # visible in this process + all children
-        os.environ["AWS_DEFAULT_REGION"] = config.AWS_S3["default_region"]
 
         # _key = generate_aes_key(32)
 
@@ -207,16 +242,48 @@ class S3Backup(object):
         # print (key)
         # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
         configure_command = "aws configure set default.s3.max_bandwidth 15MB/s"
-        for out in config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
+        for out in self.config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
             yield (out)
 
-        sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{config.BACKUP_KEY_ENCRYPTION_FILE} {config.BACKUP_PATH} s3://{config.AWS_S3['bucket_name']}/{identity_id}"
+        sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
         print (sync_command)
-        for out in config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            yield (out)
+        for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
+            await send_sse_message(self.config, "BACKUP_PROGRESS", out)
         return
 
 
+    async def aws_temp_creds(self):
+
+        r = requests.post(self.config.AWS_CREDS, data=json.dumps({
+                        "id_token": self.id_token}))
+        
+        result = r.json()
+        if result.get("error"):
+            logger.error(result["message"])
+            raise APIBadRequest(result["message"])
+        
+        return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
+
+
+
+
+async def send_sse_message(config, channel_id, message):
+    url = f"http://{config.HOST}:{config.PORT}/send"
+    logger.info(f"Sending sse message {message} at url {url}")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=json.dumps({"message": message, "channel_id": channel_id})) as response:
+            result =  await response.json()
+    
+    #r = requests.post(url, )
+
+    logger.info(f"Result sse message {result}")
+
+    if result["error"]:
+        logger.error(result["message"])
+        return 
+
+    logger.success(result["message"])
+    return 
 
 
 

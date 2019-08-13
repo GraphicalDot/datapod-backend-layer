@@ -53,11 +53,16 @@ def update_id_and_access_tokens(credentials_tbl_obj, username, id_token, access_
     return 
 
 
-def update_mnemonic(credentials_tbl_obj, username, mnemonic, salt):
+def update_mnemonic(credentials_tbl_obj, username, mnemonic, salt, address, encryption_key):
     try:
         credentials_tbl_obj.update(
             mnemonic=convert_type(mnemonic), 
-            salt=convert_type(salt)).\
+            salt=convert_type(salt),
+            address=convert_type(address),
+            encryption_key=convert_type(encryption_key),
+            
+            
+            ).\
         where(credentials_tbl_obj.username==username).\
         execute()
 
@@ -82,6 +87,9 @@ def update_password_hash(credentials_tbl_obj, username, password_hash):
 
 
 def get_credentials(credentials_tbl_obj):
+    res = credentials_tbl_obj.select().dicts()
+
+    logger.error(f"Number of entries in creds table is {len(res)}")
     try:
         for person in credentials_tbl_obj.select().dicts():
             for key, value in person.items():

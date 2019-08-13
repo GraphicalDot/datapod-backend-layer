@@ -99,7 +99,7 @@ def id_token_validity():
             # run some method that checks the request
             # for the client's authorization status
             #is_authorized = check_request_for_authorization_status(request)
-
+                
             result = get_credentials(request.app.config.CREDENTIALS_TBL)
             #logger.info(f"Data from the credential table in id_token_validity decorator {result}")
             if not result:
@@ -117,7 +117,7 @@ def id_token_validity():
                 request["user_data"] = result
             except Exception as e:
                 
-                logger.error("User must have signed out, Please Login again")
+                logger.error(f"User must have signed out, Please Login again with an error {e.__str__()}")
                 raise APIBadRequest("Please Login again")
 
 

@@ -36,55 +36,6 @@ async def backup_settings(request):
 
 
 
-def id_token_validity():
-    def decorator(f):
-        @wraps(f)
-        async def decorated_function(request, *args, **kwargs):
-            # run some method that checks the request
-            # for the client's authorization status
-            #is_authorized = check_request_for_authorization_status(request)
-
-            result = get_credentials(config.config_object.CREDENTIALS_TBL)
-            logger.info(f"Data from the credential table in id_token_validity decorator {result}")
-            if not result:
-                logger.error("Credentials aren't present, Please Login again")
-                raise APIBadRequest("Credentials aren't present, Please Login again")
-
-            try:
-                id_token = result["id_token"].decode()
-                refresh_token = result["refresh_token"].decode()
-                username = result["username"]
-            
-            except Exception as e:
-                
-                logger.error("User must have signed out, Please Login again")
-                raise APIBadRequest("Please Login again")
-
-
-            payload = jwt.get_unverified_claims(id_token)
-
-            time_now = datetime.datetime.fromtimestamp(revoke_time_stamp(timezone=config.config_object.TIMEZONE))
-            time_expiry = datetime.datetime.fromtimestamp(payload["exp"])
-            rd = dateutil.relativedelta.relativedelta (time_expiry, time_now)
-
-            logger.warning("Difference between now and expiry of id_token")
-            logger.warning(f"{rd.years} years, {rd.months} months, {rd.days} days, {rd.hours} hours, {rd.minutes} minutes and {rd.seconds} seconds")
-
-            if rd.minutes < 20:
-                logger.error("Renewing id_token, as it will expire soon")
-                id_token = update_tokens(config.config_object, username, refresh_token)
-          
-            if isinstance(id_token, bytes):
-                id_token = id_token.decode()
-
-            response = await f(request, config.config_object, id_token, username, *args, **kwargs)
-            return response
-          
-        return decorated_function
-    return decorator
-
-
-
 
 
 
@@ -109,27 +60,43 @@ async def aws_temp_creds(config, id_token, username):
 @BACKUP_BP.get('/aws_creds')
 @id_token_validity()
 #async def make_backup(request, ws):
-async def aws_creds(request, config, id_token, username):
-    identity_id, access_key, secret_key, session_token =  await aws_temp_creds(config, id_token, username)
+async def aws_creds(request):
+    identity_id, access_key, secret_key, session_token =  await aws_temp_creds(request.app.config, request["user_data"]["id_token"], request["user_data"]["username"])
     async for msg in S3Backup.sync_backup(request.app.config, identity_id, access_key, secret_key, session_token):
         logger.info(msg)
     return response.json({"error": False, "sucess": True})
 
+
+
+async def backup_upload(config, id_token):
+    # Method to handle the new backup and sync with s3 
+    
+    # archival_object = datetime.datetime.utcnow()
+    # archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
+
+    # instance = Backup(config)
+    # await instance.create(archival_name)
+
+    #await instance.create(archival_name)
+    
+    instance = await S3Backup(config, id_token)
+    await instance.sync_backup()
+
+    #request.app.add_task(
+
+
+
 @BACKUP_BP.get('/make_backup')
-#async def make_backup(request, ws):
+@id_token_validity()
 async def make_backup(request):
     """
     ##TODO ADD entries to BACKUP_TBL
     """
-    archival_object = datetime.datetime.utcnow()
-    archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
+
 
     try:
-        instance = Backup(request.app.config)
-        #await instance.create(archival_name)
             
-
-        request.app.add_task(instance.create(archival_name))
+        request.app.add_task(backup_upload(request.app.config, request["user_data"]["id_token"]))
 
         # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         # new_log_entry.save()

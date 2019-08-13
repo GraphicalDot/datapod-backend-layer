@@ -513,6 +513,8 @@ async def update_user(request):
     mnemonic = " ".join(mnemonic)
     logger.info(f"Mnemonic as a list {mnemonic}")
 
+
+    ##this will return  {"private_key", "public_key", "address"
     mnemonic_keys = child_keys(mnemonic, 0)
     logger.info(mnemonic_keys)
 
@@ -523,6 +525,7 @@ async def update_user(request):
                 "mnemonic_sha_256": mnemonic_sha3_256,
                 }), headers={"Authorization": request["user_data"]["id_token"]})
 
+    logger.info(r.json())
     if r.json()["status_code"] == 200:
         raise APIBadRequest("Mnemonic is already present, You cant update your mnemonic")
 
@@ -560,7 +563,7 @@ async def update_user(request):
     update_mnemonic(request.app.config.CREDENTIALS_TBL, 
                 request["user_data"]["username"], 
                 encrypted_mnemonic, 
-                hex_salt)
+                hex_salt,  mnemonic_keys["address"], mnemonic_keys["private_key"])
 
     return response.json({
         "error": True, 
@@ -664,9 +667,9 @@ async def mnemonics(request, id_token, username):
        })
 
 
-@USERS_BP.post('/profile')
+@USERS_BP.get('/profile')
 @id_token_validity()
-async def profile(request, id_token, username):
+async def profile(request):
     
     """
     session is the session which you will get after enabling MFA and calling login api
@@ -674,11 +677,12 @@ async def profile(request, id_token, username):
     username is the username of the user
     """
 
-    r = requests.post(request.app.config.PROFILE, data=json.dumps({"username": username}), 
-        headers={"Authorization": id_token})
+    r = requests.post(request.app.config.PROFILE, data=json.dumps({"username": request["user_data"]["username"]}), 
+        headers={"Authorization": request["user_data"]["id_token"]})
     
     result = r.json()
-    if r.json["error"]:
+    logger.info(result)
+    if result.get("error"):
         raise APIBadRequest(result["message"])
 
     return response.json({

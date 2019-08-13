@@ -66,6 +66,13 @@ class PathDoesntExists(ApiException):
         self.message = f"{path} doesnt exists"
         super().__init__(self.message)
 
+@add_status_code(400)
+class MnemonicRequiredError(ApiException):
+    def __init__(self, path=None,
+                        status_code=None):
+        self.message = f"Mnemonic required from user"
+        super().__init__(self.message)
+
 
 @add_status_code(400)
 class AccountError(ApiException):

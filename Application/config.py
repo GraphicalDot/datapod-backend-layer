@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
-USER_INDEX = f"{MAIN_DIR}/user.index"
+USER_INDEX = f"{MAIN_DIR}/user.index" #this file be creating when making backup and keeps record of all the files who are indexed for backup i.e changed or not
 KEYS_DIR = os.path.join(MAIN_DIR, "keys")
 USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
 PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
