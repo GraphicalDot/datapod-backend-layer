@@ -6,8 +6,8 @@ import os
 from errors_module.errors import APIBadRequest
 import coloredlogs, verboselogs, logging
 import datetime
-
-from utils.utils import revoke_time_stamp, update_tokens, id_token_validity
+import humanize
+from utils.utils import revoke_time_stamp, update_tokens, id_token_validity, creation_date, modification_date
 from .back import Backup, S3Backup
 verboselogs.install()
 coloredlogs.install()
@@ -35,9 +35,56 @@ async def backup_settings(request):
 
 
 
+@BACKUP_BP.get('/backups_list')
+#async def make_backup(request, ws):
+async def backups_list(request):
+
+    result = []
+    def get_dir_size(dirpath):
+        all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+        _date = creation_date(all_files[0])
+        files_and_sizes = [os.path.getsize(path) for path in all_files]
+        return  humanize.naturalsize(sum(files_and_sizes)), _date
 
 
 
+    for (path, dirs, files) in os.walk(request.app.config.BACKUP_PATH):
+        for _dir in dirs:
+            dirpath = os.path.join(path, _dir)
+            size, date = get_dir_size(dirpath)
+            result.append({"name": _dir, "size": size, "date": date})
+    
+    
+    return response.json({
+            "error": False,
+            "success": True, 
+            "data": result,
+            "message": None
+        })
+
+
+
+
+@BACKUP_BP.post('/directory_info')
+#async def make_backup(request, ws):
+async def backups_list(request):
+    request.app.config.VALIDATE_FIELDS(["dirpath"], request.json)
+
+    if not os.path.isdir(request.json["dirpath"]):
+        raise APIBadRequest("Not a valid directory path")
+
+
+    all_files = ( os.path.join(basedir, filename) for basedir, dirs, files in os.walk(request.json["dirpath"]) for filename in files)
+    files_and_sizes = [{"path": path, "size":  humanize.naturalsize(os.path.getsize(path)), "modified": modification_date(path), "created": creation_date(path)} for path in all_files]
+    return response.json(
+        {
+            "error": False,
+            "success": True, 
+            "data": files_and_sizes,
+            "message": None
+        }
+
+    )
 
 
 
@@ -56,15 +103,6 @@ async def aws_temp_creds(config, id_token, username):
     return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
 
     
-
-@BACKUP_BP.get('/aws_creds')
-@id_token_validity()
-#async def make_backup(request, ws):
-async def aws_creds(request):
-    identity_id, access_key, secret_key, session_token =  await aws_temp_creds(request.app.config, request["user_data"]["id_token"], request["user_data"]["username"])
-    async for msg in S3Backup.sync_backup(request.app.config, identity_id, access_key, secret_key, session_token):
-        logger.info(msg)
-    return response.json({"error": False, "sucess": True})
 
 
 

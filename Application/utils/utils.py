@@ -27,6 +27,19 @@ def convert_type(value):
     return value
 
 
+def creation_date(filename):
+    time_format = "%Y-%m-%d %H:%M:%S"
+    t = os.path.getctime(filename)
+    return datetime.datetime.fromtimestamp(t).strftime(time_format)
+
+
+
+def modification_date(filename):
+    time_format = "%Y-%m-%d %H:%M:%S"
+    t = os.path.getmtime(filename)
+    return datetime.datetime.fromtimestamp(t).strftime(time_format)
+
+
 def revoke_time_stamp(days=0, hours=0, minutes=0, timezone=None): 
     if not timezone:
         logger.error("Please specify valid timezone for your servers")

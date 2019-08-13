@@ -147,10 +147,8 @@ async def signup(request):
             "username": request.json["username"]
         }
 
-    logger.info(data)
     r = requests.post(request.app.config.SIGNUP, data=json.dumps(data))
     result = r.json()
-    logger.info(result)
 
     if result.get("error"):
         logger.error(result["message"])
