@@ -19,21 +19,29 @@ def logout(credentials_tbl_obj):
 
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
 
-    
-
     try:
-        user_id = (credentials_tbl_obj.insert(username=convert_type(username),  
-                                    password_hash=convert_type(password_hash),
-                                    id_token=convert_type(id_token), 
-                                    access_token= convert_type(access_token), 
-                                    refresh_token=convert_type(refresh_token),
-                                    name = name, 
-                                    email=email
-                                    )
-           .on_conflict_replace()
-           .execute())
+        if credentials_tbl_obj.select().where(credentials_tbl_obj.username == username).dicts().get():
+            credentials_tbl_obj.update(
+                            id_token=convert_type(id_token), 
+                            access_token= convert_type(access_token), 
+                            refresh_token=convert_type(refresh_token)
+                        ).\
+                    where(credentials_tbl_obj.username==username).\
+                    execute()
+            logger.info(f"On Updating the credentials userid is {username}")
 
-        logger.info(f"On insert the credentials userid is {user_id}")
+
+        else:
+                credentials_tbl_obj.insert(username=convert_type(username),  
+                                        password_hash=convert_type(password_hash),
+                                        id_token=convert_type(id_token), 
+                                        access_token= convert_type(access_token), 
+                                        refresh_token=convert_type(refresh_token),
+                                        name = name, 
+                                        email=email
+                                        ).execute()
+
+                logger.info(f"On insert the credentials userid is {username}")
     except Exception as e:
         logger.error(f"Couldnt save data to credentials_tbl because of {e}")
     return 
@@ -60,8 +68,6 @@ def update_mnemonic(credentials_tbl_obj, username, mnemonic, salt, address, encr
             salt=convert_type(salt),
             address=convert_type(address),
             encryption_key=convert_type(encryption_key),
-            
-            
             ).\
         where(credentials_tbl_obj.username==username).\
         execute()
@@ -99,7 +105,6 @@ def get_credentials(credentials_tbl_obj):
     except Exception as e:
         logger.error(f"Couldnt fetch credentials data  {e}")
     return 
-
 
 
 def update_datasources_status(tbl_object, source, name, code, message, status):

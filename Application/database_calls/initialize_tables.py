@@ -36,6 +36,8 @@ Update query uery = Stat.update(counter=Stat.counter + 1).where(Stat.url == requ
 
 from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 #from playhouse.apsw_ext import APSWDatabase
+from .credentials import update_mnemonic, get_credentials, update_id_and_access_tokens
+
 
 def intialize_db(path):
     #db = peewee.SqliteDatabase(path,  detect_types=sqlite3.PARSE_DECLTYPES)
@@ -225,6 +227,15 @@ def intialize_db(path):
     # print ("\n\n")
 
     #Credentials.delete().execute()
+    
+    logger.info(update_mnemonic(Credentials, "graphicaldot", "scacb scuc a mnemonic", "salt", "address", "encryption_key"))
+    logger.info(get_credentials(Credentials))
+    logger.info(update_id_and_access_tokens(Credentials, "graphicaldot", "id_token", "access_token"))
+    logger.info(get_credentials(Credentials))
+    
+    res = Credentials.select().where(Credentials.username == "graphicaldot").dicts().get()
+    logger.info("Selecting a single record")
+    logger.info(res)
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
         CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations

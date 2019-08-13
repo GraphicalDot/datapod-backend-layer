@@ -70,7 +70,7 @@ class PathDoesntExists(ApiException):
 class MnemonicRequiredError(ApiException):
     def __init__(self, path=None,
                         status_code=None):
-        self.message = f"Mnemonic required from user"
+        self.message = f"Mnemonic required from user, Encryption key is missing"
         super().__init__(self.message)
 
 

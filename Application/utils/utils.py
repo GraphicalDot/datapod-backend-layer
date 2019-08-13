@@ -99,7 +99,7 @@ def id_token_validity():
             # run some method that checks the request
             # for the client's authorization status
             #is_authorized = check_request_for_authorization_status(request)
-                
+
             result = get_credentials(request.app.config.CREDENTIALS_TBL)
             #logger.info(f"Data from the credential table in id_token_validity decorator {result}")
             if not result:
@@ -178,13 +178,8 @@ def update_tokens(config, username, refresh_token):
     # logger.info(result)
     # if not result:
     #     logger.error("Credentials aren't present, Please Login again")
-    logger.info(username)
-    logger.info(refresh_token)
-        
     r = requests.post(config.RENEW_REFRESH_TOKEN, data=json.dumps({"username": username, "refresh_token": refresh_token}))
-    logging.info(r.text)
     result = r.json()
-    logger.info(result)
 
     if result.get("error"):
         logger.error(result["message"])
