@@ -31,6 +31,8 @@ def child_keys(mnemonic, index):
             .ChildKey(index + BIP32_HARDEN)\
             .ChildKey(index).ChildKey(index)
 
-    return {"private_key": childkey_object.WalletImportFormat(), 
+    return {
+        #"private_key": childkey_object.WalletImportFormat(), 
+        "private_key": childkey_object.PrivateKey().hex(), 
             "public_key": childkey_object.PublicKey().hex(), 
             "address": childkey_object.Address()}

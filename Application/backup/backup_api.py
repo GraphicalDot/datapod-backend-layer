@@ -71,19 +71,17 @@ async def aws_creds(request):
 async def backup_upload(config, id_token):
     # Method to handle the new backup and sync with s3 
     
-    # archival_object = datetime.datetime.utcnow()
-    # archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
+    archival_object = datetime.datetime.utcnow()
+    archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
 
-    # instance = Backup(config)
-    # await instance.create(archival_name)
+    instance = Backup(config)
+    await instance.create(archival_name)
 
-    #await instance.create(archival_name)
     
     instance = await S3Backup(config, id_token)
     await instance.sync_backup()
 
-    #request.app.add_task(
-
+    return 
 
 
 @BACKUP_BP.get('/make_backup')
