@@ -227,15 +227,7 @@ def intialize_db(path):
     # print ("\n\n")
 
     #Credentials.delete().execute()
-    
-    logger.info(update_mnemonic(Credentials, "graphicaldot", "scacb scuc a mnemonic", "salt", "address", "encryption_key"))
-    logger.info(get_credentials(Credentials))
-    logger.info(update_id_and_access_tokens(Credentials, "graphicaldot", "id_token", "access_token"))
-    logger.info(get_credentials(Credentials))
-    
-    res = Credentials.select().where(Credentials.username == "graphicaldot").dicts().get()
-    logger.info("Selecting a single record")
-    logger.info(res)
+
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
         CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations

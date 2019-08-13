@@ -20,7 +20,8 @@ def logout(credentials_tbl_obj):
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
 
     try:
-        if credentials_tbl_obj.select().where(credentials_tbl_obj.username == username).dicts().get():
+        res = credentials_tbl_obj.select().where(credentials_tbl_obj.username == username).dicts().get()
+        if res:
             credentials_tbl_obj.update(
                             id_token=convert_type(id_token), 
                             access_token= convert_type(access_token), 
@@ -31,8 +32,9 @@ def store_credentials(credentials_tbl_obj, username, password_hash, id_token, ac
             logger.info(f"On Updating the credentials userid is {username}")
 
 
-        else:
-                credentials_tbl_obj.insert(username=convert_type(username),  
+    except Exception as e:
+        logger.error(f"Couldnt save data to credentials_tbl because of {e}")
+        credentials_tbl_obj.insert(username=convert_type(username),  
                                         password_hash=convert_type(password_hash),
                                         id_token=convert_type(id_token), 
                                         access_token= convert_type(access_token), 
@@ -41,9 +43,6 @@ def store_credentials(credentials_tbl_obj, username, password_hash, id_token, ac
                                         email=email
                                         ).execute()
 
-                logger.info(f"On insert the credentials userid is {username}")
-    except Exception as e:
-        logger.error(f"Couldnt save data to credentials_tbl because of {e}")
     return 
 
 
