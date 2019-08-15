@@ -13,7 +13,8 @@ import socket
 import os
 import json
 from loguru import logger
-from errors import request_http_error, request_url_error
+from errors_module.errors import APIBadRequest
+from .errors import request_http_error, request_url_error
 import subprocess
 import sys
 import select
@@ -22,9 +23,33 @@ from Crypto.PublicKey import RSA
 import requests
 import paramiko
 import platform
-from auth import get_auth
+from .auth import get_auth
 import time
+import aiohttp
 #curl -u "user:pass" --data '{"title":"test-key","key":"'"$(cat ~/.ssh/id_rsa.pub)"'"}' https://api.github.com/user/keys
+
+
+
+async def send_sse_message(config, channel_id, message):
+    url = f"http://{config.HOST}:{config.PORT}/send"
+    logger.info(f"Sending sse message {message} at url {url}")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=json.dumps({"message": message, "channel_id": channel_id})) as response:
+            result =  await response.json()
+    
+    #r = requests.post(url, )
+
+    logger.info(f"Result sse message {result}")
+
+    if result["error"]:
+        logger.error(result["message"])
+        return 
+
+    logger.success(result["message"])
+    return 
+
+
+
 
 class GithubIdentity(object):
     """
@@ -35,7 +60,8 @@ class GithubIdentity(object):
     with the new private key, The keys generated is rsa 2048
     """
 
-    def __init__(self, hostname, key_name, ssh_dir=None):
+    __channel_name__ = "CODEREPOS_GITHUB"
+    def __init__(self, config, hostname, key_name, ssh_dir=None):
         """
         ssh_dir directory for the .ssh configuration and 
         keypairs 
@@ -43,6 +69,7 @@ class GithubIdentity(object):
         username: username for the host
         password: password for the host
         """
+        self.config = config
         self.hostname = hostname
         self.key_name = key_name
         if not ssh_dir:
@@ -53,6 +80,7 @@ class GithubIdentity(object):
 
         ##check if identity for the host already exists or not
         if self.identity_exist():
+
             raise Exception(f"Identity for {self.hostname} already exists")
         logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generte a new identity")
         self.public_key = os.path.join(self.ssh_dir, "git_pub.key")
@@ -83,11 +111,12 @@ class GithubIdentity(object):
 
         return True
 
-    def add(self, username, password):
+    async def add(self, username, password):
         privkey, pubkey = self.generate_new_keys()
+        await send_sse_message(self.config, self.__channel_name__, "Keys generated")
 
         ##uploading the keys to the host
-        self.github_upload_keys(pubkey, username, password)
+        await self.github_upload_keys(pubkey, username, password)
         
         ##writing keys to the local ssh configuration files
         with open(self.private_key, "wb") as content_file:
@@ -119,7 +148,7 @@ class GithubIdentity(object):
         pubkey = key.publickey().exportKey('OpenSSH')
         return privkey, pubkey 
 
-    def github_upload_keys(self, pubkey, username, password):
+    async def github_upload_keys(self, pubkey, username, password):
         """
         Upload the generated public key on the github
         """
@@ -128,12 +157,15 @@ class GithubIdentity(object):
                 }))
 
         res = response.json()
+        logger.error(res)
         if response.status_code == 401:
-            raise Exception(res.get("message"))
+            raise APIBadRequest(res.get("message"))
         if response.status_code == 422:
-            raise Exception(res.get("message"))
+            raise APIBadRequest(res.get("message"))
 
         logger.success(res)
+        await send_sse_message(self.config, self.__channel_name__, "SSH Keypair uploaded")
+
         return 
 
 
@@ -405,7 +437,7 @@ def download_file(url, path, auth):
 def check_git_lfs_install():
     exit_code = subprocess.call(['git', 'lfs', 'version'])
     if exit_code != 0:
-        log_error('The argument --lfs requires you to have Git LFS installed.\nYou can get it from https://git-lfs.github.com.')
+        logger.error('The argument --lfs requires you to have Git LFS installed.\nYou can get it from https://git-lfs.github.com.')
 
 
 def json_dump(data, output_file):

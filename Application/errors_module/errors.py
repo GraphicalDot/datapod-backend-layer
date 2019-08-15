@@ -41,6 +41,8 @@ class ApiException(SanicException):
             self.message = message
 
 
+
+
 class DuplicateEntryError(Exception):
     def __init__(self, unique_key, table_name):
         self.msg = f"Duplicate key present --{unique_key}-- in table --{table_name}--"
@@ -95,6 +97,11 @@ class AccountCreationError(ApiException):
         super().__init__(message)
 
 ##---------------------ACCOUNT ERRORS END --------------------------------##
+
+
+
+
+
 
 @ERRORS_BP.exception(ApiException)
 def api_json_error(request, exception):

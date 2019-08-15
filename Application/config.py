@@ -32,7 +32,7 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 
 
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
-    Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
+    Datasources, EmailAttachment,IndexEmailContent, Reservations, CodeReposGitHub   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 
 ##########-------------------------------------------------------###########
@@ -102,6 +102,7 @@ class Config:
     EMAILS_TBL = Emails
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images
+    CODE_GITHUB_TBL = CodeReposGitHub
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
     EMAIL_ATTACHMENT_TBL = EmailAttachment
@@ -115,7 +116,7 @@ class Config:
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
     #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
-    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": 6}
+    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}}
 
 
 

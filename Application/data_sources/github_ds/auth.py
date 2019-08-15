@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 from urllib.parse import quote as urlquote
 from urllib.parse import urlencode
 import base64
-
+from loguru import logger
 
 def mask_password(url, secret='*****'):
     parsed = urlparse(url)
@@ -34,10 +34,10 @@ def get_auth(username, password, encode=True):
     if username:
         if not password:
             raise Exception("Passsword is required for github")
-            password = urlquote(args.password)
+            password = urlquote(password)
         auth = username + ':' + password
     else:
-        log_error('You must specify a username for basic auth')
+        logger.error('You must specify a username for basic auth')
 
     if not auth:
         return None

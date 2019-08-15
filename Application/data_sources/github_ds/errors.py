@@ -41,7 +41,7 @@ def request_http_error(exc, auth, errors):
 def request_url_error(template, retry_timeout):
     # Incase of a connection timing out, we can retry a few time
     # But we won't crash and not back-up the rest now
-    log_info('{} timed out'.format(template))
+    logger.info('{} timed out'.format(template))
     retry_timeout -= 1
 
     if retry_timeout >= 0:
