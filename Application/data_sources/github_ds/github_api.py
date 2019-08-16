@@ -12,16 +12,29 @@ from errors_module.errors import APIBadRequest
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
-             retrieve_data, retrieve_data_gen
+             retrieve_data, retrieve_data_gen, get_authenticated_user
+
+from .backup_new import retrieve_repositories
 
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
 
 async def background_github_parse(config, username, password):
-    
+    logger.info("Background repositories backup started")
     try:
-        inst = GithubIdentity("github.com", "datapod")
-        inst.add(username, password)
+        backup_path = os.path.join(config.RAW_DATA_PATH, "Coderepos/github")
+        logger.info(f"Path for backup of github repos is {backup_path}")
+        ensure_directory(backup_path)
+
+        authenticated_user = get_authenticated_user(username, password)
+    
+        logger.info(f"The user for which the backup will happend {authenticated_user['login']}")
+        repositories = retrieve_repositories(username, password)
+        logger.info("\nTHese are the repositories for the user\n")
+        logger.info(repositories)
+        #repositories = filter_repositories(args, repositories)
+        backup_repositories(username, password, backup_path, repositories)
+        # # backup_account(args, output_directory)
 
     except Exception as e:
        logger.error(e)
@@ -52,13 +65,12 @@ async def parse(request):
 
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
     try:
-        inst = GithubIdentity(request.app.config, "github.com", "datapod")
+        inst = await GithubIdentity(request.app.config, "github.com", "datapod")
         await inst.add(request.json["username"], request.json["password"])
 
     except Exception as e:
-       logger.error(e)
-       raise APIBadRequest(e)
-
+        logger.error(e)
+        pass
 
 
 
@@ -66,7 +78,7 @@ async def parse(request):
     #     raise APIBadRequest("Unknown format")
 
     # logger.info(f"THe request was successful with github path {request.json['path']}")
-    # request.app.add_task(backup_upload(request.app.config, request["user_data"]["id_token"]))
+    request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
 
     return response.json(
         {

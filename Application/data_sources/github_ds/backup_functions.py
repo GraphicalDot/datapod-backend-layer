@@ -1,9 +1,8 @@
 
 
 import os
-from utils import mkdir_p
 from loguru import logger
-from utils import retrieve_data, retrieve_data_gen, json_dump
+from .utils import retrieve_data, retrieve_data_gen, json_dump, mkdir_p
 import codecs
 
 def backup_issues(username, password, repo_cwd, repository, repos_template, since=None):

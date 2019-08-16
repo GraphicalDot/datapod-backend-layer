@@ -15,6 +15,8 @@ import json
 from loguru import logger
 from errors_module.errors import APIBadRequest
 from .errors import request_http_error, request_url_error
+from .auth import get_auth,  get_github_api_host
+
 import subprocess
 import sys
 import select
@@ -26,9 +28,14 @@ import platform
 from .auth import get_auth
 import time
 import aiohttp
+from asyncinit import asyncinit
 #curl -u "user:pass" --data '{"title":"test-key","key":"'"$(cat ~/.ssh/id_rsa.pub)"'"}' https://api.github.com/user/keys
 
-
+def get_authenticated_user(username, password):
+    template = 'https://{0}/user'.format(get_github_api_host())
+    logger.info (f'THis is the template from authenticated_user {template}')
+    data = retrieve_data(username, password, template, single_request=True)
+    return data[0]
 
 async def send_sse_message(config, channel_id, message):
     url = f"http://{config.HOST}:{config.PORT}/send"
@@ -50,7 +57,7 @@ async def send_sse_message(config, channel_id, message):
 
 
 
-
+@asyncinit
 class GithubIdentity(object):
     """
     Add new ssh keys to login into the github account on ssh
@@ -61,7 +68,7 @@ class GithubIdentity(object):
     """
 
     __channel_name__ = "CODEREPOS_GITHUB"
-    def __init__(self, config, hostname, key_name, ssh_dir=None):
+    async def __init__(self, config, hostname, key_name, ssh_dir=None):
         """
         ssh_dir directory for the .ssh configuration and 
         keypairs 
@@ -80,9 +87,10 @@ class GithubIdentity(object):
 
         ##check if identity for the host already exists or not
         if self.identity_exist():
-
+            await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
             raise Exception(f"Identity for {self.hostname} already exists")
-        logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generte a new identity")
+
+        logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generate a new identity")
         self.public_key = os.path.join(self.ssh_dir, "git_pub.key")
         self.private_key = os.path.join(self.ssh_dir, "git_priv.key")
 
@@ -289,7 +297,7 @@ def mkdir_p(*args):
 def ensure_directory(dirname):
     output_directory = os.path.realpath(dirname)
     if not os.path.isdir(output_directory):
-        logger.debug('Create output directory {0}'.format(dirname))
+        logger.info('Create GIthub backup directory {0}'.format(dirname))
 
         mkdir_p(output_directory)
     return

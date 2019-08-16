@@ -1,13 +1,13 @@
 #!/usr/bin env python
 import os
 import sys
-from auth import get_auth,  get_github_api_host
+from .auth import get_auth,  get_github_api_host
 from urllib.request import Request
-from utils import construct_request, get_response, ensure_directory, \
+from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
-             retrieve_data, retrieve_data_gen
+             retrieve_data, retrieve_data_gen, get_authenticated_user
 
-from backup_functions import  backup_issues, backup_pulls
+from .backup_functions import  backup_issues, backup_pulls
 
 import time 
 from loguru import logger
@@ -19,11 +19,7 @@ FNULL = open(os.devnull, 'w')
 
 
 
-def get_authenticated_user(username, password):
-    template = 'https://{0}/user'.format(get_github_api_host())
-    logger.info (f'THis is the template from authenticated_user {template}')
-    data = retrieve_data(username, password, template, single_request=True)
-    return data[0]
+
 
 
 
