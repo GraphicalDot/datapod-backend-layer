@@ -5,10 +5,11 @@ from .auth import get_auth,  get_github_api_host
 from urllib.request import Request
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
-             retrieve_data, retrieve_data_gen, get_authenticated_user
+             retrieve_data, retrieve_data_gen, get_authenticated_user, json_dump
 
 from .backup_functions import  backup_issues, backup_pulls
-
+from database_calls.coderepos.github.calls import store
+import codecs
 import time 
 from loguru import logger
 from pprint import pformat
@@ -127,7 +128,7 @@ def get_github_repo_url(username, password, repository, prefer_ssh=True):
 
     return repo_url
 
-def backup_repositories(username, password, output_directory, repositories):
+def backup_repositories(username, password, output_directory, repositories, db_table_object):
     logger.info('Backing up repositories')
     repos_template = 'https://{0}/repos'.format(get_github_api_host())
 
@@ -163,9 +164,9 @@ def backup_repositories(username, password, output_directory, repositories):
 
         logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository['private']}")
         
-    #     #include_gists = (args.include_gists or args.include_starred_gists)
-    #     #if (args.include_repository or args.include_everything) \
-    #     #       or (include_gists and repository.get('is_gist')):
+        #include_gists = (args.include_gists or args.include_starred_gists)
+        #if (args.include_repository or args.include_everything) \
+        #       or (include_gists and repository.get('is_gist')):
         repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
             
         fetch_repository(repo_name, repo_url, repo_dir)
@@ -174,7 +175,7 @@ def backup_repositories(username, password, output_directory, repositories):
             output_file = '{0}/gist.json'.format(repo_cwd)
             with codecs.open(output_file, 'w', encoding='utf-8') as f:
                 json_dump(repository, f)
-
+            break
             continue  # don't try to back anything else for a gist; it doesn't exis
 
 
@@ -191,12 +192,16 @@ def backup_repositories(username, password, output_directory, repositories):
 
 
         if repository.get('is_starred'):
+            logger.error("This is a Starred repository")
+            logger.error(repository)
+            break
             continue
+       
         #if args.include_issues or args.include_everything:
-        backup_issues(username, password, repo_cwd, repository, repos_template)
+        #backup_issues(username, password, repo_cwd, repository, repos_template)
 
         # if args.include_pulls or args.include_everything:
-        backup_pulls(username, password, repo_cwd, repository, repos_template)
+        #backup_pulls(username, password, repo_cwd, repository, repos_template)
 
         # if args.include_milestones or args.include_everything:
         #     backup_milestones(args, repo_cwd, repository, repos_template)
@@ -211,8 +216,14 @@ def backup_repositories(username, password, output_directory, repositories):
         #     backup_releases(args, repo_cwd, repository, repos_template,
         #                     include_assets=args.include_assets or args.include_everything)
 
-    if args.incremental:
-        open(last_update_path, 'w').write(last_update)
+        repository.update({"tbl_object": db_table_object, "path": repo_dir})
+        logger.success(f"The id of the repo url is {repository['id']}")
+        store(**repository)
+
+
+
+    # if args.incremental:
+    #     open(last_update_path, 'w').write(last_update)
 
 
 

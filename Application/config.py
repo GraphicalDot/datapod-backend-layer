@@ -5,10 +5,9 @@ import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from database_calls.initialize_tables import intialize_db
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from database_calls.coderepos.github.initialize import coderepos_github_initialize
+
+from loguru import logger
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
@@ -32,8 +31,13 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 
 
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
-    Datasources, EmailAttachment,IndexEmailContent, Reservations, CodeReposGitHub   = intialize_db(os.path.join(DB_PATH, "database.db"))
+    Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
+GITHUB_TBL = coderepos_github_initialize(DB_Object)
+
+# logger.info("Deleting tables")
+# DB_Object.drop_tables([GITHUB_TBL])
+# logger.info("tables deleted")
 
 ##########-------------------------------------------------------###########
 
@@ -43,7 +47,7 @@ def os_command_output(command:str, final_message:str) -> str:
     while True:
         line = process.stdout.readline()
         if not line:
-            logging.info(final_message)
+            logger.info(final_message)
             break
         yield line.decode().split("\r")[0]
     
@@ -102,7 +106,7 @@ class Config:
     EMAILS_TBL = Emails
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images
-    CODE_GITHUB_TBL = CodeReposGitHub
+    CODE_GITHUB_TBL =GITHUB_TBL
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
     EMAIL_ATTACHMENT_TBL = EmailAttachment

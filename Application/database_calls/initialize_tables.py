@@ -197,16 +197,7 @@ def intialize_db(path):
 
             )
 
-    class CodeReposGitHub(BaseModel):
-        
-        title = peewee.TextField(index=True)
-        description = peewee.TextField(null=True)
-        url = peewee.TextField(null=True)
-        update_time = peewee.DateTimeField(null=False)
-        issues = peewee.IntegerField(null=True)
-        pull = peewee.IntegerField(null=True)
-        last_commit = peewee.TextField(null=True)
-        _id = peewee.TextField(index=True)
+
         
 
 
@@ -224,7 +215,6 @@ def intialize_db(path):
         EmailAttachment,
         IndexEmailContent,
         Reservations, 
-        CodeReposGitHub
         ])
     # for person in Logs.select().dicts():
     #     print(person.message)
@@ -245,6 +235,6 @@ def intialize_db(path):
 
 
     return db, Logs, Backups, Credentials, Email, Purchases, Images, CryptoCreds,\
-        CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations, CodeReposGitHub
+        CryptoExgBinance, Datasources, EmailAttachment, IndexEmailContent, Reservations
 
 
