@@ -9,7 +9,7 @@ import zipfile
 import tarfile
 import gzip
 from errors_module.errors import APIBadRequest
-from database_calls.coderepos.github.calls import filter_repos
+from database_calls.coderepos.github.calls import filter_repos, get_repository
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
@@ -103,7 +103,22 @@ async def listrepos(request):
         'message': None
         })
 
+@GITHUB_BP.get('/get_repo')
+async def listrepos(request):
+    """
+    """
+    if not request.args.get("name"):
+        raise APIBadRequest("Name of the repository is required")
 
+    result = get_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
 
 
 

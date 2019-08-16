@@ -8,13 +8,16 @@ from .utils import construct_request, get_response, ensure_directory, \
              retrieve_data, retrieve_data_gen, get_authenticated_user, json_dump
 
 from .backup_functions import  backup_issues, backup_pulls
-from database_calls.coderepos.github.calls import store
+from database_calls.coderepos.github.calls import store, get_repository
 import codecs
 import time 
 from loguru import logger
 from pprint import pformat
 import json
 import subprocess
+from dateutil.parser import parse as date_parse
+import datetime
+
 __version__ = "3.9.9"
 FNULL = open(os.devnull, 'w')
 
@@ -129,7 +132,6 @@ def get_github_repo_url(username, password, repository, prefer_ssh=True):
     return repo_url
 
 def backup_repositories(username, password, output_directory, repositories, db_table_object):
-    logger.info('Backing up repositories')
     repos_template = 'https://{0}/repos'.format(get_github_api_host())
 
     #if args.incremental:
@@ -142,11 +144,11 @@ def backup_repositories(username, password, output_directory, repositories, db_t
 
     logger.info(last_update)
 
-    logger.info(f"Since value is {last_update}")
-    logger.info(f"Lat update path  is {last_update_path}")
+    logger.info(f"Total number of repositories are {len(repositories)}")
 
     for repository in repositories:
-        time.sleep(5)
+        logger.error(f"Name is  {repository['name']}")
+
         if repository.get('is_gist'):
             repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
         elif repository.get('is_starred'):
@@ -168,14 +170,19 @@ def backup_repositories(username, password, output_directory, repositories, db_t
         #if (args.include_repository or args.include_everything) \
         #       or (include_gists and repository.get('is_gist')):
         repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
-            
-        fetch_repository(repo_name, repo_url, repo_dir)
+        
+        pushed_at = repository["pushed_at"]
+        if check_update_needed(db_table_object, repository['name'], pushed_at):
+                fetch_repository(repo_name, repo_url, repo_dir)
+        else:
+            logger.error(f"No commit has been made to {repository['name']} since it was last downloaded")
+
         if repository.get('is_gist'):
+            logger.info("This is a gist")
             # dump gist information to a file as well
             output_file = '{0}/gist.json'.format(repo_cwd)
             with codecs.open(output_file, 'w', encoding='utf-8') as f:
                 json_dump(repository, f)
-            break
             continue  # don't try to back anything else for a gist; it doesn't exis
 
 
@@ -191,11 +198,6 @@ def backup_repositories(username, password, output_directory, repositories, db_t
                             )
 
 
-        if repository.get('is_starred'):
-            logger.error("This is a Starred repository")
-            logger.error(repository)
-            break
-            continue
        
         #if args.include_issues or args.include_everything:
         #backup_issues(username, password, repo_cwd, repository, repos_template)
@@ -217,14 +219,30 @@ def backup_repositories(username, password, output_directory, repositories, db_t
         #                     include_assets=args.include_assets or args.include_everything)
 
         repository.update({"tbl_object": db_table_object, "path": repo_dir})
-        logger.success(f"The id of the repo url is {repository['id']}")
         store(**repository)
-        return 
+        logger.success(f"The Name of the repo url is {repository['name']}")
 
+    return 
 
-    # if args.incremental:
-    #     open(last_update_path, 'w').write(last_update)
+def check_update_needed(db_table_object, repository_name, pushed_at):
+    """
+    Returns True if there is a need to clone the github repository
+    """
+    result = get_repository(db_table_object, repository_name)
 
+    logger.info(list(result))
+    if not result:
+        return True
+    else:
+
+        epoch = date_parse(pushed_at).timestamp() ##the pushed_at timetsamp available in the repo right now
+        logger.info(f"Comparing {int(epoch)} and {result['downloaded_at']} for {repository_name}")
+        if int(epoch) > int(result["downloaded_at"]):
+            return True
+
+    return False
+    ##Check if the updated is needed from the database
+    
 
 # loop = asyncio.get_event_loop() 
 #                 executor = concurrent.futures.ThreadPoolExecutor(max_workers=5) 
@@ -234,7 +252,7 @@ def backup_repositories(username, password, output_directory, repositories, db_t
 #                 return_when=asyncio.ALL_COMPLETED) 
 
 
-async def fetch_repository(name,
+def fetch_repository(name,
                      remote_url,
                      local_dir,
                      skip_existing=False,
@@ -304,7 +322,7 @@ async def fetch_repository(name,
                 git_command = ['git', 'clone', remote_url, local_dir]
         logging_subprocess(git_command, None)
 
-
+    return
 
 
 

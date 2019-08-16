@@ -60,18 +60,16 @@ def store(**data):
                     default_branch=data["default_branch"]).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
-    except IntegrityError:
+    except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
         logger.error(f'Duplicate key present --{data["name"]}-- in table --GithubRepo-- {e}')
-
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
         logger.error(f"Email data insertion failed {data['name']} with {e}")
- 
     return 
 
 
@@ -81,13 +79,35 @@ def filter_repos(tbl_object, page, number):
          print(tweet.message, tweet.created_date)
 
     """
-    logger.info(f"Page is {page}")
-    logger.info(f"Default number is  {number}")
 
     return tbl_object\
-            .select(tbl_object.name, tbl_object.git_url, tbl_object.created_at, tbl_object.updated_at, tbl_object.is_starred, tbl_object.description)\
+            .select(tbl_object.name, tbl_object.git_url, 
+                    tbl_object.downloaded_at, 
+                    tbl_object.created_at, 
+                    tbl_object.updated_at, 
+                    tbl_object.is_starred, 
+                    tbl_object.pushed_at,
+                    tbl_object.description)\
             .where(tbl_object.is_starred==False)\
             .order_by(-tbl_object.updated_at)\
             .paginate(page, number)\
              .dicts()
        
+def get_repository(tbl_object, name):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+    return tbl_object\
+            .select(tbl_object.name, tbl_object.git_url, 
+                    tbl_object.ssh_url,
+                    tbl_object.clone_url,
+                    tbl_object.created_at, 
+                    tbl_object.updated_at, 
+                    tbl_object.pushed_at,
+                    tbl_object.is_starred, 
+                    tbl_object.description, 
+                    tbl_object.downloaded_at
+                    )\
+            .where(tbl_object.name==name)
