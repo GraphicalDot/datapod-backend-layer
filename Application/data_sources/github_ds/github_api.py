@@ -89,9 +89,9 @@ async def parse(request):
 async def listrepos(request):
     """
     """
-    
-    page = [request.get("page"), 1][request.get("page") == None] 
-    number = [request.get("number"), 10][request.get("number") == None] 
+    logger.info("Number is ", request.args.get("number"))
+    page = [request.args.get("page"), 1][request.args.get("page") == None] 
+    number = [request.args.get("number"), 10][request.args.get("number") == None] 
 
     result = filter_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
 

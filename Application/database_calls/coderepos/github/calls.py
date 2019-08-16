@@ -15,6 +15,8 @@ def store(**data):
     """
     table = data["tbl_object"]
 
+    if not data.get("is_starred"):
+        data["is_starred"] = False
     try:
         table.insert(
                     path = data["path"],
@@ -61,7 +63,7 @@ def store(**data):
     except IntegrityError:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f'Duplicate key present --{data["name"]}-- in table --GithubRepo--')
+        logger.error(f'Duplicate key present --{data["name"]}-- in table --GithubRepo-- {e}')
 
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
@@ -83,7 +85,8 @@ def filter_repos(tbl_object, page, number):
     logger.info(f"Default number is  {number}")
 
     return tbl_object\
-            .select()\
+            .select(tbl_object.name, tbl_object.git_url, tbl_object.created_at, tbl_object.updated_at, tbl_object.is_starred, tbl_object.description)\
+            .where(tbl_object.is_starred==False)\
             .order_by(-tbl_object.updated_at)\
             .paginate(page, number)\
              .dicts()

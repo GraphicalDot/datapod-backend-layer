@@ -50,7 +50,7 @@ def coderepos_github_initialize(db):
         size = peewee.IntegerField()
         stargazers_count = peewee.SmallIntegerField()
         watchers_count = peewee.SmallIntegerField()
-        language = peewee.TextField()
+        language = peewee.TextField(null=True)
         has_issues =  peewee.BooleanField()
         has_projects  = peewee.BooleanField()
         has_downloads = peewee.BooleanField()

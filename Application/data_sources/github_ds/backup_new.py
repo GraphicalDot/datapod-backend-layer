@@ -219,17 +219,22 @@ def backup_repositories(username, password, output_directory, repositories, db_t
         repository.update({"tbl_object": db_table_object, "path": repo_dir})
         logger.success(f"The id of the repo url is {repository['id']}")
         store(**repository)
-
+        return 
 
 
     # if args.incremental:
     #     open(last_update_path, 'w').write(last_update)
 
 
+# loop = asyncio.get_event_loop() 
+#                 executor = concurrent.futures.ThreadPoolExecutor(max_workers=5) 
+#                 _, _ = await asyncio.wait( 
+#                 fs=[loop.run_in_executor(executor,   
+#                     functools.partial(print_counter, counter)) for counter in range(0, 20)], 
+#                 return_when=asyncio.ALL_COMPLETED) 
 
 
-
-def fetch_repository(name,
+async def fetch_repository(name,
                      remote_url,
                      local_dir,
                      skip_existing=False,
