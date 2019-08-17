@@ -16,11 +16,11 @@ def store(**data):
     """
     table = data["tbl_object"]
 
-    # if not data.get("is_starred"):
-    #     data["is_starred"] = False
+    if not data.get("is_starred"):
+        data["is_starred"] = False
 
-    # if not data.get("is_gist"):
-    #     data["is_gist"] = False
+    if not data.get("is_gist"):
+        data["is_gist"] = False
 
     # if data.get("files"):
     #     data["files"] = json.dumps(data["files"])

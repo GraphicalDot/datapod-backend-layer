@@ -167,8 +167,11 @@ async def backup_repositories(username, password, output_directory, repositories
 
     # tasks=  asyncio.gather(*[per_repository(output_directory, repository, db_table_object, since) for repository in repositories]) 
     # loop.run_until_complete(tasks) 
-    for repository in repositories:
-        await per_repository(output_directory, repository, config, since)
+    i = 100/len(repositories)
+    for num, repository in enumerate(repositories):
+        msg = await per_repository(output_directory, repository, config, since)
+        res = {"message": msg, "percentage": int(i*(num+1))}
+        await send_sse_message(config, "CODEREPOS_GITHUB", res)
 
 
 
@@ -178,6 +181,7 @@ async def backup_repositories(username, password, output_directory, repositories
 
 
 async def per_repository(output_directory, repository, config, since):
+    await asyncio.sleep(2)
     if repository.get('is_gist'):
             repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
     elif repository.get('is_starred'):
@@ -256,14 +260,12 @@ async def per_repository(output_directory, repository, config, since):
 
     if repository.get('is_gist'):
         logger.info(repository)
-        msg = f"Backof of gist with url {repository.get('url')} completed"
+        msg = f"Backup of gist with url {repository.get('url')} completed"
     else:
-        msg = f"Backof of repository with name {repository.get('name')} completed"
+        msg = f"Backup of repository with name {repository.get('name')} completed"
 
-    await send_sse_message(config, "CODEREPOS_GITHUB", msg)
 
-    logger.success(msg)
-
+    return msg
 
 
 def check_update_needed(db_table_object, repository_name, pushed_at):
