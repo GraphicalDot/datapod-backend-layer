@@ -176,3 +176,31 @@ def get_single_repository(tbl_object, name):
             .where(tbl_object.name==name).dicts())
     return list(query)
 
+
+
+@async_wrap
+def counts(tbl_object):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+    gists = tbl_object\
+            .select()\
+            .where(tbl_object.is_gist==True).count()
+    
+    repos = tbl_object\
+            .select()\
+            .where(tbl_object.is_gist != True, tbl_object.is_starred != True).count()
+
+    starred = tbl_object\
+            .select()\
+            .where(tbl_object.is_starred==True).count()
+
+
+
+    return {
+        "gists": gists,
+        "starred": starred,
+        "repos": repos,
+    }

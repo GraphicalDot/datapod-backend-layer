@@ -68,7 +68,7 @@ class GithubIdentity(object):
     """
 
     __channel_name__ = "CODEREPOS_GITHUB"
-    async def __init__(self, config, hostname, key_name, ssh_dir=None):
+    async def __init__(self, config, hostname, key_name):
         """
         ssh_dir directory for the .ssh configuration and 
         keypairs 
@@ -79,45 +79,46 @@ class GithubIdentity(object):
         self.config = config
         self.hostname = hostname
         self.key_name = key_name
-        if not ssh_dir:
-            home = os.path.expanduser("~")
-            self.ssh_dir = os.path.join(home, ".ssh") 
-        else:
-            self.ssh_dir = ssh_dir
 
         ##check if identity for the host already exists or not
-        if self.identity_exist():
+        identity, ssh_dir = self.identity_exist(self.hostname) 
+        if identity:
             await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
             raise Exception(f"Identity for {self.hostname} already exists")
 
         logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generate a new identity")
-        self.public_key = os.path.join(self.ssh_dir, "git_pub.key")
-        self.private_key = os.path.join(self.ssh_dir, "git_priv.key")
+        self.public_key = os.path.join(ssh_dir, "git_pub.key")
+        self.private_key = os.path.join(ssh_dir, "git_priv.key")
 
         return 
-    
-    def identity_exist(self):
+
+    @staticmethod
+    def identity_exist(hostname, ssh_dir=None):
         """
         Check if git identity already exists on the user machine, 
         If it does then abort generating new keys and configuring remote github account
         Use Paramiko
         """
-        
+        if not ssh_dir:
+            home = os.path.expanduser("~")
+            ssh_dir = os.path.join(home, ".ssh") 
+        else:
+            ssh_dir = ssh_dir
 
         conf = paramiko.SSHConfig()
         try:
-            with open(os.path.join(self.ssh_dir, "config")) as f:
+            with open(os.path.join(ssh_dir, "config")) as f:
                 conf.parse(f)
         except FileNotFoundError:
-            return False
+            return False, ssh_dir
 
-        host_config = conf.lookup(self.hostname)
+        host_config = conf.lookup(hostname)
         logger.info(host_config)
 
         if not host_config.get("identityfile"):
-            return False
+            return False, ssh_dir
 
-        return True
+        return True, ssh_dir
 
     async def add(self, username, password):
         privkey, pubkey = self.generate_new_keys()

@@ -5,15 +5,17 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
-
+import humanize
 import json
 from errors_module.errors import APIBadRequest
-from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists
+from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
              retrieve_data, retrieve_data_gen, get_authenticated_user
 
+import humanize
+from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
 
 GITHUB_BP = Blueprint("github", url_prefix="/github")
@@ -102,6 +104,31 @@ async def listrepos(request):
         })
 
 
+
+@GITHUB_BP.get('/identity')
+async def listrepos(request):
+    """
+    """
+    identity, ssh_dir = GithubIdentity.identity_exist("github.com")
+    logger.info(f"The ssh Directory is {ssh_dir}")
+
+    private_key_path = os.path.join(ssh_dir, "git_priv.key")
+    public_key_path = os.path.join(ssh_dir, "git_pub.key")
+
+
+    if not private_key_path and not public_key_path:
+        raise APIBadRequest("Identity doesnt not exists")
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': identity,
+        'message': None
+        })
+
+
+
 @GITHUB_BP.get('/list_starred_repos')
 async def list_starred_repos(request):
     """
@@ -161,6 +188,33 @@ async def listrepos(request):
         })
 
 
+@GITHUB_BP.get('/dashboard_data')
+async def dashboard_data(request):
+    """
+    """
+    result = await counts(request.app.config.CODE_GITHUB_TBL)
+    starred = await filter_starred_repos(request.app.config.CODE_GITHUB_TBL, 1, 10)
+    repos = await filter_repos(request.app.config.CODE_GITHUB_TBL, 1, 10)
+
+    def get_dir_size(dirpath):
+        all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+        _date = creation_date(all_files[0])
+        files_and_sizes = [os.path.getsize(path) for path in all_files]
+        return  humanize.naturalsize(sum(files_and_sizes)), _date
+
+    path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
+    size, last_updated = get_dir_size(path)
+
+    result.update({"size": size, "last_updated": last_updated, "starred": starred, "repos": repos})
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
+
 
 
 @GITHUB_BP.get('/backup_single_repo')
@@ -173,6 +227,7 @@ async def backup_single_repo(request):
     logger.info(request.app.config.CODE_GITHUB_TBL)
 
     result = await get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    
     if not result:
         raise APIBadRequest("No repo exists")
     
