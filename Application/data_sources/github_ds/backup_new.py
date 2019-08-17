@@ -21,7 +21,7 @@ from utils.utils import send_sse_message
 import asyncio
 import functools
 import concurrent.futures
-
+from utils.utils import async_wrap, send_sse_message
 __version__ = "3.9.9"
 FNULL = open(os.devnull, 'w')
 
@@ -136,7 +136,7 @@ def get_github_repo_url(repository, prefer_ssh=True):
 
     return repo_url
 
-async def backup_repositories(username, password, output_directory, repositories, db_table_object):
+async def backup_repositories(username, password, output_directory, repositories, config):
     #repos_template = 'https://{0}/repos'.format(get_github_api_host())
 
     #if args.incremental:
@@ -157,19 +157,27 @@ async def backup_repositories(username, password, output_directory, repositories
 
     #     per_repository(output_directory, repository, db_table_object, since)
 
-    loop = asyncio.get_event_loop()  
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)  
-    _, _ = await asyncio.wait(  
-    fs=[loop.run_in_executor(executor,    
-        functools.partial(per_repository, output_directory, repository, db_table_object, since)) for repository in repositories],  
-    return_when=asyncio.ALL_COMPLETED) 
+    # loop = asyncio.get_event_loop()  
+    # # executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)  
+    # # _, _ = await asyncio.wait(  
+    # # fs=[loop.run_in_executor(executor,    
+    # #     functools.partial(per_repository, output_directory, repository, db_table_object, since)) for repository in repositories],  
+    # # return_when=asyncio.ALL_COMPLETED) 
+
+
+    # tasks=  asyncio.gather(*[per_repository(output_directory, repository, db_table_object, since) for repository in repositories]) 
+    # loop.run_until_complete(tasks) 
+    for repository in repositories:
+        await per_repository(output_directory, repository, config, since)
+
+
 
 
     open(last_update_path, 'w').write(last_update)
     return 
 
 
-def per_repository(output_directory, repository, db_table_object, since):
+async def per_repository(output_directory, repository, config, since):
     if repository.get('is_gist'):
             repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
     elif repository.get('is_starred'):
@@ -181,7 +189,7 @@ def per_repository(output_directory, repository, db_table_object, since):
 
     repo_dir = os.path.join(repo_cwd, 'repository')
     repo_url = get_github_repo_url(repository)
-    #ensure_directory(repo_dir)
+    ensure_directory(repo_dir)
 
     masked_remote_url = mask_password(repo_url)
 
@@ -192,15 +200,27 @@ def per_repository(output_directory, repository, db_table_object, since):
     #       or (include_gists and repository.get('is_gist')):
     repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
     
-    pushed_at = repository["pushed_at"]
+    updated_at = repository.get("updated_at")
+
     #if check_update_needed(db_table_object, repository['name'], pushed_at):
-    if not since or pushed_at > since: 
-            fetch_repository(repo_name, repo_url, repo_dir)
+
+
+
+    if not since or updated_at > since: 
+            await fetch_repository(repo_name, repo_url, repo_dir)
+            if repository['has_wiki']:
+                wiki_url = repo_url.replace('.git', '.wiki.git')
+                logger.info(f"Trying to download wiki for {repository['name']} at {wiki_url}")
+
+                await fetch_repository(repository['name'],
+                                    wiki_url,
+                                    os.path.join(repo_cwd, 'wiki'),
+                                )
+
     else:
-        logger.error(f"No commit has been made to {repository['name']} since it was last downloaded")
+        logger.error(f"No commit has been made to {repository.get('name')} if gist<<{repository.get('is_gist')}>> since it was last downloaded")
 
     if repository.get('is_gist'):
-        logger.info("This is a gist")
         # dump gist information to a file as well
         output_file = '{0}/gist.json'.format(repo_cwd)
         with codecs.open(output_file, 'w', encoding='utf-8') as f:
@@ -209,15 +229,7 @@ def per_repository(output_directory, repository, db_table_object, since):
 
     #download_wiki = (args.include_wiki or args.include_everything)
     
-    if repository['has_wiki']:
-        wiki_url = repo_url.replace('.git', '.wiki.git')
-        logger.info(f"Trying to download wiki for {repository['name']} at {wiki_url}")
-
-        fetch_repository(repository['name'],
-                            wiki_url,
-                            os.path.join(repo_cwd, 'wiki'),
-                        )
-
+    
 
     
     #if args.include_issues or args.include_everything:
@@ -239,9 +251,18 @@ def per_repository(output_directory, repository, db_table_object, since):
     #     backup_releases(args, repo_cwd, repository, repos_template,
     #                     include_assets=args.include_assets or args.include_everything)
 
-    repository.update({"tbl_object": db_table_object, "path": repo_dir})
-    store(**repository)
-    logger.success(f"The Name of the repo url is {repository['name']}")
+    repository.update({"tbl_object": config.CODE_GITHUB_TBL, "path": repo_dir})
+    await store(**repository)
+
+    if repository.get('is_gist'):
+        logger.info(repository)
+        msg = f"Backof of gist with url {repository.get('url')} completed"
+    else:
+        msg = f"Backof of repository with name {repository.get('name')} completed"
+
+    await send_sse_message(config, "CODEREPOS_GITHUB", msg)
+
+    logger.success(msg)
 
 
 
@@ -278,7 +299,7 @@ def check_update_needed(db_table_object, repository_name, pushed_at):
 #                     functools.partial(print_counter, counter)) for counter in range(0, 20)], 
 #                 return_when=asyncio.ALL_COMPLETED) 
 
-
+@async_wrap
 def fetch_repository(name,
                      remote_url,
                      local_dir,
@@ -306,7 +327,7 @@ def fetch_repository(name,
                                   stderr=FNULL,
                                   shell=True)
     if initialized == 128:
-        logger.error("Skipping {0} ({1}) since it's not initialized".format(
+        logger.error("Failed {0} ({1}) Download".format(
             name, masked_remote_url))
         return
 

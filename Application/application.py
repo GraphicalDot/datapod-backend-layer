@@ -107,8 +107,7 @@ async def send_event(request):
 
     # if channel_id is None than event will be send to all subscribers
     channel_id = request.json.get("channel_id")
-    logger.error(request.json)
-    logger.error(f"This is the channel id {channel_id}")
+    logger.success(f"Message {request.json} on {channel_id}")
 
     # optional arguments: event_id - str, event - str, retry - int
     # data should always be str

@@ -30,13 +30,15 @@ def coderepos_github_initialize(db):
     class GitHubRepo(BaseModel):
         path = peewee.TextField(index=True, null=False)
         owner = peewee.BlobField()
-        id = peewee.IntegerField(null=False)
-        node_id = peewee.TextField()
-        name = peewee.TextField(index=True, null=False)
-        full_name = peewee.TextField()
+        id = peewee.TextField(index=True, null=False)
+        node_id = peewee.TextField(index=True, null=False)
+        name = peewee.TextField(null=True)
+        full_name = peewee.TextField(null=True)
         private = peewee.BooleanField(null=True)
         html_url = peewee.TextField()
-        git_url = peewee.TextField()
+        git_url = peewee.TextField(null=True)
+        git_pull_url = peewee.TextField(null=True) #only for gist
+        git_push_url = peewee.TextField(null=True) #only for gist
         ssh_url = peewee.TextField()
         clone_url = peewee.TextField()
         forks_url = peewee.TextField()
@@ -70,7 +72,7 @@ def coderepos_github_initialize(db):
         is_gist=peewee.BooleanField()
 
         class Meta:
-            indexes = ((('id', 'name'), True),)
+            indexes = ((('id', 'node_id'), True),)
 
     db.create_tables([
             GitHubRepo

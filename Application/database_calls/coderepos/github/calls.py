@@ -9,32 +9,42 @@ from loguru import logger
 from utils.utils import async_wrap
 
 #@retry(stop=stop_after_attempt(2))
+@async_wrap
 def store(**data):
     """
     purchases: a list of purchases dict
     """
     table = data["tbl_object"]
 
-    if not data.get("is_starred"):
-        data["is_starred"] = False
+    # if not data.get("is_starred"):
+    #     data["is_starred"] = False
 
-    if not data.get("is_gist"):
-        data["is_gist"] = False
+    # if not data.get("is_gist"):
+    #     data["is_gist"] = False
+
+    # if data.get("files"):
+    #     data["files"] = json.dumps(data["files"])
+    # else:
+    #     data["files"] = None
+
+
     try:
         table.insert(
                     path = data["path"],
                     owner = json.dumps(data["owner"]),
-                    id = data["id"],
+                    id = str(data["id"]),
                     node_id = data["node_id"],
-                    name = data["name"],
+                    name = data.get("name"),
                     full_name = data.get("full_name"),
                     private = data.get("private"),
                     html_url = data.get("html_url"),
                     git_url = data.get("git_url"),
+                    git_pull_url = data.get("git_pull_url"),
+                    git_push_url = data.get("git_push_url"),
                     ssh_url = data.get("ssh_url"),
                     clone_url = data.get("clone_url"),
                     forks_url = data.get("forks_url"),
-
+                    #files = data.get("files"), #only for gist
                     description = data.get("description"),
                     fork = data.get("fork"),
                     url = data.get("url"),
@@ -61,19 +71,19 @@ def store(**data):
                     watchers=data.get("watchers"),
                     is_starred=data.get("is_starred"),
                     is_gist=data.get("is_gist"),
-                    default_branch=data.get(default_branch"]).execute()
+                    default_branch=data.get("default_branch")).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
     except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f'Duplicate key present --{data.get(name"]}-- in table --GithubRepo-- {e}')
+        logger.error(f'Duplicate key present --{data.get("name")}-- in table --GithubRepo-- {e}')
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Email data insertion failed {data['name']} with {e}")
+        logger.error(f"Github repo data insertion failed {data.get('name')} with {e}")
     return 
 
 
@@ -88,16 +98,72 @@ def filter_repos(tbl_object, page, number):
     return tbl_object\
             .select(tbl_object.name, tbl_object.git_url, 
                     tbl_object.downloaded_at, 
+                    tbl_object.id, 
+                    tbl_object.node_id, 
                     tbl_object.created_at, 
                     tbl_object.updated_at, 
                     tbl_object.is_starred, 
                     tbl_object.pushed_at,
+                    tbl_object.is_gist,
                     tbl_object.description)\
             .where(tbl_object.is_starred==False)\
             .order_by(-tbl_object.updated_at)\
             .paginate(page, number)\
              .dicts()
-       
+
+@async_wrap #makes function asynchronous
+def filter_starred_repos(tbl_object, page, number):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+
+    return tbl_object\
+            .select(tbl_object.name, tbl_object.git_url, 
+                    tbl_object.downloaded_at, 
+                    tbl_object.id, 
+                    tbl_object.node_id, 
+                    tbl_object.created_at, 
+                    tbl_object.updated_at, 
+                    tbl_object.is_starred, 
+                    tbl_object.is_gist,
+                    tbl_object.pushed_at,
+                    tbl_object.description)\
+            .where(tbl_object.is_starred==True)\
+            .order_by(-tbl_object.updated_at)\
+            .paginate(page, number)\
+             .dicts()
+
+
+
+@async_wrap #makes function asynchronous
+def filter_gists(tbl_object, page, number):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+
+    return tbl_object\
+            .select(tbl_object.name, tbl_object.git_pull_url, 
+                    tbl_object.downloaded_at, 
+                    tbl_object.id, 
+                    tbl_object.node_id, 
+                    tbl_object.created_at, 
+                    tbl_object.updated_at, 
+                    tbl_object.is_gist,
+                    tbl_object.is_starred, 
+                    tbl_object.pushed_at,
+                    tbl_object.description)\
+            .where(tbl_object.is_gist==True)\
+            .order_by(-tbl_object.updated_at)\
+            .paginate(page, number)\
+             .dicts()
+
+
+
+
 @async_wrap
 def get_single_repository(tbl_object, name):
     """
@@ -109,3 +175,4 @@ def get_single_repository(tbl_object, name):
             .select()\
             .where(tbl_object.name==name).dicts())
     return list(query)
+

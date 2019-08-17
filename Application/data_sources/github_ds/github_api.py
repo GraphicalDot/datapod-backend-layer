@@ -8,7 +8,7 @@ import os
 
 import json
 from errors_module.errors import APIBadRequest
-from database_calls.coderepos.github.calls import filter_repos, get_single_repository
+from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
@@ -31,7 +31,7 @@ async def background_github_parse(config, username, password):
     repositories = retrieve_repositories(username, password)
     logger.info("\nTHese are the repositories for the user\n")
     #repositories = filter_repositories(args, repositories)
-    await backup_repositories(username, password, backup_path, repositories, config.CODE_GITHUB_TBL)
+    await backup_repositories(username, password, backup_path, repositories, config)
     # # backup_account(args, output_directory)
 
 
@@ -84,11 +84,10 @@ async def parse(request):
 
 
 
-@GITHUB_BP.get('/listrepos')
+@GITHUB_BP.get('/list_repos')
 async def listrepos(request):
     """
     """
-    logger.info("Number is ", request.args.get("number"))
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 10][request.args.get("number") == None] 
 
@@ -101,6 +100,43 @@ async def listrepos(request):
         'data': result,
         'message': None
         })
+
+
+@GITHUB_BP.get('/list_starred_repos')
+async def list_starred_repos(request):
+    """
+    """
+    page = [request.args.get("page"), 1][request.args.get("page") == None] 
+    number = [request.args.get("number"), 10][request.args.get("number") == None] 
+
+    result = await filter_starred_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
+
+@GITHUB_BP.get('/list_gists')
+async def list_gist(request):
+    """
+    """
+    logger.info("Number is ", request.args.get("number"))
+    page = [request.args.get("page"), 1][request.args.get("page") == None] 
+    number = [request.args.get("number"), 10][request.args.get("number") == None] 
+
+    result = await filter_gists(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
+
 
 @GITHUB_BP.get('/get_repo')
 async def listrepos(request):
@@ -123,6 +159,8 @@ async def listrepos(request):
         'data': result,
         'message': None
         })
+
+
 
 
 @GITHUB_BP.get('/backup_single_repo')
