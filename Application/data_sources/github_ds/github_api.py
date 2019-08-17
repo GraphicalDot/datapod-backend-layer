@@ -5,17 +5,16 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
-import zipfile
-import tarfile
-import gzip
+
+import json
 from errors_module.errors import APIBadRequest
-from database_calls.coderepos.github.calls import filter_repos, get_repository
+from database_calls.coderepos.github.calls import filter_repos, get_single_repository
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
              retrieve_data, retrieve_data_gen, get_authenticated_user
 
-from .backup_new import retrieve_repositories, backup_repositories
+from .backup_new import retrieve_repositories, backup_repositories, per_repository
 
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
@@ -109,8 +108,13 @@ async def listrepos(request):
     """
     if not request.args.get("name"):
         raise APIBadRequest("Name of the repository is required")
-
-    result = get_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    
+    result = get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    if result:
+        result = result[0]
+        logger.info(result)
+        owner = json.loads(result["owner"])
+        result.update({"owner": owner})
 
     return response.json(
         {
@@ -121,7 +125,33 @@ async def listrepos(request):
         })
 
 
+@GITHUB_BP.get('/backup_single_repo')
+async def backup_single_repo(request):
+    """
+    """
+    if not request.args.get("name"):
+        raise APIBadRequest("Name of the repository is required")
+    
+    logger.info(request.app.config.CODE_GITHUB_TBL)
 
+    result = get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    if not result:
+        raise APIBadRequest("No repo exists")
+    
+    if result:
+        repository = result[0]
+        logger.info(repository)
+        owner = json.loads(repository["owner"])
+        repository.update({"owner": owner})    
+        per_repository(repository["path"], repository, request.app.config.CODE_GITHUB_TBL, None)
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
 
 
 

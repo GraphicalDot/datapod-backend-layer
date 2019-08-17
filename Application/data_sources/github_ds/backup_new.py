@@ -8,7 +8,7 @@ from .utils import construct_request, get_response, ensure_directory, \
              retrieve_data, retrieve_data_gen, get_authenticated_user, json_dump
 
 from .backup_functions import  backup_issues, backup_pulls
-from database_calls.coderepos.github.calls import store, get_repository
+from database_calls.coderepos.github.calls import store, get_single_repository
 import codecs
 import time 
 from loguru import logger
@@ -105,7 +105,7 @@ def get_github_host():
     host = 'github.com'
     return host
 
-def get_github_repo_url(username, password, repository, prefer_ssh=True):
+def get_github_repo_url(repository, prefer_ssh=True):
     # if args.prefer_ssh:
     #     return repository['ssh_url']
     if repository.get('is_gist'):
@@ -114,20 +114,21 @@ def get_github_repo_url(username, password, repository, prefer_ssh=True):
     if prefer_ssh:
         return repository['ssh_url']
 
-    
+    if not prefer_ssh:
+        raise Exception ("THis is not valid anymore")
 
 
     ##if its a private url
-    auth = get_auth(username, password, False)
-    if auth:
-        logger.info(f"Auth is prsent {auth}")
-        repo_url = 'https://{0}@{1}/{2}/{3}.git'.format(
-            auth,
-            get_github_host(),
-            repository['owner']['login'],
-            repository['name'])
-    else:
-        repo_url = repository['clone_url']
+    # auth = get_auth(username, password, False)
+    # if auth:
+    #     logger.info(f"Auth is prsent {auth}")
+    #     repo_url = 'https://{0}@{1}/{2}/{3}.git'.format(
+    #         auth,
+    #         get_github_host(),
+    #         repository['owner']['login'],
+    #         repository['name'])
+    # else:
+    #     repo_url = repository['clone_url']
 
     return repo_url
 
@@ -137,6 +138,8 @@ def backup_repositories(username, password, output_directory, repositories, db_t
     #if args.incremental:
     last_update = max(list(repository['updated_at'] for repository in repositories) or [time.strftime('%Y-%m-%dT%H:%M:%SZ', time.localtime())])  # noqa
     last_update_path = os.path.join(output_directory, 'last_update')
+    logger.info(f"This is the last update {last_update}")    
+    
     if os.path.exists(last_update_path):
         since = open(last_update_path).read().strip()
     else:
@@ -147,93 +150,105 @@ def backup_repositories(username, password, output_directory, repositories, db_t
     logger.info(f"Total number of repositories are {len(repositories)}")
 
     for repository in repositories:
-        logger.error(f"Name is  {repository['name']}")
 
-        if repository.get('is_gist'):
-            repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
-        elif repository.get('is_starred'):
-            # put starred repos in -o/starred/${owner}/${repo} to prevent collision of
-            # any repositories with the same name
-            repo_cwd = os.path.join(output_directory, 'starred', repository['owner']['login'], repository['name'])
-        else:
-            repo_cwd = os.path.join(output_directory, 'repositories', repository['name'])
+        per_repository(output_directory, repository, db_table_object, since)
 
-        repo_dir = os.path.join(repo_cwd, 'repository')
-        repo_url = get_github_repo_url(username, password, repository)
-        #ensure_directory(repo_dir)
-
-        masked_remote_url = mask_password(repo_url)
-
-        logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository['private']}")
-        
-        #include_gists = (args.include_gists or args.include_starred_gists)
-        #if (args.include_repository or args.include_everything) \
-        #       or (include_gists and repository.get('is_gist')):
-        repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
-        
-        pushed_at = repository["pushed_at"]
-        if check_update_needed(db_table_object, repository['name'], pushed_at):
-                fetch_repository(repo_name, repo_url, repo_dir)
-        else:
-            logger.error(f"No commit has been made to {repository['name']} since it was last downloaded")
-
-        if repository.get('is_gist'):
-            logger.info("This is a gist")
-            # dump gist information to a file as well
-            output_file = '{0}/gist.json'.format(repo_cwd)
-            with codecs.open(output_file, 'w', encoding='utf-8') as f:
-                json_dump(repository, f)
-            continue  # don't try to back anything else for a gist; it doesn't exis
-
-
-        #download_wiki = (args.include_wiki or args.include_everything)
-        
-        if repository['has_wiki']:
-            wiki_url = repo_url.replace('.git', '.wiki.git')
-            logger.info(f"Trying to download wiki for {repository['name']} at {wiki_url}")
-
-            fetch_repository(repository['name'],
-                             wiki_url,
-                             os.path.join(repo_cwd, 'wiki'),
-                            )
-
-
-       
-        #if args.include_issues or args.include_everything:
-        #backup_issues(username, password, repo_cwd, repository, repos_template)
-
-        # if args.include_pulls or args.include_everything:
-        #backup_pulls(username, password, repo_cwd, repository, repos_template)
-
-        # if args.include_milestones or args.include_everything:
-        #     backup_milestones(args, repo_cwd, repository, repos_template)
-
-        # if args.include_labels or args.include_everything:
-        #     backup_labels(args, repo_cwd, repository, repos_template)
-
-        # if args.include_hooks or args.include_everything:
-        #     backup_hooks(args, repo_cwd, repository, repos_template)
-
-        # if args.include_releases or args.include_everything:
-        #     backup_releases(args, repo_cwd, repository, repos_template,
-        #                     include_assets=args.include_assets or args.include_everything)
-
-        repository.update({"tbl_object": db_table_object, "path": repo_dir})
-        store(**repository)
-        logger.success(f"The Name of the repo url is {repository['name']}")
-
+    open(last_update_path, 'w').write(last_update)
     return 
+
+
+def per_repository(output_directory, repository, db_table_object, since):
+    if repository.get('is_gist'):
+            repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
+    elif repository.get('is_starred'):
+        # put starred repos in -o/starred/${owner}/${repo} to prevent collision of
+        # any repositories with the same name
+        repo_cwd = os.path.join(output_directory, 'starred', repository['owner']['login'], repository['name'])
+    else:
+        repo_cwd = os.path.join(output_directory, 'repositories', repository['name'])
+
+    repo_dir = os.path.join(repo_cwd, 'repository')
+    repo_url = get_github_repo_url(repository)
+    #ensure_directory(repo_dir)
+
+    masked_remote_url = mask_password(repo_url)
+
+    logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository['private']}")
+    
+    #include_gists = (args.include_gists or args.include_starred_gists)
+    #if (args.include_repository or args.include_everything) \
+    #       or (include_gists and repository.get('is_gist')):
+    repo_name = repository.get('name') if not repository.get('is_gist') else repository.get('id')
+    
+    pushed_at = repository["pushed_at"]
+    #if check_update_needed(db_table_object, repository['name'], pushed_at):
+    if not since or pushed_at > since: 
+            fetch_repository(repo_name, repo_url, repo_dir)
+    else:
+        logger.error(f"No commit has been made to {repository['name']} since it was last downloaded")
+
+    if repository.get('is_gist'):
+        logger.info("This is a gist")
+        # dump gist information to a file as well
+        output_file = '{0}/gist.json'.format(repo_cwd)
+        with codecs.open(output_file, 'w', encoding='utf-8') as f:
+            json_dump(repository, f)
+        
+
+    #download_wiki = (args.include_wiki or args.include_everything)
+    
+    if repository['has_wiki']:
+        wiki_url = repo_url.replace('.git', '.wiki.git')
+        logger.info(f"Trying to download wiki for {repository['name']} at {wiki_url}")
+
+        fetch_repository(repository['name'],
+                            wiki_url,
+                            os.path.join(repo_cwd, 'wiki'),
+                        )
+
+
+    
+    #if args.include_issues or args.include_everything:
+    #backup_issues(username, password, repo_cwd, repository, repos_template)
+
+    # if args.include_pulls or args.include_everything:
+    #backup_pulls(username, password, repo_cwd, repository, repos_template)
+
+    # if args.include_milestones or args.include_everything:
+    #     backup_milestones(args, repo_cwd, repository, repos_template)
+
+    # if args.include_labels or args.include_everything:
+    #     backup_labels(args, repo_cwd, repository, repos_template)
+
+    # if args.include_hooks or args.include_everything:
+    #     backup_hooks(args, repo_cwd, repository, repos_template)
+
+    # if args.include_releases or args.include_everything:
+    #     backup_releases(args, repo_cwd, repository, repos_template,
+    #                     include_assets=args.include_assets or args.include_everything)
+
+    repository.update({"tbl_object": db_table_object, "path": repo_dir})
+    store(**repository)
+    logger.success(f"The Name of the repo url is {repository['name']}")
+
+
 
 def check_update_needed(db_table_object, repository_name, pushed_at):
     """
     Returns True if there is a need to clone the github repository
     """
-    result = get_repository(db_table_object, repository_name)
+    logger.info(f"This is the repo name from check_update <<{repository_name}>> and db_table <<{db_table_object}>>")
+    result = get_single_repository(db_table_object, repository_name)
 
-    logger.info(list(result))
+    logger.info(result)
+
     if not result:
+        logger.info("result not found")
         return True
     else:
+        logger.info("result found")
+        logger.info(f"This is the result {result}")
+
 
         epoch = date_parse(pushed_at).timestamp() ##the pushed_at timetsamp available in the repo right now
         logger.info(f"Comparing {int(epoch)} and {result['downloaded_at']} for {repository_name}")

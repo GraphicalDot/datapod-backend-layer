@@ -67,6 +67,7 @@ def coderepos_github_initialize(db):
         watchers=peewee.SmallIntegerField()
         default_branch=peewee.TextField()
         is_starred=peewee.BooleanField()
+        is_gist=peewee.BooleanField()
 
         class Meta:
             indexes = ((('id', 'name'), True),)
