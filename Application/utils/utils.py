@@ -4,7 +4,7 @@
 import pytz
 import datetime
 import os
-from functools import wraps
+from functools import wraps, partial
 from errors_module.errors import APIBadRequest
 from database_calls.credentials import get_credentials,update_id_and_access_tokens
 import requests
@@ -15,14 +15,45 @@ import pytz
 import datetime
 import dateutil
 from jose import jwt, JWTError 
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__name__)
+import aiohttp
+import asyncio
+from loguru import logger
+
+
+
+
+def async_wrap(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+    return run
+
+    
+async def send_sse_message(config, channel_id, msg):
+    url = f"http://{config.HOST}:{config.PORT}/send"
+    logger.info(f"Sending sse message {msg} at url {url}")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=json.dumps({"message": msg, "channel_id": channel_id})) as response:
+            result =  await response.json()
+    
+    #r = requests.post(url, )
+
+    logger.info(f"Result sse message {result}")
+
+    if result["error"]:
+        logger.error(result["message"])
+        return 
+
+    logger.success(result["message"])
+    return 
+
 
 def convert_type(value):
     if isinstance(value, bytes):
-        logging.info(f"{value} is in bytes")
+        logger.info(f"{value} is in bytes")
         value = value.decode()
     return value
 

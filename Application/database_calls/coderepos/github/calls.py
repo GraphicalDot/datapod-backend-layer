@@ -6,7 +6,7 @@ from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 from tenacity import *
 from loguru import logger
-
+from utils.utils import async_wrap
 
 #@retry(stop=stop_after_attempt(2))
 def store(**data):
@@ -27,47 +27,47 @@ def store(**data):
                     id = data["id"],
                     node_id = data["node_id"],
                     name = data["name"],
-                    full_name = data["full_name"],
-                    private = data["private"],
-                    html_url = data["html_url"],
-                    git_url = data["git_url"],
-                    ssh_url = data["ssh_url"],
-                    clone_url = data["clone_url"],
-                    forks_url = data["forks_url"],
+                    full_name = data.get("full_name"),
+                    private = data.get("private"),
+                    html_url = data.get("html_url"),
+                    git_url = data.get("git_url"),
+                    ssh_url = data.get("ssh_url"),
+                    clone_url = data.get("clone_url"),
+                    forks_url = data.get("forks_url"),
 
-                    description = data["description"],
-                    fork = data["fork"],
-                    url = data["url"],
-                    created_at = data["created_at"],
-                    updated_at = data["updated_at"],
-                    pushed_at = data["pushed_at"],
-                    size = data["size"],
-                    stargazers_count = data["stargazers_count"],
-                    watchers_count = data["watchers_count"],
-                    language = data["language"],
-                    has_issues =  data["has_issues"],
-                    has_projects  = data["has_projects"],
-                    has_downloads = data["has_downloads"],
-                    has_wiki=data["has_wiki"],
-                    has_pages=data["has_pages"],
-                    forks_count=data["forks_count"],
-                    mirror_url= data["mirror_url"],
-                    archived=data["archived"],
-                    disabled= data["disabled"],
-                    open_issues_count= data["open_issues_count"],
-                    license=data["license"],
-                    forks= data["forks"],
-                    open_issues=data["open_issues"],
-                    watchers=data["watchers"],
+                    description = data.get("description"),
+                    fork = data.get("fork"),
+                    url = data.get("url"),
+                    created_at = data.get("created_at"),
+                    updated_at = data.get("updated_at"),
+                    pushed_at = data.get("pushed_at"),
+                    size = data.get("size"),
+                    stargazers_count = data.get("stargazers_count"),
+                    watchers_count = data.get("watchers_count"),
+                    language = data.get("language"),
+                    has_issues =  data.get("has_issues"),
+                    has_projects  = data.get("has_projects"),
+                    has_downloads = data.get("has_downloads"),
+                    has_wiki=data.get("has_wiki"),
+                    has_pages=data.get("has_pages"),
+                    forks_count=data.get("forks_count"),
+                    mirror_url= data.get("mirror_url"),
+                    archived=data.get("archived"),
+                    disabled= data.get("disabled"),
+                    open_issues_count= data.get("open_issues_count"),
+                    license=data.get("license"),
+                    forks= data.get("forks"),
+                    open_issues=data.get("open_issues"),
+                    watchers=data.get("watchers"),
                     is_starred=data.get("is_starred"),
                     is_gist=data.get("is_gist"),
-                    default_branch=data["default_branch"]).execute()
+                    default_branch=data.get(default_branch"]).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
     except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f'Duplicate key present --{data["name"]}-- in table --GithubRepo-- {e}')
+        logger.error(f'Duplicate key present --{data.get(name"]}-- in table --GithubRepo-- {e}')
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
     except Exception as e:
@@ -77,6 +77,7 @@ def store(**data):
     return 
 
 
+@async_wrap #makes function asynchronous
 def filter_repos(tbl_object, page, number):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
@@ -97,6 +98,7 @@ def filter_repos(tbl_object, page, number):
             .paginate(page, number)\
              .dicts()
        
+@async_wrap
 def get_single_repository(tbl_object, name):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):

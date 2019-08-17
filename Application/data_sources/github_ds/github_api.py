@@ -31,7 +31,7 @@ async def background_github_parse(config, username, password):
     repositories = retrieve_repositories(username, password)
     logger.info("\nTHese are the repositories for the user\n")
     #repositories = filter_repositories(args, repositories)
-    backup_repositories(username, password, backup_path, repositories, config.CODE_GITHUB_TBL)
+    await backup_repositories(username, password, backup_path, repositories, config.CODE_GITHUB_TBL)
     # # backup_account(args, output_directory)
 
 
@@ -92,7 +92,7 @@ async def listrepos(request):
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 10][request.args.get("number") == None] 
 
-    result = filter_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+    result = await filter_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
 
     return response.json(
         {
@@ -109,7 +109,7 @@ async def listrepos(request):
     if not request.args.get("name"):
         raise APIBadRequest("Name of the repository is required")
     
-    result = get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    result = await get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
     if result:
         result = result[0]
         logger.info(result)
@@ -134,7 +134,7 @@ async def backup_single_repo(request):
     
     logger.info(request.app.config.CODE_GITHUB_TBL)
 
-    result = get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    result = await get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
     if not result:
         raise APIBadRequest("No repo exists")
     

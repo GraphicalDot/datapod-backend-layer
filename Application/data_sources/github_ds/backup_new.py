@@ -17,6 +17,10 @@ import json
 import subprocess
 from dateutil.parser import parse as date_parse
 import datetime
+from utils.utils import send_sse_message
+import asyncio
+import functools
+import concurrent.futures
 
 __version__ = "3.9.9"
 FNULL = open(os.devnull, 'w')
@@ -132,8 +136,8 @@ def get_github_repo_url(repository, prefer_ssh=True):
 
     return repo_url
 
-def backup_repositories(username, password, output_directory, repositories, db_table_object):
-    repos_template = 'https://{0}/repos'.format(get_github_api_host())
+async def backup_repositories(username, password, output_directory, repositories, db_table_object):
+    #repos_template = 'https://{0}/repos'.format(get_github_api_host())
 
     #if args.incremental:
     last_update = max(list(repository['updated_at'] for repository in repositories) or [time.strftime('%Y-%m-%dT%H:%M:%SZ', time.localtime())])  # noqa
@@ -149,9 +153,17 @@ def backup_repositories(username, password, output_directory, repositories, db_t
 
     logger.info(f"Total number of repositories are {len(repositories)}")
 
-    for repository in repositories:
+    # for repository in repositories:
 
-        per_repository(output_directory, repository, db_table_object, since)
+    #     per_repository(output_directory, repository, db_table_object, since)
+
+    loop = asyncio.get_event_loop()  
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)  
+    _, _ = await asyncio.wait(  
+    fs=[loop.run_in_executor(executor,    
+        functools.partial(per_repository, output_directory, repository, db_table_object, since)) for repository in repositories],  
+    return_when=asyncio.ALL_COMPLETED) 
+
 
     open(last_update_path, 'w').write(last_update)
     return 
@@ -173,7 +185,7 @@ def per_repository(output_directory, repository, db_table_object, since):
 
     masked_remote_url = mask_password(repo_url)
 
-    logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository['private']}")
+    logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository.get('private')}")
     
     #include_gists = (args.include_gists or args.include_starred_gists)
     #if (args.include_repository or args.include_everything) \
