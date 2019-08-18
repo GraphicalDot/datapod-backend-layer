@@ -5,10 +5,15 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
+import datetime
 import humanize
 import json
+from dateutil.parser import parse as date_parse 
+
 from errors_module.errors import APIBadRequest
 from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts
+from database_calls.credentials import update_datasources_status, datasource_status
+
 from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
@@ -36,6 +41,9 @@ async def background_github_parse(config, username, password):
     await backup_repositories(username, password, backup_path, repositories, config)
     # # backup_account(args, output_directory)
 
+
+    ##after completeion og the github parse, update the datasources table with the COMPLETED status
+    update_datasources_status(config.DATASOURCES_TBL , "CODEREPOS/Github", username , config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "COMPLETED", "COMPLETED")
 
 
     #generate_new_keys(username, password)
@@ -66,9 +74,11 @@ async def parse(request):
         inst = await GithubIdentity(request.app.config, "github.com", "datapod")
         await inst.add(request.json["username"], request.json["password"])
 
+        update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
+    
     except Exception as e:
-        logger.error(e)
-        pass
+        logger.error(f"Error is {e}")
+        raise APIBadRequest(e)        
 
 
 
@@ -91,10 +101,16 @@ async def listrepos(request):
     """
     """
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 10][request.args.get("number") == None] 
+    number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
     result = await filter_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
-
+    [repo.update({
+            "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
+            "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
+            "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
+            "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
+    }) for repo in result]
+    
     return response.json(
         {
         'error': False,
@@ -134,10 +150,15 @@ async def list_starred_repos(request):
     """
     """
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 10][request.args.get("number") == None] 
+    number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
     result = await filter_starred_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
-
+    [repo.update({
+                "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
+                "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
+                "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
+                "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
+        }) for repo in result]
     return response.json(
         {
         'error': False,
@@ -152,9 +173,14 @@ async def list_gist(request):
     """
     logger.info("Number is ", request.args.get("number"))
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 10][request.args.get("number") == None] 
+    number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
     result = await filter_gists(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+    [repo.update({
+            "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
+            "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
+            "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y")
+        }) for repo in result]
 
     return response.json(
         {
@@ -247,4 +273,24 @@ async def backup_single_repo(request):
         })
 
 
+
+@GITHUB_BP.get('/parse_status')
+async def parse_status(request):
+    """
+    """
+    code = request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"]
+    result = datasource_status(request.app.config.DATASOURCES_TBL,code)
+    logger.info(result)
+    if result:
+        result = result[0]
+    else:
+        result = {}
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
 

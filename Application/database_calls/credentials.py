@@ -1,6 +1,8 @@
 
 #-*- coding: utf-8 -*-
+
 from loguru import logger
+from peewee import IntegrityError
 
 def convert_type(value):
     if isinstance(value, bytes):
@@ -112,13 +114,27 @@ def update_datasources_status(tbl_object, source, name, code, message, status):
                                     name=name,
                                     code=code,
                                     status=status,
-                                    message=message).on_conflict_replace().execute()
+                                    message=message).execute()
                                     
 
         logger.info(f"On insert new datasource is {source}")
+    
+    except IntegrityError as e:
+        logger.error(f"Couldnt insert datasource source because of {e} so updating it")
+
+        tbl_object.update(
+            status=status,
+            message=message).\
+        where(tbl_object.source==source).\
+        execute()
+
     except Exception as e:
         logger.error(f"Couldnt new datasource source updated because of {e}")
     return 
+
+
+def datasource_status(datasources_tbl_obj, code):
+    return datasources_tbl_obj.select().where(datasources_tbl_obj.code == code).dicts()
 
 
 def get_datasources_status(datasources_tbl_obj):
@@ -127,9 +143,6 @@ def get_datasources_status(datasources_tbl_obj):
     To get status of all the datasources that have been 
     fetched till now
     """
-    try:
-        return datasources_tbl_obj.select().dicts()
+    return datasources_tbl_obj.select().dicts()
     
-    except Exception as e:
-        logger.error(f"Couldnt fetch credentials data  {e}")
-    return 
+    

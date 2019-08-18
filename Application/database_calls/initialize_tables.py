@@ -132,9 +132,9 @@ def intialize_db(path):
 
     
     class Datasources(BaseModel):
-        source = peewee.TextField(null=True, index=True, unique=True)
+        source = peewee.TextField(index=True, unique=True)
         name = peewee.TextField(null=True)
-        code = peewee.IntegerField()
+        code = peewee.IntegerField(index=True, unique=True)
         message = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
         status = peewee.TextField(null=True)
@@ -226,7 +226,7 @@ def intialize_db(path):
     #use this to delete tables
     logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
     #db.drop_tables([Datasources, IndexEmailContent])
-    #db.drop_tables([Credentials])
+    #db.drop_tables([Datasources])
     # for person in Credentials.select().dicts():
     #     print(person)
     # print ("\n\n")

@@ -102,11 +102,9 @@ def filter_repos(tbl_object, page, number):
                     tbl_object.node_id, 
                     tbl_object.created_at, 
                     tbl_object.updated_at, 
-                    tbl_object.is_starred, 
                     tbl_object.pushed_at,
-                    tbl_object.is_gist,
                     tbl_object.description)\
-            .where(tbl_object.is_starred==False)\
+            .where(tbl_object.is_gist != True, tbl_object.is_starred != True)\
             .order_by(-tbl_object.updated_at)\
             .paginate(page, number)\
              .dicts()
@@ -126,8 +124,6 @@ def filter_starred_repos(tbl_object, page, number):
                     tbl_object.node_id, 
                     tbl_object.created_at, 
                     tbl_object.updated_at, 
-                    tbl_object.is_starred, 
-                    tbl_object.is_gist,
                     tbl_object.pushed_at,
                     tbl_object.description)\
             .where(tbl_object.is_starred==True)\
@@ -152,8 +148,6 @@ def filter_gists(tbl_object, page, number):
                     tbl_object.node_id, 
                     tbl_object.created_at, 
                     tbl_object.updated_at, 
-                    tbl_object.is_gist,
-                    tbl_object.is_starred, 
                     tbl_object.pushed_at,
                     tbl_object.description)\
             .where(tbl_object.is_gist==True)\
@@ -200,7 +194,7 @@ def counts(tbl_object):
 
 
     return {
-        "gists": gists,
-        "starred": starred,
-        "repos": repos,
+        "gists_count": gists,
+        "starred_count": starred,
+        "repos_count": repos,
     }

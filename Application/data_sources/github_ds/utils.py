@@ -81,14 +81,14 @@ class GithubIdentity(object):
         self.key_name = key_name
 
         ##check if identity for the host already exists or not
-        identity, ssh_dir = self.identity_exist(self.hostname) 
+        identity, self.ssh_dir = self.identity_exist(self.hostname) 
         if identity:
             await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
             raise Exception(f"Identity for {self.hostname} already exists")
 
         logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generate a new identity")
-        self.public_key = os.path.join(ssh_dir, "git_pub.key")
-        self.private_key = os.path.join(ssh_dir, "git_priv.key")
+        self.public_key = os.path.join(self.ssh_dir, "git_pub.key")
+        self.private_key = os.path.join(self.ssh_dir, "git_priv.key")
 
         return 
 
