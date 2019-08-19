@@ -78,6 +78,53 @@ def store(**data):
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
         logger.error(f'Duplicate key present --{data.get("name")}-- in table --GithubRepo-- {e}')
+        logger.info(f'Updating --{data.get("name")}-- in table --GithubRepo-- ')
+
+
+
+        table.update(
+                    name = data.get("name"),
+                    full_name = data.get("full_name"),
+                    private = data.get("private"),
+                    html_url = data.get("html_url"),
+                    git_url = data.get("git_url"),
+                    git_pull_url = data.get("git_pull_url"),
+                    git_push_url = data.get("git_push_url"),
+                    ssh_url = data.get("ssh_url"),
+                    clone_url = data.get("clone_url"),
+                    forks_url = data.get("forks_url"),
+                    #files = data.get("files"), #only for gist
+                    description = data.get("description"),
+                    fork = data.get("fork"),
+                    url = data.get("url"),
+                    created_at = data.get("created_at"),
+                    updated_at = data.get("updated_at"),
+                    pushed_at = data.get("pushed_at"),
+                    size = data.get("size"),
+                    stargazers_count = data.get("stargazers_count"),
+                    watchers_count = data.get("watchers_count"),
+                    language = data.get("language"),
+                    has_issues =  data.get("has_issues"),
+                    has_projects  = data.get("has_projects"),
+                    has_downloads = data.get("has_downloads"),
+                    has_wiki=data.get("has_wiki"),
+                    has_pages=data.get("has_pages"),
+                    forks_count=data.get("forks_count"),
+                    mirror_url= data.get("mirror_url"),
+                    archived=data.get("archived"),
+                    disabled= data.get("disabled"),
+                    open_issues_count= data.get("open_issues_count"),
+                    license=data.get("license"),
+                    forks= data.get("forks"),
+                    open_issues=data.get("open_issues"),
+                    watchers=data.get("watchers"),
+                    is_starred=data.get("is_starred"),
+                    is_gist=data.get("is_gist"),
+                    default_branch=data.get("default_branch"))\
+                        .where(table.id==str(data["id"]))\
+                        .execute()
+        logger.success(f'Success in Updating --{data.get("name")}-- in table --GithubRepo-- ')
+
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
     except Exception as e:

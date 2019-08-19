@@ -30,8 +30,8 @@ def coderepos_github_initialize(db):
     class GitHubRepo(BaseModel):
         path = peewee.TextField(index=True, null=False)
         owner = peewee.BlobField()
-        id = peewee.TextField(index=True, null=False)
-        node_id = peewee.TextField(index=True, null=False)
+        id = peewee.TextField(index=True, unique=True, null=False)
+        node_id = peewee.TextField(index=True, unique=True,  null=False)
         name = peewee.TextField(null=True)
         full_name = peewee.TextField(null=True)
         private = peewee.BooleanField(null=True)

@@ -78,7 +78,7 @@ async def parse(request):
     
     except Exception as e:
         logger.error(f"Error is {e}")
-        raise APIBadRequest(e)        
+        #raise APIBadRequest(e)        
 
 
 

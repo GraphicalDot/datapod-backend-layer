@@ -193,7 +193,7 @@ async def per_repository(output_directory, repository, config, since):
 
     repo_dir = os.path.join(repo_cwd, 'repository')
     repo_url = get_github_repo_url(repository)
-    ensure_directory(repo_dir)
+    #ensure_directory(repo_dir)
 
     masked_remote_url = mask_password(repo_url)
 
@@ -310,6 +310,7 @@ def fetch_repository(name,
                      lfs_clone=False):
     if bare_clone:
         if os.path.exists(local_dir):
+            logger.info(f"Local Directory for this rep is {local_dir}")
             clone_exists = subprocess.check_output(['git',
                                                     'rev-parse',
                                                     '--is-bare-repository'],
@@ -319,8 +320,8 @@ def fetch_repository(name,
     else:
         clone_exists = os.path.exists(os.path.join(local_dir, '.git'))
 
-    if clone_exists and skip_existing:
-        return
+    # if clone_exists and skip_existing:
+    #     return
 
     masked_remote_url = mask_password(remote_url)
 
