@@ -16,7 +16,7 @@ logger = logging.getLogger(__file__)
 BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 
 from database_calls.credentials import store_credentials, get_credentials, update_id_and_access_tokens,\
-            update_mnemonic
+            update_mnemonic,   update_datasources_status
     
 import config
 from functools import wraps
@@ -27,6 +27,7 @@ import dateutil
 import hashlib
 import requests
 import json
+from utils.utils import async_wrap
 
 @BACKUP_BP.get('/settings')
 #async def make_backup(request, ws):
@@ -39,6 +40,18 @@ async def backup_settings(request):
 #async def make_backup(request, ws):
 async def backups_list(request):
 
+    result = await backup_list_info(request.app.config)
+
+    return response.json({
+            "error": False,
+            "success": True, 
+            "data": result,
+            "message": None
+        })
+
+
+@async_wrap
+def backup_list_info(config):
     result = []
     def get_dir_size(dirpath):
         all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
@@ -48,19 +61,15 @@ async def backups_list(request):
 
 
 
-    for (path, dirs, files) in os.walk(request.app.config.BACKUP_PATH):
+    for (path, dirs, files) in os.walk(config.BACKUP_PATH):
         for _dir in dirs:
             dirpath = os.path.join(path, _dir)
             size, date = get_dir_size(dirpath)
             result.append({"name": _dir, "size": size, "date": date})
     
+    return result
     
-    return response.json({
-            "error": False,
-            "success": True, 
-            "data": result,
-            "message": None
-        })
+
 
 
 
@@ -89,6 +98,7 @@ async def backups_list(request):
 
 
 
+
 #@id_token_validity()
 async def aws_temp_creds(config, id_token, username):
 
@@ -108,16 +118,19 @@ async def aws_temp_creds(config, id_token, username):
 
 async def backup_upload(config, id_token):
     # Method to handle the new backup and sync with s3 
-    
+    update_datasources_status(config.DATASOURCES_TBL , "BACKUP", "backup" , config.DATASOURCES_CODE["BACKUP"], "Backup in Progress", "PROGRESS")
+
     archival_object = datetime.datetime.utcnow()
     archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
 
-    instance = Backup(config)
-    await instance.create(archival_name)
+    backup_instance = Backup(config)
+    await backup_instance.create(archival_name)
 
     
     instance = await S3Backup(config, id_token)
     await instance.sync_backup()
+    update_datasources_status(config.DATASOURCES_TBL , "BACKUP", "backup" , config.DATASOURCES_CODE["BACKUP"], "Backup Completed", "COMPLETED")
+    await backup_instance.send_sse_message("COMPLETED")
 
     return 
 

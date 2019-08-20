@@ -249,7 +249,7 @@ class S3Backup(object):
         sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
         print (sync_command)
         for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            await send_sse_message(self.config, "BACKUP_PROGRESS", out)
+            await send_sse_message(self.config, "BACKUP_PROGRESS", f"Upload to Cloud {out}")
         
         await send_sse_message(self.config, "BACKUP_PROGRESS", "Backup upload completed")
 

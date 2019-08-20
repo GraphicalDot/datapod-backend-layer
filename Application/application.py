@@ -54,7 +54,7 @@ from http import HTTPStatus
 #from sockets.sockets import sio
 from loguru import logger
 #from secrets.aws_secret_manager import get_secrets
-
+from database_calls.credentials import update_datasources_status
 
 app = Sanic(__name__)
 
@@ -228,4 +228,6 @@ def main():
 #     return text("Oops, server error", status=500)
 
 if __name__ == "__main__":
+
     main()
+

@@ -23,6 +23,30 @@ USERS_BP = Blueprint("user", url_prefix="/user")
 
 
 
+@USERS_BP.get('/datasources_states')
+@id_token_validity()
+async def datasources_states(request):
+    """
+    This api is the starting point of the application, It will fetch all the states and the user profile 
+    from cognito and localdatabase and give it to the frontend
+    """
+
+    datasources_status  = get_datasources_status(request.app.config.DATASOURCES_TBL)
+    result = {}
+
+    [result.update({e["source"]: e}) for e in datasources_status]
+
+
+
+
+    return response.json({
+        'error': False,
+        'success': True,
+        "data": result
+       })
+    
+   
+
 
 
 
@@ -562,6 +586,10 @@ async def update_user(request):
                 request["user_data"]["username"], 
                 encrypted_mnemonic, 
                 hex_salt,  mnemonic_keys["address"], mnemonic_keys["private_key"])
+
+    ##UPDATE the local datasource status table,
+    ##with a flag that SETUP_COMPLETED for the backup
+    update_datasources_status(request.app.config.DATASOURCES_TBL , "BACKUP", "backup" , request.app.config.DATASOURCES_CODE["BACKUP"], "Setup completed for backup", "SETUP_COMPLETED")
 
     return response.json({
         "error": True, 

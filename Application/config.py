@@ -8,6 +8,8 @@ from database_calls.initialize_tables import intialize_db
 from database_calls.coderepos.github.initialize import coderepos_github_initialize
 
 from loguru import logger
+from database_calls.credentials import update_datasources_status 
+
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
@@ -34,6 +36,12 @@ DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, Cry
     Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 GITHUB_TBL = coderepos_github_initialize(DB_Object)
+
+
+"""
+
+########update_datasources_status(Datasources , "BACKUP", "backup" ,80, "Backup Completed", "SETUP_COMPLETED")
+"""
 
 # logger.info("Deleting tables")
 # DB_Object.drop_tables([GITHUB_TBL])
@@ -120,7 +128,8 @@ class Config:
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
     #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
-    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}}
+    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}, "BACKUP": 80}
+    STATES = ["COMPLETED", "PROGRESS", 'STARTED', "NULL", "SETUP_COMPLETED"]
 
 
 
