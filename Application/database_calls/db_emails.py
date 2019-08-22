@@ -4,12 +4,8 @@ import json
 import datetime
 from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
-import coloredlogs, verboselogs, logging
-from tenacity import *
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
-
+#from tenacity import *
+from loguru import logger
 
 
 #@retry(stop=stop_after_attempt(2))

@@ -8,12 +8,9 @@ import asyncio
 import concurrent
 import asyncinit
 from collections import Counter
-import coloredlogs, verboselogs, logging
 import operator
 from geopy.geocoders import Nominatim
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 
 

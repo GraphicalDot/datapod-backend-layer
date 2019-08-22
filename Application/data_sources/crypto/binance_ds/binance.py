@@ -5,10 +5,7 @@ from database_calls.crypto.db_binance import get_creds, store_pairs
 from binance.client import Client 
 import asyncio
 import time
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 def binance_client(api_key, api_secret):
     """

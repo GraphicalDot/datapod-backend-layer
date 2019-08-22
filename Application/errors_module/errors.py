@@ -1,8 +1,5 @@
 
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 from sanic.response import json
 from sanic import Blueprint
@@ -10,7 +7,6 @@ from sanic.exceptions import SanicException
 
 
 ERRORS_BP = Blueprint('errors')
-LOGGER = logging.getLogger(__name__)
 DEFAULT_MSGS = {
     400: 'Bad Request',
     401: 'Unauthorized',

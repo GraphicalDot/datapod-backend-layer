@@ -17,7 +17,6 @@ from .images import ParseGoogleImages
 import datetime
 import asyncio
 import functools
-import coloredlogs, verboselogs, logging
 from functools import partial
 import concurrent.futures
 from websockets.exceptions import ConnectionClosed

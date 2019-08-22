@@ -4,14 +4,12 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-import coloredlogs, verboselogs, logging
 import datetime
 import humanize
 from utils.utils import revoke_time_stamp, update_tokens, id_token_validity, creation_date, modification_date
 from .back import Backup, S3Backup
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
+
 
 BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 

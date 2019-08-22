@@ -1,12 +1,9 @@
 #-*- coding: utf-8 -*-
 
-from tenacity import *
+#from tenacity import *
 import peewee
 import json
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 
 #@retry(stop=stop_after_attempt(2))
@@ -69,7 +66,7 @@ def format(config, db_purchase_obj):
     """
     db_purchase_obj: retrived from the db
     """
-    logging.info(db_purchase_obj)
+    logger.info(db_purchase_obj)
     products = json.loads(db_purchase_obj["products"])
     return {
             "merchant_name": db_purchase_obj["merchant_name"],
@@ -97,5 +94,5 @@ def get_credentials(credentials_tbl_obj):
         for person in credentials_tbl_obj.select().dicts():
             return person
     except Exception as e:
-        logging.error(f"Couldnt fetch credentials data  {e}")
+        logger.error(f"Couldnt fetch credentials data  {e}")
     return 

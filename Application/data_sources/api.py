@@ -6,11 +6,8 @@ import os
 import humanize
 from   database_calls.db_profile import  get_datasources, count_datasources
 from utils.utils import folder_size
-import coloredlogs, verboselogs, logging
 import datetime
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 PROFILE_BP = Blueprint("profile", url_prefix="/")
 
 

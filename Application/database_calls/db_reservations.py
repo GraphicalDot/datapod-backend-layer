@@ -3,10 +3,7 @@
 from tenacity import *
 import peewee
 import json
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 
 @retry(stop=stop_after_attempt(2))

@@ -13,13 +13,10 @@ import requests
 import json
 import aiohttp
 from asyncinit import asyncinit
-import coloredlogs, verboselogs, logging
 from errors_module.errors import MnemonicRequiredError
-verboselogs.install()
-coloredlogs.install()
 from errors_module.errors import APIBadRequest, PathDoesntExists
-logger = logging.getLogger(__file__)
 from database_calls.credentials import get_credentials
+from loguru import logger
 
 
 class cd:

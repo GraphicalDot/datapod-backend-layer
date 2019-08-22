@@ -12,10 +12,7 @@ import datetime
 import pytz
 from pathlib import Path
 
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 
 """

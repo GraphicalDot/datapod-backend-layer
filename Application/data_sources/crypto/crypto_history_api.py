@@ -10,13 +10,10 @@ import gzip
 import datetime
 from binance.client import Client
 from errors_module.errors import APIBadRequest
-import coloredlogs, verboselogs, logging
 from database_calls.crypto.db_binance import store, get_creds, get_pairs, filter_pair
 from .binance_ds.binance import binance_client, get_all_tickers, get_all_orders
 
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 CRYPTO_BP = Blueprint("crypto", url_prefix="")
 
 

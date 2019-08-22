@@ -8,10 +8,8 @@ import os
 import zipfile
 from .facebook_ds import data_parse
 from errors_module.errors import APIBadRequest
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
+
 FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 
 

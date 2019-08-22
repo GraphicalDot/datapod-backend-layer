@@ -4,11 +4,8 @@
 
 from EncryptionModule.key_derivation import generate_scrypt_key
 from EncryptionModule.symmetric import aes_decrypt, aes_encrypt
-import coloredlogs, verboselogs, logging
 import binascii
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 def encrypt_mnemonic(password, mnemonic):
     """

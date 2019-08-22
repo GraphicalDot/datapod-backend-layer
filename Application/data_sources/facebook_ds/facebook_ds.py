@@ -7,10 +7,7 @@ import datetime
 import pytz
 import sys
 from errors_module.errors import APIBadRequest
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))

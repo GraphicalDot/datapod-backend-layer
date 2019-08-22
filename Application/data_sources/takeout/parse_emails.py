@@ -1,7 +1,5 @@
 
-import logging
-import verboselogs
-import coloredlogs
+from loguru import logger
 from lxml.html.clean import Cleaner
 import sys
 import requests
@@ -28,16 +26,13 @@ import asyncio
 import functools
 import aiohttp
 import concurrent.futures
-from tenacity import *
+#from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
 
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
 
 
 class TakeoutEmails(object):

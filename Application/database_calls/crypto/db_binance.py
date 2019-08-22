@@ -1,8 +1,5 @@
 #-*- coding: utf-8 -*-
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
 import peewee
 
 def store(tbl_obj, api_key, api_secret):

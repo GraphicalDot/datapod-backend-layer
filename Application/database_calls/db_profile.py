@@ -8,10 +8,8 @@ Deals witht he db calls for the landing page of the desktop app of datapod
 
 
 import json
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
+
 
 def store_datasource(**data):
     try:

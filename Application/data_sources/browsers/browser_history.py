@@ -10,11 +10,9 @@ from errors_module.errors import APIBadRequest
 import tldextract
 import collections
 from urllib.parse import urlparse 
+from loguru import logger
 
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+
 
 BROWSER_HISTORY_BP = Blueprint("browser_history", url_prefix="/browser_history")
 

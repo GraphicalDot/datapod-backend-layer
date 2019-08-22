@@ -8,10 +8,8 @@ import os
 import shutil
 from errors_module.errors import APIBadRequest
 from .instagram_data import save_instagram, instagram_login, get_all_posts
-import coloredlogs, verboselogs, logging
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
+from loguru import logger
+
 INSTAGRAM_BP = Blueprint("instagram", url_prefix="/instagram")
 
 async def periodic(app, instagram_object):

@@ -30,12 +30,8 @@ import pytz
 import asyncio
 import concurrent
 
-import coloredlogs, verboselogs, logging
 from geopy.geocoders import Nominatim
-verboselogs.install()
-coloredlogs.install()
-logger = logging.getLogger(__file__)
-
+from loguru import logger
 from utils.utils import timezone_timestamp
 
 
