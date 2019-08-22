@@ -31,7 +31,11 @@ def build_app():
             logger.info(out)                                                                                                                                                                                                                                            
 
     elif platform.system() == "Darwin":
-        pass
+        backup_command = f"pyi-makespec -F --hidden-import engineio.async_eventlet  --hidden-import _striptime --hidden-import engineio.async_gevent --additional-hooks-dir pyinstaller_hooks --onefile --windowed --icon datapod.ico --name Datapod_OSX  application.py"
+        command = "pyinstaller Datapod_OSX.spec"
+        for out in os_command_output(command, "Build Complete"):
+            logger.info(out)  
+        
         #backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"
     else:
         raise Exception("The platform is not available for this os distribution")
