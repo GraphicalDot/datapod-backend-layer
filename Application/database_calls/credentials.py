@@ -124,6 +124,7 @@ def update_datasources_status(tbl_object, source, name, code, message, status):
 
         tbl_object.update(
             status=status,
+            name=name,
             message=message).\
         where(tbl_object.source==source).\
         execute()

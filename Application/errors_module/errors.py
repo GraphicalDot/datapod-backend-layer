@@ -76,7 +76,7 @@ class MnemonicRequiredError(ApiException):
 class AccountError(ApiException):
     def __init__(self, message="This Account already exists with us",
                         status_code=None):
-        super().__init__(message)
+        super().__init__(message) 
 
 
 @add_status_code(400)
@@ -115,7 +115,7 @@ def json_error(request, exception):
         code = exception.status_code
     except AttributeError:
         code = 500
-    LOGGER.exception(exception)
+    logger.exception(exception)
     return json({
         'error': exception.args[0]
     }, status=code)

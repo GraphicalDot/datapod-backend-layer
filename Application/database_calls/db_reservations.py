@@ -1,12 +1,14 @@
 #-*- coding: utf-8 -*-
 
-from tenacity import *
+#from tenacity import *
 import peewee
 import json
 from loguru import logger
+from utils.utils import async_wrap
 
 
-@retry(stop=stop_after_attempt(2))
+#@retry(stop=stop_after_attempt(2))
+@async_wrap
 def store(tbl_object, merchant_name, source, time, dest, src):
     """
     purchases: a list of purchases dict

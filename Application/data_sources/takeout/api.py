@@ -20,6 +20,7 @@ import functools
 from functools import partial
 import concurrent.futures
 from websockets.exceptions import ConnectionClosed
+from utils.utils import async_wrap, send_sse_message
 
 
 import string
@@ -48,6 +49,9 @@ async def parse_images(config, loop, executor):
             return_when=asyncio.ALL_COMPLETED
         )
 
+    for args in images_data:
+        await q_images_db.store(**args)
+
     return 
 
 async def purchase_n_reservations(config, loop, executor):
@@ -68,15 +72,20 @@ async def purchase_n_reservations(config, loop, executor):
         reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
 
 
-    await asyncio.wait(
-            fs=[loop.run_in_executor(executor,  
-                functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
-            return_when=asyncio.ALL_COMPLETED)
+    # await asyncio.wait(
+    #         fs=[loop.run_in_executor(executor,  
+    #             functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
+    #         return_when=asyncio.ALL_COMPLETED)
+    for purchase in purchases:
+        await q_purchase_db.store(**purchase)
     
-    await asyncio.wait(
-            fs=[loop.run_in_executor(executor,  
-                functools.partial(q_reservation_db.store, **reservation)) for reservation in reservations],
-            return_when=asyncio.ALL_COMPLETED)
+    # await asyncio.wait(
+    #         fs=[loop.run_in_executor(executor,  
+    #             functools.partial(q_reservation_db.store, **reservation)) for reservation in reservations],
+    #         return_when=asyncio.ALL_COMPLETED)
+    
+    for reservation in reservations:
+        await q_reservation_db.store(**reservation)
     
 
 
@@ -168,7 +177,9 @@ async def parse_takeout(config):
     await email_parsing_instance.send_sse_message(100)
 
     ##updating datasources table with the status that parsing of the takeout is completed
+    logger.info("Trying to update data source table with status completed")
     email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
+    logger.info("Updated data source table with status completed")
 
     return 
 

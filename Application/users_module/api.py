@@ -91,9 +91,15 @@ async def is_logged_in(request):
     if not creds.get("id_token"):
         raise APIBadRequest("User is not logged in")
     
-    res = get_datasources_status(request.app.config.DATASOURCES_TBL)
+    datasources_status = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
-    logger.info(list(res))
+
+    result = {}
+
+    [result.update({e["source"]: e}) for e in datasources_status]
+
+
+    logger.info(result)
     return response.json({
         'error': False,
         'success': True,
@@ -101,7 +107,7 @@ async def is_logged_in(request):
             "name": creds["name"],
             "email": creds["email"],
             "username": creds["username"],
-            "datasources": list(res)
+            "datasources": result
         }, 
         "message": "User is logged in"
        })

@@ -6,9 +6,11 @@ from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 #from tenacity import *
 from loguru import logger
+from utils.utils import async_wrap, send_sse_message
 
 
 #@retry(stop=stop_after_attempt(2))
+@async_wrap
 def store_email(**data):
     """
     purchases: a list of purchases dict
@@ -37,7 +39,7 @@ def store_email(**data):
  
     return 
 
-
+@async_wrap
 def store_email_content(**data):
     """
     purchases: a list of purchases dict
@@ -63,6 +65,7 @@ def store_email_content(**data):
 
 
 #@retry(stop=stop_after_attempt(2))
+@async_wrap
 def store_email_attachment(**data):
     """
     purchases: a list of purchases dict

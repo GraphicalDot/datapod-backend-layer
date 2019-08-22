@@ -5,11 +5,11 @@ import datetime
 from errors_module.errors import APIBadRequest
 from tenacity import *
 import peewee
-
 from loguru import logger
-
+from utils.utils import async_wrap
 
 #@retry(stop=stop_after_attempt(7))
+@async_wrap
 def store(tbl_object, source, creation_time, modification_time,
             photo_taken_time, description, url, title, geo_data, image_path):
     """

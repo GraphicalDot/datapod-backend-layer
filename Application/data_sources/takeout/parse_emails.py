@@ -29,6 +29,7 @@ import concurrent.futures
 #from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
+from utils.utils import async_wrap, send_sse_message
 
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
@@ -134,14 +135,16 @@ class TakeoutEmails(object):
         if status == "PROGRESS":
             email_id= ""
         else:
+            ##TODO we need some other data structure to store this data
             email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
+
         data = {"tbl_object": self.datasources_tbl,
                 "name": email_id, 
                 "source": self.__source__, "message": f"{email_count} emails",
                 "code": self.config.DATASOURCES_CODE[self.__source__],
                 "status": status }
 
-
+        logger.error(f"Data on completion to be stored in datasources status is {data}")
         update_datasources_status(**data)
         return 
     
@@ -197,7 +200,7 @@ class TakeoutEmails(object):
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             i += 1
-            self.save_email(message)
+            await self.save_email(message)
             if completion_percentage:
                 if i in completion_percentage:
                     #logger.info(f"I found {i}")
@@ -206,9 +209,9 @@ class TakeoutEmails(object):
                     await self.send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
-            if i == 3000:
-                await self.send_sse_message(95)
-                break
+            # if i == 3000:
+            #     await self.send_sse_message(95)
+            #     break
             
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
@@ -316,8 +319,8 @@ class TakeoutEmails(object):
         else:
             self._to_addr_dict[email_address] = 1
         return 
-
-    def save_email(self, email_message):
+    
+    async def save_email(self, email_message):
         email_from = email_message["From"]
         email_to = email_message["To"]
         subject = email_message["Subject"]
@@ -458,21 +461,22 @@ class TakeoutEmails(object):
         if attachments:
             data.update({"attachments": True})
 
-        self.store(attachments, data)
+        await self.store(attachments, data)
 
         # if attachments:
         #     logger.info(f"This is the attachement array {attachments}")
         self.email_count +=1 
         return 
 
-    def store(self, attachments, data):
+
+    async def store(self, attachments, data):
         if attachments:
             data.update({"attachments": True})
             
         try:
     
             data.update({"tbl_object": self.email_table})
-            store_email(**data)
+            await store_email(**data)
 
             ##storing email content in different table, make searchable
             ##if only insertion of email is successful, insertion of indexed content 
@@ -483,7 +487,7 @@ class TakeoutEmails(object):
             content_hash = hashlib.sha256(content.encode()).hexdigest()
             data.update({"content": content, "content_hash": content_hash})
         
-            store_email_content(**data)
+            await store_email_content(**data)
         except DuplicateEntryError as e:
             # logger.error(e)
             # logger.info("Skipping indexed email content entry")
@@ -491,7 +495,7 @@ class TakeoutEmails(object):
         data.update({"tbl_object": self.email_attachements_tbl})
         for attachment_path in attachments:
             data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})
-            store_email_attachment(**data)
+            await store_email_attachment(**data)
 
         
         return 
