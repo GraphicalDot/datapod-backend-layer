@@ -25,6 +25,7 @@ from sanic import Sanic
 from sanic_cors import CORS
 from zmq.asyncio import ZMQEventLoop
 
+import pprint 
 
 
 from spf import SanicPluginsFramework
@@ -177,11 +178,10 @@ def main():
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
     #app.config["SIO"] = sio
-    import pprint 
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="localhost", port=app.config.PORT, workers=1)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(

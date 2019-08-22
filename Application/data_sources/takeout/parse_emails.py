@@ -27,7 +27,6 @@ import datetime
 import asyncio
 import functools
 import aiohttp
-from sockets.sockets import broadcast
 import concurrent.futures
 from tenacity import *
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
