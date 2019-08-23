@@ -56,6 +56,11 @@ class APIBadRequest(ApiException):
         super().__init__(message)
 
 
+@add_status_code(400)
+class IdentityAlreadyExists(ApiException):
+    def __init__(self, message="Code repos identity already exists",
+                        status_code=None):
+        super().__init__(message)
 
 @add_status_code(400)
 class PathDoesntExists(ApiException):

@@ -13,7 +13,7 @@ import socket
 import os
 import json
 from loguru import logger
-from errors_module.errors import APIBadRequest
+from errors_module.errors import APIBadRequest, IdentityAlreadyExists
 from .errors import request_http_error, request_url_error
 from .auth import get_auth,  get_github_api_host
 
@@ -84,7 +84,7 @@ class GithubIdentity(object):
         identity, self.ssh_dir = self.identity_exist(self.hostname) 
         if identity:
             await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
-            raise Exception(f"Identity for {self.hostname} already exists")
+            raise IdentityAlreadyExists(f"Identity for {self.hostname} already exists")
 
         logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generate a new identity")
         self.public_key = os.path.join(self.ssh_dir, "git_pub.key")

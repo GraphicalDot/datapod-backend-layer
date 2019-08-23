@@ -10,7 +10,7 @@ import humanize
 import json
 from dateutil.parser import parse as date_parse 
 
-from errors_module.errors import APIBadRequest
+from errors_module.errors import APIBadRequest, IdentityAlreadyExists
 from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts
 from database_calls.credentials import update_datasources_status, datasource_status
 
@@ -74,11 +74,15 @@ async def parse(request):
         inst = await GithubIdentity(request.app.config, "github.com", "datapod")
         await inst.add(request.json["username"], request.json["password"])
 
-        update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
+    except IdentityAlreadyExists as e:
+        logger.error(f"Error is {e}")
+        
     
     except Exception as e:
         logger.error(f"Error is {e}")
-        #raise APIBadRequest(e)        
+        raise APIBadRequest(e)        
+    
+    update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
 
 
 
@@ -93,6 +97,10 @@ async def parse(request):
         'error': False,
         'success': True,
         })
+
+
+
+
 
 
 

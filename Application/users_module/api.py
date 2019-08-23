@@ -17,7 +17,8 @@ from utils.utils import id_token_validity, username
 from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys
 import hashlib
 from loguru import logger
-
+import os
+import humanize
 USERS_BP = Blueprint("user", url_prefix="/user")
 
 
@@ -82,6 +83,12 @@ async def is_logged_in(request):
     code is the code generated from the MFA device
     username is the username of the user
     """
+    def get_dir_size(dirpath):
+        all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+        files_and_sizes = [os.path.getsize(path) for path in all_files]
+        return  humanize.naturalsize(sum(files_and_sizes))
+
+
     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
     if not creds:
         raise APIBadRequest("User is not logged in")
@@ -93,10 +100,19 @@ async def is_logged_in(request):
     
     datasources_status = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
-
     result = {}
 
     [result.update({e["source"]: e}) for e in datasources_status]
+
+    logger.info(result)
+
+    if result.get("TAKEOUT"):
+        size = os.path.join(request.app.config.RAW_DATA_PATH, 'Takeout')        
+        result["TAKEOUT"].update({"size": get_dir_size(size)})
+
+    if result.get("CODEREPOS/Github"):
+        size = os.path.join(request.app.config.RAW_DATA_PATH, 'Coderepos/github')        
+        result["CODEREPOS/Github"].update({"size": get_dir_size(size)})
 
 
     logger.info(result)

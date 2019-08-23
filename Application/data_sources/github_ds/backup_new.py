@@ -168,7 +168,7 @@ async def backup_repositories(username, password, output_directory, repositories
     # tasks=  asyncio.gather(*[per_repository(output_directory, repository, db_table_object, since) for repository in repositories]) 
     # loop.run_until_complete(tasks) 
     i = 100/len(repositories)
-    for num, repository in enumerate(repositories):
+    for num, repository in enumerate(repositories[::-1]):
         msg = await per_repository(output_directory, repository, config, since)
         res = {"message": msg, "percentage": int(i*(num+1))}
         await send_sse_message(config, "CODEREPOS_GITHUB", res)
@@ -212,7 +212,7 @@ async def per_repository(output_directory, repository, config, since):
 
     if not since or updated_at > since: 
             await fetch_repository(repo_name, repo_url, repo_dir)
-            if repository['has_wiki']:
+            if repository.get('has_wiki'):
                 wiki_url = repo_url.replace('.git', '.wiki.git')
                 logger.info(f"Trying to download wiki for {repository['name']} at {wiki_url}")
 
