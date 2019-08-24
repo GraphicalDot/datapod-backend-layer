@@ -30,103 +30,103 @@ import concurrent.futures
 from database_calls.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
 from utils.utils import async_wrap, send_sse_message
+from email.header import Header, decode_header, make_header
 
 SERVER = "imap.gmail.com"
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 
 
-
-class TakeoutEmails(object):
-    message_types = ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]
+@asyncinit
+class EmailParse(object):
     __source__ = "TAKEOUT"
     __channel_id__ = "TAKEOUT_EMAIL_PROGRESS"
+
+    #message_types = ["Sent", "Inbox", "Archived", "Starred", "Drafts", "Chat"]
+
+    async def __init__(self, config):
     
-    def __init__(self, config):
-
         ##to keep track of all the to_addr email ids and their respective frequencies 
-        self._to_addr_dict = {}
         # self.db_dir_path = db_dir_path
-        self.email_dir = os.path.join(
-            config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
+        self.config = config
+        self.datasources_tbl = config.DATASOURCES_TBL
 
-        self.email_mbox = mailbox.mbox(self.email_dir)
-        self.total_emails_number = len(self.email_mbox.keys())
+        self.email_path = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail")
+
+        self.mbox_objects = []
+        total_emails = []
+
+
+        for mbox_file in os.listdir(self.email_path):
+            path = os.path.join(self.email_path, mbox_file)
+
+            #mbox_object = mailbox.mbox(path)
+            mbox_object = await self.read_mbox(path)
+            email_count = len(mbox_object.keys())
+
+            self.mbox_objects.append({
+                    "mbox_type": mbox_file.replace(".mbox", ""), 
+                    "mbox_object": mbox_object,
+                    "email_count": email_count
+            })
+
+            total_emails.append(email_count)
+
+        step = sum(total_emails)//97
+
+
+        start = 0
+        for mbox_object in self.mbox_objects:
+            end = mbox_object["email_count"]//step 
+            mbox_object.update({"start": start*step, "end": (start+end)*step, "step": step}) 
+            start = start+end 
+
+
+
+
+        logger.info(f"Total number of emails {sum(total_emails)}")        
+        logger.info(f"Mbox objects {self.mbox_objects}")        
+        self.email_count = sum(total_emails)
+        self.update_datasource_table("PROGRESS")
+
+
+    @async_wrap
+    def read_mbox(self, path):
+        logger.info(f"Reading {path}")
+        mbox_object = mailbox.mbox(path)
+        logger.success(f"Read {path}")
+        return mbox_object
+
+
+    async def download_emails(self):
+
+        for mbox_object in self.mbox_objects:
+        
+            instance = Emails(self.config, mbox_object["mbox_object"], mbox_object["mbox_type"], 
+                                mbox_object["email_count"], mbox_object["step"], 
+                                mbox_object["start"], mbox_object["end"])
+             
+            await instance.download_emails()
+            if mbox_object["mbox_type"] == "Inbox":
+                            self.email_id = max(instance._to_addr_dict, key=instance._to_addr_dict.get)
 
         
-        self.email_dir_html = os.path.join(
-            config.PARSED_DATA_PATH, "mails/gmail/email_html")
+    async def send_sse_message(self, percentage):
+        url = f"http://{self.config.HOST}:{self.config.PORT}/send"
+        logger.info(f"Sending sse message {percentage} at url {url}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=json.dumps({"message": percentage, "channel_id": self.__channel_id__})) as response:
+                result =  await response.json()
+        
+        #r = requests.post(url, )
 
-        self.email_table = config.EMAILS_TBL
-        self.config = config
-        # this wil store the content of the email to be searchable through content
-        # store subject+content+to_addr in this as a content
-        self.indexed_email_content_tbl = config.INDEX_EMAIL_CONTENT_TBL
+        logger.info(f"Result sse message {result}")
 
-        self.datasources_tbl = config.DATASOURCES_TBL
-        # this is a seperate table which will store the attachments of the
-        # the email
-        self.email_attachements_tbl = config.EMAIL_ATTACHMENT_TBL
+        if result["error"]:
+            logger.error(result["message"])
+            return 
 
-        for message_type in ["Sent", "Inbox", "Spam", "Trash", "Drafts", "Chat"]:
-            if not os.path.exists(self.email_dir_html):
-                logger.warning(
-                    f"Path doesnt exists creating {self.email_dir_html}")
-                os.makedirs(self.email_dir_html)
-
-            self.image_dir = os.path.join(
-                config.PARSED_DATA_PATH, f"mails/gmail/images")
-            if not os.path.exists(self.image_dir):
-                logger.warning(f"Path doesnt exists creating {self.image_dir}")
-                os.makedirs(self.image_dir)
-
-            self.image_dir_temp = os.path.join(self.image_dir, "temp")
-            if not os.path.exists(self.image_dir_temp):
-                logger.warning(
-                    f"Path doesnt exists creating {self.image_dir_temp}")
-                os.makedirs(self.image_dir_temp)
-
-            # creating sub sirectories for image formats
-
-            self.image_dir_png = os.path.join(self.image_dir, "png")
-            if not os.path.exists(self.image_dir_png):
-                logger.warning(
-                    f"Path doesnt exists creating {self.image_dir_png}")
-                os.makedirs(self.image_dir_png)
-
-            self.image_dir_small = os.path.join(self.image_dir, "small")
-            if not os.path.exists(self.image_dir_small):
-                logger.warning(
-                    f"Path doesnt exists creating {self.image_dir_small}")
-                os.makedirs(self.image_dir_small)
-
-            self.image_dir_junk = os.path.join(self.image_dir, "junk")
-            if not os.path.exists(self.image_dir_junk):
-                logger.warning(
-                    f"Path doesnt exists creating {self.image_dir_junk}")
-                os.makedirs(self.image_dir_junk)
-
-            self.image_dir_normal = os.path.join(self.image_dir, "normal")
-            if not os.path.exists(self.image_dir_normal):
-                logger.warning(
-                    f"Path doesnt exists creating {self.image_dir_normal}")
-                os.makedirs(self.image_dir_normal)
-
-            self.pdf_dir = os.path.join(
-                config.PARSED_DATA_PATH, "mails/gmail/pdfs")
-            if not os.path.exists(self.pdf_dir):
-                logger.warning(f"Path doesnt exists creating {self.pdf_dir}")
-                os.makedirs(self.pdf_dir)
-
-            self.extra_dir = os.path.join(
-                config.PARSED_DATA_PATH, "mails/gmail/extra")
-            if not os.path.exists(self.extra_dir):
-                logger.warning(f"Path doesnt exists creating {self.extra_dir}")
-                os.makedirs(self.extra_dir)
-        logger.info("App intiation been done")
-
-        ##Since the takeout has started we need to update the datasources table in DB eith
-        ## the flag Progress
-        self.update_datasource_table("PROGRESS")
+        logger.success(result["message"])
+        return 
 
     def update_datasource_table(self, status, email_count=None):
         """
@@ -136,7 +136,7 @@ class TakeoutEmails(object):
             email_id= ""
         else:
             ##TODO we need some other data structure to store this data
-            email_id = max(self._to_addr_dict, key=self._to_addr_dict.get)
+            email_id = self.email_id
 
         data = {"tbl_object": self.datasources_tbl,
                 "name": email_id, 
@@ -147,7 +147,92 @@ class TakeoutEmails(object):
         logger.error(f"Data on completion to be stored in datasources status is {data}")
         update_datasources_status(**data)
         return 
+
+class Emails(object):
+    message_types = ["Sent", "Inbox", "Archived", "Starred", "Drafts", "Chat"]
+    __source__ = "TAKEOUT"
+    __channel_id__ = "TAKEOUT_EMAIL_PROGRESS"
     
+    def __init__(self, config, mbox_object, mbox_type, email_count, step, start, end):
+
+        self.step = step
+        self.start = start
+        self.end = end
+        ##to keep track of all the to_addr email ids and their respective frequencies 
+        self._to_addr_dict = {}
+        # self.db_dir_path = db_dir_path
+        self.email_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Inbox.mbox")
+        # self.archived_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Archived.mbox")
+        # self.sent_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Sent.mbox")
+        # self.starred_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Starred.mbox")
+        # self.drafts_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Drafts.mbox")
+        # self.chat_dir = os.path.join(config.RAW_DATA_PATH,  "Takeout/Mail/Chat.mbox")
+
+
+        self.email_mbox = mbox_object
+        self.mbox_type = mbox_type
+        self.email_count = email_count
+        self.email_dir_html = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/email_html")
+
+        self.email_table = config.EMAILS_TBL
+        self.config = config
+        # this wil store the content of the email to be searchable through content
+        # store subject+content+to_addr in this as a content
+        self.indexed_email_content_tbl = config.INDEX_EMAIL_CONTENT_TBL
+
+        # this is a seperate table which will store the attachments of the
+        # the email
+        self.email_attachements_tbl = config.EMAIL_ATTACHMENT_TBL
+
+        if not os.path.exists(self.email_dir_html):
+            logger.warning(f"Path doesnt exists creating {self.email_dir_html}")
+            os.makedirs(self.email_dir_html)
+
+        ##Creating iimage directory for the emails
+        self.image_dir = os.path.join(config.PARSED_DATA_PATH, f"mails/gmail/images")
+        if not os.path.exists(self.image_dir):
+            logger.warning(f"Path doesnt exists creating {self.image_dir}")
+            os.makedirs(self.image_dir)
+
+        self.image_dir_temp = os.path.join(self.image_dir, "temp")
+        if not os.path.exists(self.image_dir_temp):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_temp}")
+            os.makedirs(self.image_dir_temp)
+
+        # creating sub sirectories for image formats
+        self.image_dir_png = os.path.join(self.image_dir, "png")
+        if not os.path.exists(self.image_dir_png):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_png}")
+            os.makedirs(self.image_dir_png)
+
+        self.image_dir_small = os.path.join(self.image_dir, "small")
+        if not os.path.exists(self.image_dir_small):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_small}")
+            os.makedirs(self.image_dir_small)
+
+        self.image_dir_junk = os.path.join(self.image_dir, "junk")
+        if not os.path.exists(self.image_dir_junk):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_junk}")
+            os.makedirs(self.image_dir_junk)
+
+        self.image_dir_normal = os.path.join(self.image_dir, "normal")
+        if not os.path.exists(self.image_dir_normal):
+            logger.warning(f"Path doesnt exists creating {self.image_dir_normal}")
+            os.makedirs(self.image_dir_normal)
+
+        self.pdf_dir = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/pdfs")
+        if not os.path.exists(self.pdf_dir):
+            logger.warning(f"Path doesnt exists creating {self.pdf_dir}")
+            os.makedirs(self.pdf_dir)
+
+        self.extra_dir = os.path.join(config.PARSED_DATA_PATH, "mails/gmail/extra")
+        if not os.path.exists(self.extra_dir):
+            logger.warning(f"Path doesnt exists creating {self.extra_dir}")
+            os.makedirs(self.extra_dir)
+
+        ##Since the takeout has started we need to update the datasources table in DB eith
+        ## the flag Progress
+
     async def send_sse_message(self, percentage):
         url = f"http://{self.config.HOST}:{self.config.PORT}/send"
         logger.info(f"Sending sse message {percentage} at url {url}")
@@ -182,36 +267,26 @@ class TakeoutEmails(object):
         #db_instance = create_db_instance(self.db_dir_path)
         #db_instance = None
 
-        self.email_count = 0
+        self._email_count = 0
 
-        if self.total_emails_number > 100:
-            ##the length of the list will be 98, the rest two points will be sent when image parsing will be done 
-            ##and when purchases and reservation will be done
-            completion_percentage  = list(range(1, self.total_emails_number, int(self.total_emails_number /97)))          
-            #completion_percentage.append(self.total_emails_number)
-        else:
-            completion_percentage = None
-
-        # _, _ = await asyncio.wait(
-        #     fs=[loop.run_in_executor(executor,  
-        #         functools.partial(self.save_email, message, number)) for (number, message) in enumerate(self.email_mbox)],
-        #     return_when=asyncio.ALL_COMPLETED)
+        completion_percentage = list(range(self.start, self.end, self.step)) 
         i = 0
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
+            self.start += 1
             i += 1
             await self.save_email(message)
             if completion_percentage:
-                if i in completion_percentage:
+                if self.start in completion_percentage:
                     #logger.info(f"I found {i}")
-                    percentage = f"{completion_percentage.index(i) +1 }"
-                    logger.info(f"Percentage of completion {percentage}% at {i} emails")
+                    # percentage = f"{completion_percentage.index(i) +1 }"
+                    percentage = (self.start+self.step)//self.step
+                    logger.info(f"Percentage of completion {percentage}% at {self.start} emails")
                     await self.send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
-            # if i == 3000:
-            #     await self.send_sse_message(95)
-            #     break
+            if i == 2000:
+                break
             
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
@@ -328,7 +403,7 @@ class TakeoutEmails(object):
 
         self.__add_to_addr_address(email_to)
 
-        message_type = email_message.get("X-Gmail-Labels")
+        #message_type = email_message.get("X-Gmail-Labels")
 
         
         sender_dir_name, sender_sub_dir_name = self.extract_email_from(
@@ -441,7 +516,7 @@ class TakeoutEmails(object):
 
         email_text = self.get_clean_html(html_body)
         with open(file_path_html, "wb") as f:
-            data = f"From: {email_from}{nl}To: {email_to}{nl}Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
+            data = f"From: {email_from}{nl}To: {email_to}{nl} Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
             f.write(data.encode())
 
         raw_id, message_id = self.__message_id(email_message)
@@ -455,7 +530,7 @@ class TakeoutEmails(object):
                 "date": datetime.datetime.utcfromtimestamp(epoch),
                 "path": file_path_html,
                 "attachments": False,
-                "message_type": message_type}
+                "message_type": self.mbox_type}
         
 
         if attachments:
@@ -483,7 +558,12 @@ class TakeoutEmails(object):
             ##will happem , indexing on FTS5 table is not allowed so we have to adopt this 
             ##stategy nby making assumption that if a key for email exists so is the indexed content
             data.update({"tbl_object": self.indexed_email_content_tbl})
-            content = data["content"] + data["subject"]
+            try:
+                content = data["content"] + data["subject"]
+            except Exception as e:
+                logger.error(decode_header(data["subject"]))
+                content = data["content"]
+
             content_hash = hashlib.sha256(content.encode()).hexdigest()
             data.update({"content": content, "content_hash": content_hash})
         
@@ -492,6 +572,10 @@ class TakeoutEmails(object):
             # logger.error(e)
             # logger.info("Skipping indexed email content entry")
             pass
+        except Exception as e:
+            logger.info(e)
+            pass
+
         data.update({"tbl_object": self.email_attachements_tbl})
         for attachment_path in attachments:
             data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})

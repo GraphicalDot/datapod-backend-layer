@@ -77,12 +77,13 @@ class ParseGoogleImages(object):
     async def image_data(self, image_path, image_json_path):
         with open(image_json_path, "rb") as fi:
             data = json.loads(fi.read())
+            print(data)
             #pprint (data)
             res = {'creation_time': datetime.datetime.utcfromtimestamp(int(data["creationTime"]["timestamp"])), 
                     'modification_time' : datetime.datetime.utcfromtimestamp(int(data["modificationTime"]["timestamp"])),
                     'photo_taken_time':  datetime.datetime.utcfromtimestamp(int(data["photoTakenTime"]["timestamp"])),
                     'description': data["description"],
-                    'url': data["url"],
+                    'url': data.get("url"),
                     'title': data["title"],
                      'geo_data':  data["geoData"],
                     'image_path': image_path,

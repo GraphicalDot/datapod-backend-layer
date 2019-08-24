@@ -120,9 +120,9 @@ def intialize_db(path):
         modification_time = peewee.DateTimeField(index=True, null=False)
         photo_taken_time = peewee.DateTimeField(index=True, null=False)
         description = peewee.TextField(null=True)
-        url = peewee.TextField(null=False, index=True)
+        url = peewee.TextField(null=True)
         title = peewee.TextField(null=False, index=True)
-        image_path = peewee.TextField(null=True)
+        image_path = peewee.TextField(index=True, null=False, primary=True)
         geo_data = peewee.BareField()
         class Meta:
             indexes = (
@@ -226,7 +226,7 @@ def intialize_db(path):
     #use this to delete tables
     logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
     #db.drop_tables([Datasources, IndexEmailContent])
-    #db.drop_tables([Datasources])
+    #db.drop_tables([Images])
     #db.drop_tables([Credentials])
     # for person in Credentials.select().dicts():
     #     print(person)

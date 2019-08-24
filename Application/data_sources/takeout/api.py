@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from .parse_emails import TakeoutEmails
+from .parse_emails import EmailParse
 from .location import  LocationHistory
 from .purchases_n_reservations import PurchaseReservations
 import base64
@@ -134,25 +134,25 @@ async def parse_takeout(config):
     ##while True:
     logger.info('Periodic task has begun execution')
     #path = os.path.join(config.RAW_DATA_PATH, "Takeout")
-
-    email_parsing_instance = TakeoutEmails(config)
+    email_parsing_instance = await EmailParse(config)
 
     ##parsing all the email data from the takeout
     await email_parsing_instance.download_emails()
     #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
     #await broadcast(config, i)
-
     try:
         ins = await ParseGoogleImages(config)
         await ins.parse()
         images_data = ins.images_data
 
         for image_data in images_data:
+            logger.info(image_data)
             image_data.update({"tbl_object": config.IMAGES_TBL}) 
-            q_images_db.store(**image_data)
+            await q_images_db.store(**image_data)
     except Exception as e:
         logger.error(f"Parsing Image data Failed {e}")    
         pass
+    
     await email_parsing_instance.send_sse_message(99)
 
 
@@ -165,22 +165,21 @@ async def parse_takeout(config):
 
     for purchase in purchases:
         purchase.update({"tbl_object": config.PURCHASES_TBL}) 
-        q_purchase_db.store(**purchase)
+        await q_purchase_db.store(**purchase)
 
     for reservation in reservations:
         reservation.pop("products")
         reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
-        q_reservation_db.store(**reservation)
+        await q_reservation_db.store(**reservation)
         
     logger.info('Periodic task has finished execution')
 
     await email_parsing_instance.send_sse_message(100)
 
-    ##updating datasources table with the status that parsing of the takeout is completed
+    # ##updating datasources table with the status that parsing of the takeout is completed
     logger.info("Trying to update data source table with status completed")
     email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
-    logger.info("Updated data source table with status completed")
-
+    # logger.info("Updated data source table with status completed")
     return 
 
 
@@ -194,42 +193,42 @@ async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
-    import zipfile
-    request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    # import zipfile
+    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
 
 
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
+    # if not os.path.exists(request.json["path"]):
+    #     raise APIBadRequest("This path doesnt exists")
 
-    try:
-        the_zip_file = zipfile.ZipFile(request.json["path"])
-    except:
-        raise APIBadRequest("Invalid zip takeout file")
-
-
-    logger.info(f"Testing zip {request.json['path']} file")
-    ret = the_zip_file.testzip()
-
-    if ret is not None:
-        raise APIBadRequest("Invalid zip takeout file")
-
-    ##check if mbox file exists or not
+    # try:
+    #     the_zip_file = zipfile.ZipFile(request.json["path"])
+    # except:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
 
+    # logger.info(f"Testing zip {request.json['path']} file")
+    # ret = the_zip_file.testzip()
 
-    logger.info("Copying and extracting takeout data")
+    # if ret is not None:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
-    try:
-        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
-    except:
-        raise APIBadRequest("Invalid zip takeout file")
+    # ##check if mbox file exists or not
 
 
-    mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail/All mail Including Spam and Trash.mbox")
-    if not os.path.exists(mbox_file):
-        raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
+
+    # logger.info("Copying and extracting takeout data")
+
+    # try:
+    #     shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    # except:
+    #     raise APIBadRequest("Invalid zip takeout file")
+
+
+    # mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail")
+    # if not os.path.exists(mbox_file):
+    #     raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
 
 
 
