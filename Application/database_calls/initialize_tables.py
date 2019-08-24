@@ -122,12 +122,12 @@ def intialize_db(path):
         description = peewee.TextField(null=True)
         url = peewee.TextField(null=True)
         title = peewee.TextField(null=False, index=True)
-        image_path = peewee.TextField(index=True, null=False, primary=True)
+        image_path = peewee.TextField(index=True, null=False)
         geo_data = peewee.BareField()
         class Meta:
             indexes = (
                 # create a unique on from/to/date
-                (('creation_time', 'url', 'title'), True),
+                (('creation_time', 'image_path', 'title'), True),
             )
 
     
