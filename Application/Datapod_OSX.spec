@@ -2,9 +2,11 @@
 
 block_cipher = None
 
+
 import distutils
 if distutils.distutils_path.endswith('__init__.py'):
     distutils.distutils_path = os.path.dirname(distutils.distutils_path)
+    
 a = Analysis(['application.py'],
              pathex=['/Users/kaali/Programs/datapod-backend-layer/Application'],
              binaries=[],

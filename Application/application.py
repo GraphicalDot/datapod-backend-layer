@@ -181,7 +181,7 @@ def main():
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="localhost", port=app.config.PORT, workers=1)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
 
     """
     server = app.create_server(
