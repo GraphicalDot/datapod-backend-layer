@@ -105,14 +105,17 @@ def get_email_attachment(tbl_object, page, number,):
                 .dicts()
 
 @async_wrap
-def get_emails(tbl_object, page, number,):
+def get_emails(tbl_object, page, number, message_type):
     """
     purchases: a list of purchases dict
     """
     email_attachment_table = tbl_object
+
+
     return email_attachment_table\
                 .select()\
                 .order_by(-email_attachment_table.date)\
+                .where(email_attachment_table.message_type== message_type)\
                 .paginate(page, number)\
                 .dicts()
 

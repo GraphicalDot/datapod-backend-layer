@@ -12,7 +12,7 @@ import  database_calls.db_purchases as q_purchase_db
 import  database_calls.db_reservations as q_reservation_db
 import  database_calls.db_images as q_images_db
 from   database_calls.takeout.db_emails  import match_text as e_match_text
-from database_calls.takeout.db_emails  import  get_email_attachment
+from database_calls.takeout.db_emails  import  get_email_attachment, get_emails
 from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
@@ -436,14 +436,18 @@ async def emails_filter(request):
     if request.args.get("number"):
         number = request.args.get("number")
     else:
-        number = 50
+        number = 200
 
+    if request.args.get("message_type"):
+        message_type = request.args.get("message_type")
+    else:
+        message_type = "Inbox"
 
-    emails = await get_email_attachment(request.app.config.EMAILS_TBL, page, number)
-    # for iage in images:
-    #     creation_time = image.pop("creation_time")
-    #     #data:image/png;base64
-    #     image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
+    emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)
+    for email in emails:
+        creation_time = email.pop("date")
+        #data:image/png;base64
+        email.update({"date": creation_time.strftime("%d %b, %Y")})
 
     logger.success(emails)
     return response.json(
