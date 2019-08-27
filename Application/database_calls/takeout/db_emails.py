@@ -91,6 +91,32 @@ def store_email_attachment(**data):
     return 
 
 
+
+@async_wrap
+def get_email_attachment(tbl_object, page, number,):
+    """
+    purchases: a list of purchases dict
+    """
+    email_attachment_table = tbl_object
+    return email_attachment_table\
+                .select()\
+                .order_by(-email_attachment_table.date)\
+                .paginate(page, number)\
+                .dicts()
+
+@async_wrap
+def get_emails(tbl_object, page, number,):
+    """
+    purchases: a list of purchases dict
+    """
+    email_attachment_table = tbl_object
+    return email_attachment_table\
+                .select()\
+                .order_by(-email_attachment_table.date)\
+                .paginate(page, number)\
+                .dicts()
+
+
 def match_text(email_tbl_object, index_email_obj, matching_string, page, number,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):

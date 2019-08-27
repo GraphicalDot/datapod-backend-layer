@@ -27,7 +27,7 @@ import functools
 import aiohttp
 import concurrent.futures
 #from tenacity import *
-from database_calls.db_emails import store_email, store_email_attachment, store_email_content
+from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
 from database_calls.credentials import update_datasources_status
 from utils.utils import async_wrap, send_sse_message
 from email.header import Header, decode_header, make_header

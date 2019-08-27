@@ -11,7 +11,8 @@ import base64
 import  database_calls.db_purchases as q_purchase_db
 import  database_calls.db_reservations as q_reservation_db
 import  database_calls.db_images as q_images_db
-from   database_calls.db_emails  import match_text as e_match_text
+from   database_calls.takeout.db_emails  import match_text as e_match_text
+from database_calls.takeout.db_emails  import  get_email_attachment
 from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
@@ -193,42 +194,42 @@ async def parse_takeout_api(request):
     """
     To get all the assets created by the requester
     """
-    # import zipfile
-    # request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    import zipfile
+    request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
 
 
-    # if not os.path.exists(request.json["path"]):
-    #     raise APIBadRequest("This path doesnt exists")
+    if not os.path.exists(request.json["path"]):
+        raise APIBadRequest("This path doesnt exists")
 
-    # try:
-    #     the_zip_file = zipfile.ZipFile(request.json["path"])
-    # except:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-
-    # logger.info(f"Testing zip {request.json['path']} file")
-    # ret = the_zip_file.testzip()
-
-    # if ret is not None:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-    # ##check if mbox file exists or not
+    try:
+        the_zip_file = zipfile.ZipFile(request.json["path"])
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
 
 
+    logger.info(f"Testing zip {request.json['path']} file")
+    ret = the_zip_file.testzip()
 
-    # logger.info("Copying and extracting takeout data")
+    if ret is not None:
+        raise APIBadRequest("Invalid zip takeout file")
 
-    # try:
-    #     shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
-    # except:
-    #     raise APIBadRequest("Invalid zip takeout file")
+    ##check if mbox file exists or not
 
 
-    # mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail")
-    # if not os.path.exists(mbox_file):
-    #     raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
+
+    logger.info("Copying and extracting takeout data")
+
+    try:
+        shutil.unpack_archive(request.json["path"], extract_dir=request.app.config.RAW_DATA_PATH, format=None)
+    except:
+        raise APIBadRequest("Invalid zip takeout file")
+
+
+    mbox_file = os.path.join(request.app.config.RAW_DATA_PATH,  "Takeout/Mail")
+    if not os.path.exists(mbox_file):
+        raise APIBadRequest(f"This is not a valid takeout zip {mbox_file}")
 
 
 
@@ -384,26 +385,74 @@ async def images_filter(request):
 
 
 
+@TAKEOUT_BP.get('attachements/filter')
+async def attachements_filter(request):
+    """
+    To get all the assets created by the requester
+    """
+    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+    if request.args.get("page"):
+        page = request.args.get("page")
+    else:
+        page = 1
 
 
-# @TAKEOUT_BP.get('images')
-# @check_production()
-# async def parse_images_api(request):
-#     """
-#     To get all the assets created by the requester
-#     """
-#     loop = asyncio.get_event_loop()
-#     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-    
-#     await prase_images(request.app.config)
-#     return response.json(
-#         {
-#         'error': False,
-#         'success': True,
-#         "data": "Successful"
-#         })
+    if request.args.get("number"):
+        number = request.args.get("number")
+    else:
+        number = 50
 
 
+    attachments = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, page, number)
+    # for iage in images:
+    #     creation_time = image.pop("creation_time")
+    #     #data:image/png;base64
+    #     image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
+
+    logger.success(attachments)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": attachments,
+        "message": None
+        })
+
+
+
+
+@TAKEOUT_BP.get('emails/filter')
+async def emails_filter(request):
+    """
+    To get all the assets created by the requester
+    """
+    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+    if request.args.get("page"):
+        page = request.args.get("page")
+    else:
+        page = 1
+
+
+    if request.args.get("number"):
+        number = request.args.get("number")
+    else:
+        number = 50
+
+
+    emails = await get_email_attachment(request.app.config.EMAILS_TBL, page, number)
+    # for iage in images:
+    #     creation_time = image.pop("creation_time")
+    #     #data:image/png;base64
+    #     image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
+
+    logger.success(emails)
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": emails,
+        "message": None
+        })
 
 
 
