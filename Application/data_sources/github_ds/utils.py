@@ -239,7 +239,7 @@ def logging_subprocess(popenargs,
     child = subprocess.Popen(popenargs, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, **kwargs)
     if sys.platform == 'win32':
-        log_info("Windows operating system detected - no subprocess logging will be returned")
+        logger.info("Windows operating system detected - no subprocess logging will be returned")
 
     log_level = {child.stdout: stdout_log_level,
                  child.stderr: stderr_log_level}

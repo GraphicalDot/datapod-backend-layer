@@ -11,7 +11,7 @@ import json
 from dateutil.parser import parse as date_parse 
 
 from errors_module.errors import APIBadRequest, IdentityAlreadyExists
-from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts
+from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts, store_creds, get_creds
 from database_calls.credentials import update_datasources_status, datasource_status
 
 from loguru import logger
@@ -22,6 +22,7 @@ from .utils import construct_request, get_response, ensure_directory, \
 import humanize
 from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
+from gitsuggest import GitSuggest
 
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
@@ -82,6 +83,8 @@ async def parse(request):
         logger.error(f"Error is {e}")
         raise APIBadRequest(e)        
     
+
+    await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
     update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
 
 
@@ -97,7 +100,21 @@ async def parse(request):
         'error': False,
         'success': True,
         })
+        
 
+@GITHUB_BP.post('/backup')
+async def backup(request):
+    """
+    """
+    username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
+
+    request.app.add_task(background_github_parse(request.app.config, username, password))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        })
 
 
 
@@ -299,6 +316,44 @@ async def parse_status(request):
         'error': False,
         'success': True,
         'data': result,
+        'message': None
+        })
+
+@GITHUB_BP.get('/get_suggestions')
+async def get_suggestions(request):
+
+    username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
+    
+    deep_dive = request.args.get("deep_dive")
+
+    # To use with username password combination
+    if not deep_dive:
+        gs = GitSuggest(username=username, password=password)
+    else:
+        gs = GitSuggest(username=username, deep_dive=True)
+
+
+    # To use with access_token
+    #gs = GitSuggest(token="access_token")
+
+    # To use without authenticating
+    #gs = GitSuggest(username="<username>")
+
+    # # To use with deep dive flag
+    # gs = GitSuggest(username=<username>, password=<password>, token=None, deep_dive=True)
+    # gs = GitSuggest(token=access_token, deep_dive=True)
+    # gs = GitSuggest(username=<username>, deep_dive=True)
+
+    # To get an iterator over suggested repositories.
+
+    result = []
+    for repo in gs.get_suggested_repositories():
+        result.append({"name": repo.full_name, "description": repo.description, "stars": repo.stargazers_count, "url": repo.git_url})
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'result': result,
         'message': None
         })
 

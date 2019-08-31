@@ -35,7 +35,7 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
     Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
-GITHUB_TBL = coderepos_github_initialize(DB_Object)
+GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
 
 
 """
@@ -115,6 +115,7 @@ class Config:
     PURCHASES_TBL = Purchases
     IMAGES_TBL = Images
     CODE_GITHUB_TBL =GITHUB_TBL
+    CODE_GITHUB_CREDS_TBL = GITHUB_CREDS_TBL
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
     EMAIL_ATTACHMENT_TBL = EmailAttachment

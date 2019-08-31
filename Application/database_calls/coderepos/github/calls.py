@@ -9,6 +9,33 @@ from loguru import logger
 from utils.utils import async_wrap
 
 #@retry(stop=stop_after_attempt(2))
+
+
+@async_wrap
+def store_creds(tbl_object, username, password):
+    """
+    purchases: a list of purchases dict
+    """
+
+
+    try:
+        tbl_object.insert(
+                    username = username,
+                    password=password).execute()
+
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+   
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Github creds data insertion failed {username} with {e}")
+    return 
+
+@async_wrap #makes function asynchronous
+def get_creds(tbl_object):
+        res = tbl_object.get_by_id(1)
+        return res.username, res.password
+
 @async_wrap
 def store(**data):
     """

@@ -27,6 +27,11 @@ def coderepos_github_initialize(db):
     #     type = peewee.TextField()
     #     site_admin = peewee.BooleanField()
 
+    class GitHubCreds(BaseModel):
+        username = peewee.TextField(unique=True, null=False)
+        password = peewee.TextField(null=False)
+        
+
     class GitHubRepo(BaseModel):
         path = peewee.TextField(index=True, null=False)
         owner = peewee.BlobField()
@@ -75,12 +80,13 @@ def coderepos_github_initialize(db):
             indexes = ((('id', 'node_id'), True),)
 
     db.create_tables([
-            GitHubRepo
+            GitHubRepo, 
+            GitHubCreds
         ])
 
     #db.drop_tables([GitHubRepo])
 
 
 
-    return GitHubRepo
+    return GitHubRepo, GitHubCreds
 
