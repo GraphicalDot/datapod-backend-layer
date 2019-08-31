@@ -116,9 +116,9 @@ class Backup(object):
         # backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
 
             
-        logging.info(f"The dir whose backup will be made {self.raw_data_path}")
-        # logging.info(f"The dir where backup will be made {backup_path}")
-        logging.error(f"Temporary file location is {temp.name}")
+        logger.info(f"The dir whose backup will be made {self.raw_data_path}")
+        # logger.info(f"The dir where backup will be made {backup_path}")
+        logger.error(f"Temporary file location is {temp.name}")
 
         if platform.system() == "Linux":
             backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
@@ -147,11 +147,11 @@ class Backup(object):
         return 
 
     def remove_temporary_archive(self, file_name):
-        logging.warning(f"Removing temporary backup file {file_name}")
+        logger.warning(f"Removing temporary backup file {file_name}")
         try:
             os.remove(file_name)
         except Exception as e:
-            logging.info(f"couldnt remove temporary archive file {file_name}")
+            logger.info(f"couldnt remove temporary archive file {file_name} with error {e}")
         return 
 
     async def split(self, backup_path_dir, file_path):
@@ -159,7 +159,7 @@ class Backup(object):
         dir_name, file_name = os.path.split(file_path)
 
         with cd(backup_path_dir):
-            logging.info(f"THe directory where split is taking place {backup_path_dir}")
+            logger.info(f"THe directory where split is taking place {backup_path_dir}")
             if platform.system() == "Linux":
                 #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.config.TAR_SPLIT_SIZE, dir_name, file_name)
                 command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.config.TAR_SPLIT_SIZE, file_path)
@@ -170,7 +170,7 @@ class Backup(object):
             else:
                 raise APIBadRequest("The platform is not available for this os distribution")
 
-            logging.warning(f"Splitting command is {command}")
+            logger.warning(f"Splitting command is {command}")
             for out in self.config.OS_COMMAND_OUTPUT(command, "Split"):
                 yield (f"Archiving {out[-70:]}")
 
