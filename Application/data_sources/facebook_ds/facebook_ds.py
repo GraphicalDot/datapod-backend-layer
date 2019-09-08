@@ -9,6 +9,8 @@ import sys
 from errors_module.errors import APIBadRequest
 from loguru import logger
 
+from database_calls.credentials import update_datasources_status
+from database_calls.facebook.calls import store_image
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
@@ -31,14 +33,20 @@ def indian_time_stamp(naive_timestamp=None):
 
 
 
-async def data_parse(app, path):
+async def __parse(config, path):
     ##add this if this has to executed periodically
     ##while True:
+    #path = /home/feynman/.datapod/userdata/raw/facebook/
+
     async def change_uri(json_data, prefix_path):
         for entry in json_data["photos"]:
             uri = os.path.join(prefix_path, entry["uri"])
-            timestamp = indian_time_stamp(entry["creation_timestamp"])
-            entry.update({"uri": uri, "creation_timestamp": timestamp})
+            #timestamp = indian_time_stamp(entry["creation_timestamp"])
+            timestamp = datetime.datetime.fromtimestamp(entry["creation_timestamp"])
+            entry.update({"uri": uri, "creation_timestamp": timestamp, "tbl_object": config.FB_IMAGES_TBL})
+
+            await store_image(**entry)
+
         return json_data["photos"]
 
     #path = "/home/feynman/Programs/datapod-backend-layer/Application/userdata/facebook/"
@@ -53,45 +61,26 @@ async def data_parse(app, path):
             data = json.load(json_file)
             images.extend(await change_uri(data, path))
 
-    logger.info(images)
+
+    return 
 
 
-    db_instance = create_db_instance(app.config.db_dir_path)
-    stored_value = get_key("logs", db_instance)
-
-    value = [{"date": indian_time_stamp(), 
-            "status": "success", 
-            "message": "Facebook data has been parsed successfully"}]
-    
-    if stored_value:
-        value = value+stored_value  
-
-    #logger.info(f"value stored against logs is {value}")
-    insert_key("logs", value, db_instance)
-
-    insert_key("facebook_images", images, db_instance)
-
-
-    stored_value = get_key("services", db_instance)
-    logger.info("Stored value against services %s"%stored_value)
-
-    #delete_key("services", db_instance)
-    value = [{"time": indian_time_stamp(), 
-            "service": "facebook", 
-            "message": f"{len(images)} images present"}]
-    
-    if stored_value:
-        
-        for entry in stored_value:
-            if entry.get("service") == "facebook":
-                break
-        stored_value.remove(entry)
-        stored_value.extend(value)
+def update_datasource_table(self, status, email_count=None):
+    """
+    Update data sources table after successful parsing of takeout and emails 
+    """
+    if status == "PROGRESS":
+        email_id= ""
     else:
-        stored_value = value
+        ##TODO we need some other data structure to store this data
+        email_id = self.email_id
 
-    insert_key("services", stored_value, db_instance)
+    data = {"tbl_object": self.datasources_tbl,
+            "name": email_id, 
+            "source": self.__source__, "message": f"{email_count} emails",
+            "code": self.config.DATASOURCES_CODE[self.__source__],
+            "status": status }
 
-    close_db_instance(db_instance)
-
+    logger.error(f"Data on completion to be stored in datasources status is {data}")
+    update_datasources_status(**data)
     return 

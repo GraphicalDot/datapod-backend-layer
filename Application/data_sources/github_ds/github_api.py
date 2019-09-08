@@ -9,7 +9,7 @@ import datetime
 import humanize
 import json
 from dateutil.parser import parse as date_parse 
-
+from .auth import get_auth
 from errors_module.errors import APIBadRequest, IdentityAlreadyExists
 from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts, store_creds, get_creds
 from database_calls.credentials import update_datasources_status, datasource_status
@@ -100,7 +100,7 @@ async def parse(request):
         'error': False,
         'success': True,
         })
-        
+
 
 @GITHUB_BP.post('/backup')
 async def backup(request):
@@ -325,12 +325,13 @@ async def get_suggestions(request):
     username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
     
     deep_dive = request.args.get("deep_dive")
+    logger.info(f"Deep dive is {deep_dive}")
 
     # To use with username password combination
-    if not deep_dive:
-        gs = GitSuggest(username=username, password=password)
-    else:
-        gs = GitSuggest(username=username, deep_dive=True)
+    # if not deep_dive:
+    #     gs = GitSuggest(username=username, password=password)
+    # else:
+    #     gs = GitSuggest(username=username, deep_dive=True)
 
 
     # To use with access_token
@@ -345,10 +346,12 @@ async def get_suggestions(request):
     # gs = GitSuggest(username=<username>, deep_dive=True)
 
     # To get an iterator over suggested repositories.
-
+    auth = get_auth(username, password, encode=True)
+    logger.info(f"This is the auth {auth}")
     result = []
     for repo in gs.get_suggested_repositories():
-        result.append({"name": repo.full_name, "description": repo.description, "stars": repo.stargazers_count, "url": repo.git_url})
+        result.append({"name": repo.full_name, "description": repo.description, 
+            "stars": repo.stargazers_count, "url": repo.git_url,  "updated_at": repo.updated_at.strftime("%d, %b %Y")})
     return response.json(
         {
         'error': False,
