@@ -114,6 +114,15 @@ async def is_logged_in(request):
         size = os.path.join(request.app.config.RAW_DATA_PATH, 'Coderepos/github')        
         result["CODEREPOS/Github"].update({"size": get_dir_size(size)})
 
+    if result.get("FACEBOOK"):
+        size = os.path.join(request.app.config.RAW_DATA_PATH, 'facebook')        
+        result["FACEBOOK"].update({"size": get_dir_size(size)})
+
+
+    if result.get("TWITTER"):
+        size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        
+        result["TWITTER"].update({"size": get_dir_size(size)})
+
 
     logger.info(result)
     return response.json({

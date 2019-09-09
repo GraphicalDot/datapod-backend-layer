@@ -37,7 +37,8 @@ async def __parse(config, path):
     ##add this if this has to executed periodically
     ##while True:
     #path = /home/feynman/.datapod/userdata/raw/facebook/
-
+    update_datasource_table(config, "PROGRESS")
+    
     async def change_uri(json_data, prefix_path):
         for entry in json_data["photos"]:
             uri = os.path.join(prefix_path, entry["uri"])
@@ -62,25 +63,37 @@ async def __parse(config, path):
             images.extend(await change_uri(data, path))
 
 
+    update_datasource_table(config, "COMPLETED")
     return 
 
 
-def update_datasource_table(self, status, email_count=None):
+def profile(config):
+
+    profile = os.path.join(config.RAW_DATA_PATH, "facebook/profile_information/profile_information.json") 
+    if os.path.exists(profile):
+        with open(profile, "r") as json_file:   
+            data = json.load(json_file)
+
+    try:
+        name = data["profile"]["name"]["full_name"]
+    except :
+        name = "Dummy facebook name"
+
+    return name
+
+
+def update_datasource_table(config, status):
     """
     Update data sources table after successful parsing of takeout and emails 
     """
-    if status == "PROGRESS":
-        email_id= ""
-    else:
-        ##TODO we need some other data structure to store this data
-        email_id = self.email_id
+    if status not in ["PROGRESS", "COMPLETED"]:
+        raise APIBadRequest("Invalid status")
 
-    data = {"tbl_object": self.datasources_tbl,
-            "name": email_id, 
-            "source": self.__source__, "message": f"{email_count} emails",
-            "code": self.config.DATASOURCES_CODE[self.__source__],
+    data = {"tbl_object": config.DATASOURCES_TBL,
+            "name": profile(config), 
+            "source": "FACEBOOK", "message": "fb data parsing started",
+            "code": config.DATASOURCES_CODE["FACEBOOK"],
             "status": status }
 
-    logger.error(f"Data on completion to be stored in datasources status is {data}")
     update_datasources_status(**data)
     return 

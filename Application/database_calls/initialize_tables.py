@@ -227,6 +227,8 @@ def intialize_db(path):
     logger.error("IF YOU WANT TO PERSIST LOGIN REMOVE THIS LINE")
     #db.drop_tables([Datasources, IndexEmailContent])
     #db.drop_tables([Images])
+    
+    
     #db.drop_tables([Credentials])
     # for person in Credentials.select().dicts():
     #     print(person)

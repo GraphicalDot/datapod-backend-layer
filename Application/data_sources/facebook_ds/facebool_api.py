@@ -6,16 +6,32 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 import zipfile
-from .facebook_ds import __parse
+from .facebook_ds import __parse, update_datasource_table
 from errors_module.errors import APIBadRequest
 from loguru import logger
 from database_calls.facebook.calls import filter_images
 import json
+import base64
+from io import BytesIO
+from PIL import Image
+
 FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 
 
 
 
+
+# @FACEBOOK_BP.route('/serve')
+# async def serve(request):
+#     path = request.args.get("path")
+
+#     request.app.url_for(path) 
+
+# FACEBOOK_BP.static('/profile',  "~/.datapod/userdata/raw/facebook/photos_and_videos/Profilepictures_IHIxz3DIcQ/")
+
+
+# @FACEBOOK_BP.post('/parse')
+# async def parse(request):
 
 
 
@@ -75,6 +91,12 @@ async def parse(request):
 
 
 
+def image_base64(path):
+    image = Image.open(path)
+    buffered = BytesIO()
+    image.save(buffered, format=image.format)
+    img_str = base64.b64encode(buffered.getvalue())
+    return img_str.decode()
 
 @FACEBOOK_BP.get('/images')
 async def images(request):
@@ -82,9 +104,12 @@ async def images(request):
     number = [request.args.get("number"), 20][request.args.get("number") == None] 
     result = await filter_images(request.app.config.FB_IMAGES_TBL , page, number)
     for image_data in result:
+        path = image_data['uri']
+        encoded_string = "data:image/jpeg;base64," + image_base64(path)
+            
         if image_data.get("comments"):
             comments = json.loads(image_data.get("comments"))
-            image_data.update({"comments": comments})
+            image_data.update({"comments": comments, "path": path, "uri": encoded_string})
     
     return response.json(
         {
