@@ -37,7 +37,7 @@ def facebook_initialize(db):
         uri = peewee.TextField(index=True, null=False)
         creation_timestamp = peewee.DateTimeField()
         media_metadata = peewee.BlobField()
-        comments =  peewee.BlobField()
+        comments =  peewee.BlobField(null=True)
 
     db.create_tables([
             FacebookCreds, 

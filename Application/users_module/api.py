@@ -117,7 +117,7 @@ async def is_logged_in(request):
     if result.get("FACEBOOK"):
         size = os.path.join(request.app.config.RAW_DATA_PATH, 'facebook')        
         result["FACEBOOK"].update({"size": get_dir_size(size)})
-
+        #result.pop("FACEBOOK")
 
     if result.get("TWITTER"):
         size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        

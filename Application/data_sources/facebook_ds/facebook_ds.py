@@ -45,7 +45,7 @@ async def __parse(config, path):
             #timestamp = indian_time_stamp(entry["creation_timestamp"])
             timestamp = datetime.datetime.fromtimestamp(entry["creation_timestamp"])
             entry.update({"uri": uri, "creation_timestamp": timestamp, "tbl_object": config.FB_IMAGES_TBL})
-
+            logger.info(entry)
             await store_image(**entry)
 
         return json_data["photos"]
