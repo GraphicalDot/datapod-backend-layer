@@ -22,7 +22,7 @@ from .utils import construct_request, get_response, ensure_directory, \
 import humanize
 from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
-from gitsuggest import GitSuggest
+#from gitsuggest import GitSuggest
 
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 

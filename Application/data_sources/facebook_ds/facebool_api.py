@@ -126,7 +126,7 @@ async def images(request):
         "data": result
         })
 
-def read_chat(config, chat_type, chat_id, all_messages= False):
+def read_chat(config, chat_type, chat_id, all_messages=False):
 
     ds_path = os.path.join(config.RAW_DATA_PATH, f"facebook/messages/{chat_type}/{chat_id}")
 
@@ -210,22 +210,19 @@ async def allchats(request):
 async def single_chat(request):
     """
     To get all the chats created by the user
+    thread_path = 'inbox/KapilDevGarg_lapjbN90Hw'
     """
 
-    chat_id = request.args.get("chat_id")
-    message_type = request.args.get("message_type")
-    if not chat_id:
-        raise APIBadRequest("chat id  is required")
-    
-    if not message_type:
-        raise APIBadRequest("message_type is required")
-    
 
+    thread_path = request.args.get("thread_path")
+    if not thread_path:
+        raise APIBadRequest("thread_path  is required")
+    
     logger.info(f'This is the chat id {request.args.get("chat_id")}')
-    ds_path = os.path.join(request.app.config.RAW_DATA_PATH, f"facebook/messages/{message_type}/{chat_id}")
+    ds_path = os.path.join(request.app.config.RAW_DATA_PATH, f"facebook/messages/{thread_path}")
 
     if not os.path.exists(ds_path):
-        raise APIBadRequest("This chat doesnt exists")
+        raise APIBadRequest("This thread_path doesnt exists")
 
     logger.info(ds_path)
     chats = []
