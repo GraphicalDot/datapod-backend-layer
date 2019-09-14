@@ -41,7 +41,6 @@ async def parse(request):
     """
     To get all the assets created by the requester
     """
-    import zipfile
     request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
@@ -76,7 +75,7 @@ async def parse(request):
 
     logger.info("Copying and extracting facebook data completed")
 
-    request.app.add_task(_parse(request.app.config, ds_path))
+    # request.app.add_task(_parse(request.app.config, ds_path))
 
     return response.json(
         {
