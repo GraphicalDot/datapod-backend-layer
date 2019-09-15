@@ -19,26 +19,15 @@ user_mentions is alos a list of dicts
     'indices': ['103', '126']}]
 """
 
-def coderepos_github_initialize(db):
+def twitter_initialize(db):
 
     class BaseModel(peewee.Model):
         class Meta:
             database = db
 
 
-    # class Owner(BaseModel):
-    #     login = peewee.TextField()
-    #     id = peewee.IntegerField()
-    #     node_id = peewee.TextField()
-    #     avatar_url = peewee.TextField()
-    #     gravatar_id = peewee.TextField(null=True)
-    #     url = peewee.TextField()
-    #     html_url = peewee.TextField()
-    #     type = peewee.TextField()
-    #     site_admin = peewee.BooleanField()
-        
-
-    class Tweet(BaseModel):
+    class TweetObject(BaseModel):
+        tweet_hash = peewee.TextField(index=True, unique=True,null=False)
         retweeted = peewee.BooleanField(null=True)
         source = peewee.TextField(null=True) #<a href="http://twitter.com" rel="nofollow">Twitter Web Client</a>',
         entities = peewee.BlobField(null=True)
@@ -46,24 +35,26 @@ def coderepos_github_initialize(db):
         display_text_range=peewee.BlobField(null=True)
         favorite_count= peewee.TextField(null=True)
         id_str=peewee.TextField(null=True)
-        possibly_sensitive = peewee.BooleanField(null=False)
+        possibly_sensitive = peewee.BooleanField(null=True)
         truncated=peewee.BooleanField(null=True)
         retweet_count=peewee.TextField(null=True)
-        created_at=peewee.TextField(null=True),
-        favorited=peewee.BooleanField(null=True),
+        created_at=peewee.TextField(null=True)
+        favorited=peewee.BooleanField(null=True)
         full_text=peewee.TextField(null=False)
         lang=peewee.TextField(null=True)
         in_reply_to_screen_name=peewee.TextField(null=True)
         in_reply_to_user_id_str=peewee.TextField(null=True)
         
+        # class Meta:
+        #     indexes = ((('tweet_hash', 'nofull_textde_id'), True),)
 
     db.create_tables([
-            Tweet, 
+            TweetObject, 
         ])
 
-    #db.drop_tables([GitHubRepo])
+    #db.drop_tables([TweetObject])
 
 
 
-    return Tweet
+    return TweetObject
 

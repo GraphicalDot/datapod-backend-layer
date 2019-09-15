@@ -7,6 +7,7 @@ from errors_module.errors import APIBadRequest
 from database_calls.initialize_tables import intialize_db
 from database_calls.coderepos.github.initialize import coderepos_github_initialize
 from database_calls.facebook.initialize import facebook_initialize
+from database_calls.twitter.intiialize import twitter_initialize
 from loguru import logger
 from database_calls.credentials import update_datasources_status 
 
@@ -37,6 +38,8 @@ DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, Cry
 
 GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
 FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
+TWITTER_TBL =  twitter_initialize(DB_Object)
+
 
 """
 
@@ -122,7 +125,8 @@ class Config:
     INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
     RESERVATIONS_TBL = Reservations
     FB_CREDS_TBL= FB_CREDS_TBL 
-    FB_IMAGES_TBL = FB_IMAGES_TBL 
+    FB_IMAGES_TBL = FB_IMAGES_TBL
+    TWITTER_TBL = TWITTER_TBL 
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api

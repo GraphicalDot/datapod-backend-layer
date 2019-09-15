@@ -75,7 +75,7 @@ async def parse(request):
 
     logger.info("Copying and extracting facebook data completed")
 
-    # request.app.add_task(_parse(request.app.config, ds_path))
+    request.app.add_task(_parse(request.app.config, ds_path))
 
     return response.json(
         {

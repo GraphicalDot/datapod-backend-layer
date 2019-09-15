@@ -7,7 +7,7 @@ from errors_module.errors import APIBadRequest, DuplicateEntryError
 from tenacity import *
 from loguru import logger
 from utils.utils import async_wrap
-
+import hashlib
 #@retry(stop=stop_after_attempt(2))
 
 
@@ -43,6 +43,7 @@ def store(**data):
     """
     table = data["tbl_object"]
 
+    logger.info(table)
     if data.get("entities"):
         entities=  json.dumps(data.get("entities"))
     else:
@@ -60,34 +61,36 @@ def store(**data):
     else:
         display_text_range = None
 
-
-
+    tweet_hash = hashlib.sha256(data["full_text"].encode()).hexdigest()
+    logger.info(f"Tweet hash is {tweet_hash}")
 
 
     try:
         table.insert(
-                    retweeted = data["retweeted"],
-                    source = data["source"],
+                    tweet_hash = tweet_hash,
+                    retweeted = data.get("retweeted"),
+                    source = data.get("source"),
                     entities =entities,
                     symbols =symbols,
                     display_text_range=display_text_range,
-                    favorite_count= data["favorite_count"],
-                    id_str=data["id_str"],
-                    possibly_sensitive = data["possibly_sensitive"],
-                    truncated=data["truncated"],
-                    retweet_count=data["retweet_count"],
-                    created_at=data["created_at"],
-                    favorited=data["favorited"],
-                    full_text=data["full_text"],
-                    lang=data["lang"],
-                    in_reply_to_screen_name=data["in_reply_to_screen_name"],
-                    in_reply_to_user_id_str=data["in_reply_to_user_id_str"]).execute()
+                    favorite_count= data.get("favorite_count"),
+                    id_str=data.get("id_str"),
+                    possibly_sensitive = data.get("possibly_sensitive"),
+                    truncated=data.get("truncated"),
+                    retweet_count=data.get("retweet_count"),
+                    created_at=data.get("created_at"),
+                    favorited=data.get("favorited"),
+                    full_text=data.get("full_text"),
+                    lang=data.get("lang"),
+                    in_reply_to_screen_name=data.get("in_reply_to_screen_name"),
+                    in_reply_to_user_id_str=data.get("in_reply_to_user_id_str")).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
     except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        raise DuplicateEntryError(data['id_str'], "Tweet")
+        logger.error(f"Tweet data insertion failed {data.get('id_str')} with Duplicate Key")
+        pass
 
     except Exception as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
