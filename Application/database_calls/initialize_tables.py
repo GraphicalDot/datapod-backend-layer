@@ -67,16 +67,16 @@ def intialize_db(path):
     class Credentials(BaseModel):
         ##blocfileds will be stored in bytes
         name = peewee.TextField(null=True)
-        email = peewee.TextField(null=True)
-        username = peewee.CharField(unique=True)
+        email = peewee.TextField(null=False)
+        username = peewee.CharField(unique=False)
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
         access_token = peewee.BlobField(null= True)
-        password_hash = peewee.TextField(null= True)
+        password_hash = peewee.TextField(null=False)
         refresh_token = peewee.BlobField(null= True)
         salt = peewee.TextField(null= True)
-        address = peewee.TextField(null= True)
-        encryption_key = peewee.TextField(null= True)
+        address = peewee.TextField(null=True)
+        encryption_key = peewee.TextField(null=True)
 
     class IndexEmailContent(FTSModel):
         content = peewee.TextField()

@@ -3,6 +3,7 @@
 
 from loguru import logger
 from peewee import IntegrityError
+from errors_module.errors import APIBadRequest
 
 def convert_type(value):
     if isinstance(value, bytes):
@@ -22,20 +23,6 @@ def logout(credentials_tbl_obj):
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
 
     try:
-        res = credentials_tbl_obj.select().where(credentials_tbl_obj.username == username).dicts().get()
-        if res:
-            credentials_tbl_obj.update(
-                            id_token=convert_type(id_token), 
-                            access_token= convert_type(access_token), 
-                            refresh_token=convert_type(refresh_token)
-                        ).\
-                    where(credentials_tbl_obj.username==username).\
-                    execute()
-            logger.info(f"On Updating the credentials userid is {username}")
-
-
-    except Exception as e:
-        logger.error(f"Couldnt save data to credentials_tbl because of {e}")
         credentials_tbl_obj.insert(username=convert_type(username),  
                                         password_hash=convert_type(password_hash),
                                         id_token=convert_type(id_token), 
@@ -44,6 +31,22 @@ def store_credentials(credentials_tbl_obj, username, password_hash, id_token, ac
                                         name = name, 
                                         email=email
                                         ).execute()
+        
+
+    except IntegrityError:
+        logger.info(f"Credentials for the user already exists, updating it now")
+        credentials_tbl_obj.update(
+                            id_token=convert_type(id_token), 
+                            access_token= convert_type(access_token), 
+                            refresh_token=convert_type(refresh_token)
+                        ).\
+                    where(credentials_tbl_obj.username==username).\
+                    execute()
+
+    except Exception as e:
+        logger.error("Saving credentials of the users failed {e}")
+        raise APIBadRequest("Could save credentials because of {e.__str__()}")
+
 
     return 
 
