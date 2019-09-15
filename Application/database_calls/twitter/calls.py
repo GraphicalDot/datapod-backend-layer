@@ -8,6 +8,7 @@ from tenacity import *
 from loguru import logger
 from utils.utils import async_wrap
 import hashlib
+from dateutil.parser import parse
 #@retry(stop=stop_after_attempt(2))
 
 
@@ -37,72 +38,102 @@ def get_creds(tbl_object):
         return res.username, res.password
 
 @async_wrap
-def store(**data):
+def store(**tweet):
     """
     purchases: a list of purchases dict
     """
-    table = data["tbl_object"]
+    table = tweet["tbl_object"]
 
-    logger.info(table)
-    if data.get("entities"):
-        entities=  json.dumps(data.get("entities"))
+    if tweet.get("entities"):
+        entities=  json.dumps(tweet.get("entities"))
     else:
         entities = None
 
 
 
-    if data.get("symbols"):
-        symbols=  json.dumps(data.get("symbols"))
+    if tweet.get("symbols"):
+        symbols=  json.dumps(tweet.get("symbols"))
     else:
         symbols = None
 
-    if data.get("display_text_range"):
-        display_text_range=  json.dumps(data.get("display_text_range"))
+    if tweet.get("display_text_range"):
+        display_text_range=  json.dumps(tweet.get("display_text_range"))
     else:
         display_text_range = None
 
-    tweet_hash = hashlib.sha256(data["full_text"].encode()).hexdigest()
+    tweet_hash = hashlib.sha256(tweet["full_text"].encode()).hexdigest()
     logger.info(f"Tweet hash is {tweet_hash}")
+
+
+    ##this will extract all the hashtags from the tweet, if the present and creates 
+    ## a string with all the hashtags in it
+    hashtags = ""  
+    
+    if tweet.get('entities'): 
+        if tweet['entities'].get("hashtags"): 
+            for tag in tweet['entities'].get("hashtags"): 
+                hashtags= hashtags + ", " + tag.get('text') 
+    logger.info(f"hashtags == {hashtags}") 
+
+    ##this will extract all the user mentions from the tweet, if the present and creates 
+    ## a string with all the hashtags in it
+
+    user_mentions=""
+    if tweet.get('entities'): 
+        if tweet['entities'].get("user_mentions"): 
+            for tag in tweet['entities'].get("user_mentions"): 
+                user_mentions= user_mentions + ", " + tag.get('name')+ ", " +tag.get('screen_name') 
+    logger.info(f"user_mentions == {user_mentions}") 
+
+
+    ##this is the content wchihc will be indexed under FTS5 model
+    content_to_be_indexed = tweet.get("full_text") + " " + hashtags + " " + user_mentions
+    logger.info(f"Content which will be indexed is {content_to_be_indexed}")
+
+    indexed_table = tweet["indexed_tbl_object"]
 
 
     try:
         table.insert(
                     tweet_hash = tweet_hash,
-                    retweeted = data.get("retweeted"),
-                    source = data.get("source"),
+                    retweeted = tweet.get("retweeted"),
+                    source = tweet.get("source"),
                     entities =entities,
                     symbols =symbols,
                     display_text_range=display_text_range,
-                    favorite_count= data.get("favorite_count"),
-                    id_str=data.get("id_str"),
-                    possibly_sensitive = data.get("possibly_sensitive"),
-                    truncated=data.get("truncated"),
-                    retweet_count=data.get("retweet_count"),
-                    created_at=data.get("created_at"),
-                    favorited=data.get("favorited"),
-                    full_text=data.get("full_text"),
-                    lang=data.get("lang"),
-                    in_reply_to_screen_name=data.get("in_reply_to_screen_name"),
-                    in_reply_to_user_id_str=data.get("in_reply_to_user_id_str")).execute()
+                    favorite_count= tweet.get("favorite_count"),
+                    id_str=tweet.get("id_str"),
+                    possibly_sensitive = tweet.get("possibly_sensitive"),
+                    truncated=tweet.get("truncated"),
+                    retweet_count=tweet.get("retweet_count"),
+                    created_at=parse(tweet.get("created_at")),
+                    favorited=tweet.get("favorited"),
+                    full_text=tweet.get("full_text"),
+                    lang=tweet.get("lang"),
+                    in_reply_to_screen_name=tweet.get("in_reply_to_screen_name"),
+                    in_reply_to_user_id_str=tweet.get("in_reply_to_user_id_str")).execute()
 
-        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+        indexed_table.insert(tweet_hash = tweet_hash,
+                            content=content_to_be_indexed).execute()
+
+        #logger.success(f"Success on insert email_id --{tweet['email_id']}-- path --{tweet['path']}--")
     except IntegrityError as e:
-        #raise DuplicateEntryError(data['email_id'], "Email")
+        #raise DuplicateEntryError(tweet['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Tweet data insertion failed {data.get('id_str')} with Duplicate Key")
+        logger.error(f"Tweet tweet insertion failed {tweet.get('id_str')} with Duplicate Key")
         pass
 
     except Exception as e:
-        #raise DuplicateEntryError(data['email_id'], "Email")
+        #raise DuplicateEntryError(tweet['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Tweet data insertion failed {data.get('id_str')} with {e}")
+        logger.error(f"Tweet tweet insertion failed {tweet.get('id_str')} with {e}")
     return 
 
 
 
 
 @async_wrap #makes function asynchronous
-def filter_gists(tbl_object, page, number):
+def filter_tweet(tbl_object, page, number):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -110,59 +141,22 @@ def filter_gists(tbl_object, page, number):
     """
 
     return tbl_object\
-            .select(tbl_object.name, tbl_object.git_pull_url, 
-                    tbl_object.downloaded_at, 
-                    tbl_object.id, 
-                    tbl_object.node_id, 
-                    tbl_object.created_at, 
-                    tbl_object.updated_at, 
-                    tbl_object.pushed_at,
-                    tbl_object.description)\
-            .where(tbl_object.is_gist==True)\
-            .order_by(-tbl_object.updated_at)\
+            .select()\
+            .order_by(-tbl_object.created_at)\
             .paginate(page, number)\
              .dicts()
 
 
-
-
-@async_wrap
-def get_single_repository(tbl_object, name):
+def match_text(main_tbl_object, indexed_obj, matching_string, page, number,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
-    query = (tbl_object\
-            .select()\
-            .where(tbl_object.name==name).dicts())
+    query = (main_tbl_object
+                .select()
+                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))
+                .where(indexed_obj.match(matching_string))
+                .dicts())
     return list(query)
 
-
-
-@async_wrap
-def counts(tbl_object):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
-
-    """
-    gists = tbl_object\
-            .select()\
-            .where(tbl_object.is_gist==True).count()
-    
-    repos = tbl_object\
-            .select()\
-            .where(tbl_object.is_gist != True, tbl_object.is_starred != True).count()
-
-    starred = tbl_object\
-            .select()\
-            .where(tbl_object.is_starred==True).count()
-
-
-
-    return {
-        "gists_count": gists,
-        "starred_count": starred,
-        "repos_count": repos,
-    }

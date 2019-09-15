@@ -25,7 +25,7 @@ async def read_tweet(config, path):
     data = lines[lines.find('[') : lines.rfind(']')+1]
     jsonObj = json.loads(data)
     for tweet in jsonObj:
-        tweet.update({"tbl_object": config.TWITTER_TBL})
+        tweet.update({"tbl_object": config.TWITTER_TBL, "indexed_tbl_object": config.TWITTER_INDEXED_TBL})
         await  store(**tweet)
 
 

@@ -38,7 +38,7 @@ def twitter_initialize(db):
         possibly_sensitive = peewee.BooleanField(null=True)
         truncated=peewee.BooleanField(null=True)
         retweet_count=peewee.TextField(null=True)
-        created_at=peewee.TextField(null=True)
+        created_at=peewee.DateTimeField(null=True)
         favorited=peewee.BooleanField(null=True)
         full_text=peewee.TextField(null=False)
         lang=peewee.TextField(null=True)
@@ -48,13 +48,21 @@ def twitter_initialize(db):
         # class Meta:
         #     indexes = ((('tweet_hash', 'nofull_textde_id'), True),)
 
+    class IndexTweetContent(FTSModel):
+        content = peewee.TextField()
+        tweet_hash = peewee.TextField()
+        class Meta:
+            database = db
+
+
     db.create_tables([
             TweetObject, 
+            IndexTweetContent
         ])
 
-    #db.drop_tables([TweetObject])
+    #db.drop_tables([TweetObject, IndexTweetContent])
 
 
 
-    return TweetObject
+    return TweetObject, IndexTweetContent
 

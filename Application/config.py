@@ -38,7 +38,7 @@ DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, Cry
 
 GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
 FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
-TWITTER_TBL =  twitter_initialize(DB_Object)
+TWITTER_TBL, TWITTER_INDEXED_TBL =  twitter_initialize(DB_Object)
 
 
 """
@@ -123,6 +123,7 @@ class Config:
     CRYPTO_EXG_BINANCE = CryptoExgBinance
     EMAIL_ATTACHMENT_TBL = EmailAttachment
     INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
+    TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
     RESERVATIONS_TBL = Reservations
     FB_CREDS_TBL= FB_CREDS_TBL 
     FB_IMAGES_TBL = FB_IMAGES_TBL

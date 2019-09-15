@@ -9,7 +9,7 @@ import zipfile
 from errors_module.errors import APIBadRequest
 from .twitter_ds import _parse
 from loguru import logger
-from database_calls.facebook.calls import filter_images
+from database_calls.twitter.calls import filter_tweet, match_text
 import json
 import base64
 from io import BytesIO
@@ -86,17 +86,56 @@ async def parse(request):
         })
 
 
+
+
 @TWITTER_BP.get("/tweets")
 async def tweets(request):
 
-    return response.json(
-            {
-            'error': False,
-            'success': True,
-            "message": None, 
-            "data": []
-            })
+    logger.info("Number is ", request.args.get("number"))
+    page = [request.args.get("page"), 1][request.args.get("page") == None] 
+    number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
+    result = await filter_tweet(request.app.config.TWITTER_TBL, int(page), int(number))
+    # [repo.update({
+    #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),
+    #     }) for repo in result]
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': result,
+        'message': None
+        })
+    
+
+
+@TWITTER_BP.get('/tweets/match_text')
+async def match_text_email(request):
+    
+
+    page = [request.args.get("page"), 1][request.args.get("page") == None] 
+    number = [request.args.get("number"), 200][request.args.get("number") == None] 
+
+    if not request.args.get("match_string"):
+        raise APIBadRequest("get params match_string is required")
+
+    matching_string = request.args.get("match_string") 
+
+
+    logger.info(request.args)
+    logger.info(f"This is the matching string {matching_string}")
+
+    
+    res = match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
+            matching_string , page, number)
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "data": res
+        })
 
 
 @TWITTER_BP.get("/messages")

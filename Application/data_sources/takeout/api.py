@@ -506,8 +506,8 @@ async def match_text_email(request):
     matching_string = request.args.get("match_string") 
 
 
-    logging.info(request.args)
-    logging.info(f"This is the matching string {matching_string}")
+    logger.info(request.args)
+    logger.info(f"This is the matching string {matching_string}")
 
 
     res = e_match_text(request.app.config.EMAILS_TBL, request.app.config.INDEX_EMAIL_CONTENT_TBL, \
