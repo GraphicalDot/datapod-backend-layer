@@ -38,7 +38,7 @@ DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, Cry
 
 GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
 FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
-TWITTER_TBL, TWITTER_INDEXED_TBL =  twitter_initialize(DB_Object)
+TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Object)
 
 
 """
@@ -124,6 +124,7 @@ class Config:
     EMAIL_ATTACHMENT_TBL = EmailAttachment
     INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
     TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
+    TWITTER_ACC_TBL = TweetAccountData
     RESERVATIONS_TBL = Reservations
     FB_CREDS_TBL= FB_CREDS_TBL 
     FB_IMAGES_TBL = FB_IMAGES_TBL
@@ -135,7 +136,7 @@ class Config:
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
     #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
-    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}, "BACKUP": 80}
+    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}, "TWITTER": 8, "BACKUP": 80}
     STATES = ["COMPLETED", "PROGRESS", 'STARTED', "NULL", "SETUP_COMPLETED"]
 
 

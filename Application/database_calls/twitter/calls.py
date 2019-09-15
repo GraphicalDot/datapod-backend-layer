@@ -130,6 +130,45 @@ def store(**tweet):
     return 
 
 
+@async_wrap
+def store_account(**account_data):
+    table = account_data["tbl_object"]
+
+    try:
+        table.insert(
+                    phone_number=account_data.get("phoneNumber"),
+                    email=account_data.get("email"),
+                    created_at = account_data.get("createdAt"),
+                    username = account_data.get("username"),
+                    account_id = account_data.get("accountId"),
+                    created_via= account_data.get("createdVia"),
+                    account_display_name = account_data.get("accountDisplayName")).execute()
+
+        #logger.success(f"Success on insert email_id --{tweet['email_id']}-- path --{tweet['path']}--")
+    except IntegrityError as e:
+        table.update(
+                    phone_number=account_data.get("phoneNumber"),
+                    email=account_data.get("email"),
+                    created_at = account_data.get("createdAt"),
+                    username = account_data.get("username"),
+                    account_id = account_data.get("accountId"),
+                    created_via= account_data.get("createdVia"),
+                    account_display_name = account_data.get("accountDisplayName")).\
+                        where(table.account_id==account_data.get("accountId"))\
+                        .execute()
+        #raise DuplicateEntryError(tweet['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Twitter Account Data insertion failed {account_data.get('accountDisplayName')} with Duplicate Key but update assucessful")
+        pass
+
+    except Exception as e:
+        #raise DuplicateEntryError(tweet['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Tweet tweet insertion failed {account_data.get('accountDisplayName')} with {e}")
+    return 
+    
+
+
 
 
 @async_wrap #makes function asynchronous

@@ -15,6 +15,8 @@ import base64
 from io import BytesIO
 from PIL import Image
 import datetime
+from database_calls.credentials import update_datasources_status, datasource_status
+
 TWITTER_BP = Blueprint("twitter", url_prefix="/twitter")
 
 

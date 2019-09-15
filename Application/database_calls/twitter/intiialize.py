@@ -25,6 +25,16 @@ def twitter_initialize(db):
         class Meta:
             database = db
 
+    class TweetAccountData(BaseModel):
+        phone_number=peewee.TextField(null=True)
+        email = peewee.TextField(null=True)
+        created_via = peewee.TextField(null=True)
+        username = peewee.TextField(null=True)
+        account_id = peewee.TextField(index=True, unique=True, null=True)
+        created_at=peewee.DateTimeField(null=True)
+        account_display_name = peewee.TextField(null=True)
+
+    
 
     class TweetObject(BaseModel):
         tweet_hash = peewee.TextField(index=True, unique=True,null=False)
@@ -57,12 +67,14 @@ def twitter_initialize(db):
 
     db.create_tables([
             TweetObject, 
-            IndexTweetContent
+            IndexTweetContent,
+            TweetAccountData
         ])
 
-    #db.drop_tables([TweetObject, IndexTweetContent])
+    #db.drop_tables([#TweetObject, IndexTweetContent, TweetAccountData])
+    #db.drop_tables([ TweetAccountData])
 
 
 
-    return TweetObject, IndexTweetContent
+    return TweetObject, IndexTweetContent, TweetAccountData
 
