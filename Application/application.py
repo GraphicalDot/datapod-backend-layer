@@ -178,7 +178,7 @@ def main():
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
     #app.config["SIO"] = sio
-    pprint.pprint(app.config)
+    #pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
     app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
