@@ -10,7 +10,7 @@ import humanize
 import json
 from dateutil.parser import parse as date_parse 
 from .auth import get_auth
-from errors_module.errors import APIBadRequest, IdentityAlreadyExists
+from errors_module.errors import APIBadRequest, IdentityAlreadyExists,  IdentityExistsNoPath, IdentityDoesntExists
 from database_calls.coderepos.github.calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts, store_creds, get_creds
 from database_calls.credentials import update_datasources_status, datasource_status
 
@@ -84,23 +84,28 @@ async def parse(request):
 
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
     try:
-        inst = await GithubIdentity(request.app.config, "github.com", "datapod")
-        await inst.add(request.json["username"], request.json["password"])
+        inst = await GithubIdentity(request.app.config, "github.com", "datapod", request.json["username"], request.json["password"])
+        await inst.keys_path()
+
+
 
     except IdentityAlreadyExists as e:
-        logger.error(f"Error is {e}")
-        
-    
+        logger.success(f"GithubDS Error {e}")
+
+    except IdentityDoesntExists as e:
+        await inst.add(request.json["username"], request.json["password"])
+        logger.success(f"GithubDS Error {e}")
+
+    except IdentityExistsNoPath as e:
+        ##this implies host is present in config but path of privatekey doesnt exists
+        logger.success(f"GithubDS Error {e}")
+        await inst.update()
 
     await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
     update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
 
 
 
-    # else:
-    #     raise APIBadRequest("Unknown format")
-
-    # logger.info(f"THe request was successful with github path {request.json['path']}")
     request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
 
     return response.json(

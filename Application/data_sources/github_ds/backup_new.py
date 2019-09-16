@@ -306,7 +306,7 @@ def fetch_repository(name,
                      remote_url,
                      local_dir,
                      skip_existing=False,
-                     bare_clone=True,
+                     bare_clone=False,
                      lfs_clone=False):
     if bare_clone:
         if os.path.exists(local_dir):

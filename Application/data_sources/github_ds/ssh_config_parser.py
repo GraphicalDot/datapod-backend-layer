@@ -195,6 +195,11 @@ class SSHConfig(object):
             if name == host.name:
                 host.update(attrs)
                 self.__hosts[idx] = host
+    
+    def host_key(self, name, key):
+        for idx, host in enumerate(self.__hosts):
+            if name == host.name:
+                return host.get(key)
 
     def get(self, name, raise_exception=True):
         for host in self.__hosts:
@@ -232,11 +237,20 @@ class SSHConfig(object):
 if __name__ == "__main__":
     path = "/home/feynman/.ssh/config"
     #instance = (path)
+    hostname = "random.com"
     res = SSHConfig.load(path)
-    print (res)
-    print (res.parse())
-    print (res.get("github.com"))
-    print (res.remove("github.com"))
-    print (res.write())
+    res
+    res.parse()
+    try:
+        data = res.get(hostname)
+        print (data)
+        print (res.host_key(hostname, "IdentityFile"))
+        #print (res.update(hostname, {"IdentityFile": "/home/feynmen/random_key.key"}))
+        
+        #print (res.remove(hostname))
+        #print (res.write())
+    except  KeyError:
+        print (f"{hostname} is not present")
+
     
 

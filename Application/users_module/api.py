@@ -1,6 +1,7 @@
 
 import requests
 import json
+import subprocess
 from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
@@ -84,10 +85,10 @@ async def is_logged_in(request):
     username is the username of the user
     """
     def get_dir_size(dirpath):
-        all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
-        files_and_sizes = [os.path.getsize(path) for path in all_files]
-        return  humanize.naturalsize(sum(files_and_sizes))
-
+        # all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+        # files_and_sizes = [os.path.getsize(path) for path in all_files]
+        # return  humanize.naturalsize(sum(files_and_sizes))
+        return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
 
     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
     if not creds:

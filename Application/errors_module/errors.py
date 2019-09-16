@@ -63,6 +63,18 @@ class IdentityAlreadyExists(ApiException):
         super().__init__(message)
 
 @add_status_code(400)
+class IdentityExistsNoPath(ApiException):
+    def __init__(self, message="Code repos identity exists but no path for private key exists",
+                        status_code=None):
+        super().__init__(message)
+
+@add_status_code(400)
+class IdentityDoesntExists(ApiException):
+    def __init__(self, message="Code repos identity doesnt exists",
+                        status_code=None):
+        super().__init__(message)
+
+@add_status_code(400)
 class PathDoesntExists(ApiException):
     def __init__(self, path=None,
                         status_code=None):
