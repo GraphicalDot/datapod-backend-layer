@@ -19,7 +19,7 @@ from loguru import logger
 from .utils import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess,  GithubIdentity,\
              retrieve_data, retrieve_data_gen, get_authenticated_user
-
+import mmap
 import humanize
 from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
@@ -382,6 +382,7 @@ async def get_suggestions(request):
     for repo in gs.get_suggested_repositories():
         result.append({"name": repo.full_name, "description": repo.description, 
             "stars": repo.stargazers_count, "url": repo.git_url,  "updated_at": repo.updated_at.strftime("%d, %b %Y")})
+    
     return response.json(
         {
         'error': False,
@@ -390,3 +391,46 @@ async def get_suggestions(request):
         'message': None
         })
 
+
+def search_text(filepath, string): 
+    try: 
+        with open(filepath, 'rb', 0) as file, mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as s: 
+            if s.find(string.encode()) != -1: 
+                return True 
+    except: 
+        return False 
+
+
+
+@GITHUB_BP.get('/rawtext')
+async def rawtext(request):
+
+    if not request.args.get("rawtext"):
+        raise APIBadRequest("Raw text  which is to be searched is required")
+
+    backup_path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
+
+    all_directories = [os.path.join(backup_path, dirname) for dirname in os.listdir(backup_path)]
+    all_file = lambda dirpath: [os.path.join(path, name) for path, subdirs, files in os.walk(dirpath) for name in files]
+
+    logger.info(all_directories)
+
+    allfiles =[]
+    for dirpath in all_directories:
+        allfiles.extend(all_file(dirpath))
+
+
+    result = []
+    for filepath in allfiles: 
+        if search_text(filepath, request.args.get("rawtext")): 
+            result.append(filepath)
+
+    
+    logger.info(f"Total number of files are {len(allfiles)}")
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': None, 
+        'result': result
+        })
