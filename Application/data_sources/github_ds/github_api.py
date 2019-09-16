@@ -5,6 +5,7 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
+import subprocess
 import datetime
 import humanize
 import json
@@ -103,7 +104,6 @@ async def parse(request):
 
     await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
     update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
-
 
 
     request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
@@ -291,8 +291,8 @@ async def dashboard_data(request):
     def get_dir_size(dirpath):
         all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
         _date = creation_date(all_files[0])
-        files_and_sizes = [os.path.getsize(path) for path in all_files]
-        return  humanize.naturalsize(sum(files_and_sizes)), _date
+        #files_and_sizes = [os.path.getsize(path) for path in all_files]
+        return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8'), _date
 
     path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
     size, last_updated = get_dir_size(path)
