@@ -21,6 +21,8 @@ from .utils import construct_request, get_response, ensure_directory, \
              retrieve_data, retrieve_data_gen, get_authenticated_user
 import mmap
 import humanize
+from utils.utils import async_wrap
+
 from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
 #from gitsuggest import GitSuggest
@@ -392,6 +394,7 @@ async def get_suggestions(request):
         })
 
 
+@async_wrap
 def search_text(filepath, string): 
     try: 
         with open(filepath, 'rb', 0) as file, mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as s: 
@@ -420,11 +423,13 @@ async def rawtext(request):
         allfiles.extend(all_file(dirpath))
 
 
-    result = []
-    for filepath in allfiles: 
-        if search_text(filepath, request.args.get("rawtext")): 
-            result.append(filepath)
+    # result = []
+    # for filepath in allfiles: 
+    #     if await search_text(filepath, request.args.get("rawtext")): 
+    #         result.append(filepath)
 
+    tasks = [search_text(filepath, request.args.get("rawtext")) for filepath in allfiles]
+    result = await asyncio.gather(*tasks)
     
     logger.info(f"Total number of files are {len(allfiles)}")
     return response.json(
