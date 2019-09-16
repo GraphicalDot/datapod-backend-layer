@@ -103,7 +103,8 @@ async def parse(request):
         await inst.update()
 
     await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
-    update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
+    update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , \
+            request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "github parse completed", "PROGRESS")
 
 
     request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
@@ -129,35 +130,17 @@ async def reparse(request):
 
     #update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
 
-
-
     # else:
     #     raise APIBadRequest("Unknown format")
 
     # logger.info(f"THe request was successful with github path {request.json['path']}")
-    request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
+    #request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
 
     return response.json(
         {
         'error': False,
         'success': True,
         })
-
-@GITHUB_BP.post('/backup')
-async def backup(request):
-    """
-    """
-    username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
-
-    request.app.add_task(background_github_parse(request.app.config, username, password))
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        })
-
-
 
 
 
@@ -219,12 +202,18 @@ async def list_starred_repos(request):
     number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
     result = await filter_starred_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
-    [repo.update({
-                "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
-                "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
-                "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
-                "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
-        }) for repo in result]
+    for repo in result:
+        try:
+            repo.update({
+                        "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
+                        "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
+                        "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
+                        "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
+                })
+        except :
+            logger.error(repo)
+            pass
+
     return response.json(
         {
         'error': False,
@@ -328,7 +317,7 @@ async def backup_single_repo(request):
         logger.info(repository)
         owner = json.loads(repository["owner"])
         repository.update({"owner": owner})    
-        per_repository(repository["path"], repository, request.app.config.CODE_GITHUB_TBL, None)
+        await per_repository(repository["path"], repository, request.app.config, None)
 
     return response.json(
         {
