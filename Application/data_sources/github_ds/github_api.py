@@ -65,6 +65,18 @@ async def background_github_parse(config, username, password):
     # # backup_account(args, output_directory)
 
 
+
+
+def deactivate():
+    """
+    This method is required to deactivate Github from Datapod
+    First remove the keys registry from ~/.ssh/config file  
+    """
+    ##somwhow remove hostname github in config in .ssh
+    ##delete the datapod key of the rmeote Code Repo like github
+
+    return 
+
 @GITHUB_BP.post('/parse')
 async def parse(request):
     """
@@ -78,10 +90,6 @@ async def parse(request):
     except IdentityAlreadyExists as e:
         logger.error(f"Error is {e}")
         
-    
-    except Exception as e:
-        logger.error(f"Error is {e}")
-        raise APIBadRequest(e)        
     
 
     await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
@@ -101,6 +109,34 @@ async def parse(request):
         'success': True,
         })
 
+
+
+@GITHUB_BP.get('/reparse')
+async def reparse(request):
+    """
+    """
+
+    try:
+        result = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
+    except:
+        raise APIBadRequest("Credentials aren't present")
+    logger.info(result)
+
+    #update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
+
+
+
+    # else:
+    #     raise APIBadRequest("Unknown format")
+
+    # logger.info(f"THe request was successful with github path {request.json['path']}")
+    request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        })
 
 @GITHUB_BP.post('/backup')
 async def backup(request):

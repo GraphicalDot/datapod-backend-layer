@@ -12,6 +12,7 @@ from urllib.request import build_opener
 import socket
 import os
 import json
+import datetime
 from loguru import logger
 from errors_module.errors import APIBadRequest, IdentityAlreadyExists
 from .errors import request_http_error, request_url_error
@@ -78,17 +79,37 @@ class GithubIdentity(object):
         """
         self.config = config
         self.hostname = hostname
-        self.key_name = key_name
+        self.timestamp =datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+        self._key_name = key_name
+        self.key_name = f"{self._key_name}_{self.timestamp}"
 
         ##check if identity for the host already exists or not
-        identity, self.ssh_dir = self.identity_exist(self.hostname) 
-        if identity:
-            await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
-            raise IdentityAlreadyExists(f"Identity for {self.hostname} already exists")
+        self.private_key_path, self.ssh_dir = self.identity_exist(self.hostname) 
+
+        if not self.private_key_path:
+            self.private_key_path = os.path.join(self.config.KEYS_DIR, f"git_priv_{self._key_name}_{self.timestamp}.key")
+            self.public_key_path = os.path.join(self.config.KEYS_DIR, f"git_pub_{self._key_name}_{self.timestamp}.key")
+
+
+
+        if self.private_key_path:
+            if os.path.exists(self.private_key_path):
+                await send_sse_message(self.config, self.__channel_name__, "SSH setup for github is already present")
+                raise IdentityAlreadyExists(f"Identity for {self.hostname} already exists")
+               
+            else:
+                logger.error("Your github private key doesnt exists, This happened because your keys are configured but \
+                        private key itself is not available")
+                logger.error("Datapod will generate a new key for github on your machine")
+                self.public_key_path = os.path.join(self.config.KEYS_DIR, f"git_pub_{self._key_name}_{self.timestamp}.key")
+
 
         logger.info(f"Identity for {hostname} doesnt exists, Please run add method to generate a new identity")
-        self.public_key = os.path.join(self.ssh_dir, "git_pub.key")
-        self.private_key = os.path.join(self.ssh_dir, "git_priv.key")
+
+
+
+        # self.public_key_path = os.path.join(self.ssh_dir, "git_pub.key")
+        # self.private_key_path = os.path.join(self.ssh_dir, "git_priv.key")
 
         return 
 
@@ -98,6 +119,12 @@ class GithubIdentity(object):
         Check if git identity already exists on the user machine, 
         If it does then abort generating new keys and configuring remote github account
         Use Paramiko
+
+        IF the host github.com is present and there is an identity file present for github, 
+        then it will use the existing config i.e it will not create new keys
+
+        Returns:
+
         """
         if not ssh_dir:
             home = os.path.expanduser("~")
@@ -116,9 +143,10 @@ class GithubIdentity(object):
         logger.info(host_config)
 
         if not host_config.get("identityfile"):
-            return False, ssh_dir
+            ##the identity file is not present, i.e ssh config for host is required
+            return None, ssh_dir
 
-        return True, ssh_dir
+        return host_config.get("identityfile")[0], ssh_dir
 
     async def add(self, username, password):
         privkey, pubkey = self.generate_new_keys()
@@ -128,14 +156,14 @@ class GithubIdentity(object):
         await self.github_upload_keys(pubkey, username, password)
         
         ##writing keys to the local ssh configuration files
-        with open(self.private_key, "wb") as content_file:
+        with open(self.private_key_path, "wb") as content_file:
             content_file.write(privkey)
 
-        command = f"chmod 400 {self.private_key}"
+        command = f"chmod 400 {self.private_key_path}"
         for res in self.os_command_output(command, f"Setting up permissions for {self.hostname} private key"):
             logger.info(res)
 
-        with open(self.public_key, 'wb') as content_file:
+        with open(self.public_key_path, 'wb') as content_file:
             content_file.write(pubkey)
 
 
@@ -168,9 +196,9 @@ class GithubIdentity(object):
         res = response.json()
         logger.error(res)
         if response.status_code == 401:
-            raise APIBadRequest(res.get("message"))
+            raise Exception(res.get("message"))
         if response.status_code == 422:
-            raise APIBadRequest(res.get("message"))
+            raise Exception(res.get("message"))
 
         logger.success(res)
         await send_sse_message(self.config, self.__channel_name__, "SSH Keypair uploaded")
@@ -193,9 +221,9 @@ class GithubIdentity(object):
     def append_ssh_config(self):
 
         if platform.system() == "Darwin":
-            conf_string = f"Host *\n\tAddKeysToAgent yes\n\tUseKeychain yes\n\tIdentityFile  {self.private_key}"
+            conf_string = f"Host *\n\tAddKeysToAgent yes\n\tUseKeychain yes\n\tIdentityFile  {self.private_key_path}"
         else:
-            conf_string = f"Host github.com\n\tHostname github.com\n\tPreferredAuthentications publickey\n\tIdentityFile  {self.private_key}"
+            conf_string = f"Host github.com\n\tHostname github.com\n\tPreferredAuthentications publickey\n\tIdentityFile  {self.private_key_path}"
         logger.info(f"String which will be appended to the config file is {conf_string}")
         with open(os.path.join(self.ssh_dir, "config"), "a+") as f:
             f.write(conf_string)
@@ -215,9 +243,9 @@ class GithubIdentity(object):
         """
         """
         if platform.system() == "Darwin":
-            command = f"ssh-add -K {self.private_key}"
+            command = f"ssh-add -K {self.private_key_path}"
         else:
-            command = f"ssh-add {self.private_key}"
+            command = f"ssh-add {self.private_key_path}"
         for res in self.os_command_output(command, "Adding new keys to ssh"):
             logger.info(res)
         return 
