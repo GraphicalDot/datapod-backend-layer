@@ -6,6 +6,7 @@ import asyncio
 import functools
 from database_calls.credentials import update_datasources_status, datasource_status
 from loguru import logger
+from utils.utils import async_wrap, send_sse_message
 
 
 
@@ -13,7 +14,7 @@ async def _parse(config, path):
     update_datasources_status(config.DATASOURCES_TBL , "TWITTER", None, config.DATASOURCES_CODE["TWITTER"], "Twitter data aprsing has been completed", "PROGRESS")
     
     account_display_name = await account(config, path)
-    #await read_tweet(config, path)
+    await read_tweet(config, path)
 
 
     update_datasources_status(config.DATASOURCES_TBL , "TWITTER", account_display_name, config.DATASOURCES_CODE["TWITTER"], "Twitter data aprsing has been completed", "COMPLETED")
@@ -31,10 +32,15 @@ async def read_tweet(config, path):
 
     data = lines[lines.find('[') : lines.rfind(']')+1]
     jsonObj = json.loads(data)
-    for tweet in jsonObj:
+
+    i = 100/len(jsonObj)
+
+    for num, tweet in enumerate(jsonObj):
         tweet.update({"tbl_object": config.TWITTER_TBL, "indexed_tbl_object": config.TWITTER_INDEXED_TBL})
         await  store(**tweet)
 
+        res = {"message": "Processing tweet", "percentage": int(i*(num+1))}
+        await send_sse_message(config, config.TWITTER_SSE_TOPIC, res)
 
     # loop = asyncio.get_event_loop()
     # tasks = [store(**args)  for args in jsonObj]

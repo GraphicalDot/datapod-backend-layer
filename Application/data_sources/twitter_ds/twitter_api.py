@@ -51,6 +51,10 @@ async def parse(request):
     if not os.path.exists(request.json["path"]):
         raise APIBadRequest("This path doesnt exists")
 
+    if not os.path.basename(request.json["path"]).startswith("twitter"):
+        raise APIBadRequest("Invalid Twitter zip file")
+
+
     try:
         the_zip_file = zipfile.ZipFile(request.json["path"])
     except:

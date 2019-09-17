@@ -123,7 +123,7 @@ async def is_logged_in(request):
     if result.get("TWITTER"):
         size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        
         result["TWITTER"].update({"size": get_dir_size(size)})
-
+        #result.pop("TWITTER")
 
     logger.info(result)
     return response.json({

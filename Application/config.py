@@ -128,7 +128,8 @@ class Config:
     RESERVATIONS_TBL = Reservations
     FB_CREDS_TBL= FB_CREDS_TBL 
     FB_IMAGES_TBL = FB_IMAGES_TBL
-    TWITTER_TBL = TWITTER_TBL 
+    TWITTER_TBL = TWITTER_TBL
+    TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api

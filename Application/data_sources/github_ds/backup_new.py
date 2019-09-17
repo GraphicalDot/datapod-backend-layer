@@ -17,7 +17,6 @@ import json
 import subprocess
 from dateutil.parser import parse as date_parse
 import datetime
-from utils.utils import send_sse_message
 import asyncio
 import functools
 import concurrent.futures
