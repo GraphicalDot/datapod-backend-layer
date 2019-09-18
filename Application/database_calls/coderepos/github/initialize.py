@@ -47,7 +47,7 @@ def coderepos_github_initialize(db):
         ssh_url = peewee.TextField(null=True)
         clone_url = peewee.TextField(null=True)
         forks_url = peewee.TextField(null=True)
-        downloaded_at =  peewee.DateTimeField(default=datetime.datetime.now)
+        downloaded_at =  peewee.DateTimeField()
         description = peewee.TextField(null=True)
         fork = peewee.BooleanField(null=True)
         url = peewee.TextField(null=True)

@@ -96,6 +96,7 @@ def store(**data):
                     forks= data.get("forks"),
                     open_issues=data.get("open_issues"),
                     watchers=data.get("watchers"),
+                    downloaded_at=datetime.datetime.now(),
                     is_starred=data.get("is_starred"),
                     is_gist=data.get("is_gist"),
                     default_branch=data.get("default_branch")).execute()
@@ -104,10 +105,11 @@ def store(**data):
     except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f'Duplicate key present --{data.get("name")}-- in table --GithubRepo-- {e}')
-        logger.info(f'Updating --{data.get("name")}-- in table --GithubRepo-- ')
+        downloaded_at = datetime.datetime.now()
 
+        logger.info(f'Updating --{data.get("name")}-- in table --GithubRepo-- with downloaded time {downloaded_at} ')
 
+        
 
         table.update(
                     name = data.get("name"),
@@ -123,6 +125,7 @@ def store(**data):
                     #files = data.get("files"), #only for gist
                     description = data.get("description"),
                     fork = data.get("fork"),
+                    downloaded_at=downloaded_at,
                     url = data.get("url"),
                     created_at = data.get("created_at"),
                     updated_at = data.get("updated_at"),

@@ -314,12 +314,15 @@ async def backup_single_repo(request):
     if not result:
         raise APIBadRequest("No repo exists")
     
-    if result:
-        repository = result[0]
+   
+    for repository in  result:
         logger.info(repository)
         owner = json.loads(repository["owner"])
         repository.update({"owner": owner})    
-        await per_repository(repository["path"], repository, request.app.config, None)
+
+        request.app.add_task(per_repository(repository["path"], repository, request.app.config, None))
+
+    ##await per_repository(repository["path"], repository, request.app.config, None)
 
     return response.json(
         {
