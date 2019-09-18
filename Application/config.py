@@ -8,7 +8,8 @@ from database_calls.initialize_tables import intialize_db
 from database_calls.coderepos.github.initialize import coderepos_github_initialize
 from database_calls.facebook.initialize import facebook_initialize
 from database_calls.twitter.intiialize import twitter_initialize
-from loguru import logger
+from loguru import logger as loguru_logger
+from custom_logger import datapod_logger
 from database_calls.credentials import update_datasources_status 
 
 
@@ -132,6 +133,7 @@ class Config:
     TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    LOGGER = datapod_logger
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken

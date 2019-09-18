@@ -135,9 +135,9 @@ def get_github_repo_url(repository, prefer_ssh=True):
 
     return repo_url
 
-async def backup_repositories(username, password, output_directory, repositories, config):
+async def backup_repositories(username, password, output_directory, repositories, config, re_backup):
     #repos_template = 'https://{0}/repos'.format(get_github_api_host())
-
+    ##re_back=True means re backup of whole github is going on, These is no need to send SSE messages now
     #if args.incremental:
     last_update = max(list(repository['updated_at'] for repository in repositories) or [time.strftime('%Y-%m-%dT%H:%M:%SZ', time.localtime())])  # noqa
     last_update_path = os.path.join(output_directory, 'last_update')
@@ -169,8 +169,9 @@ async def backup_repositories(username, password, output_directory, repositories
     i = 100/len(repositories)
     for num, repository in enumerate(repositories[::-1]):
         msg = await per_repository(output_directory, repository, config, since)
-        res = {"message": msg, "percentage": int(i*(num+1))}
-        await send_sse_message(config, "CODEREPOS_GITHUB", res)
+        if not re_backup:
+            res = {"message": msg, "percentage": int(i*(num+1))}
+            await send_sse_message(config, "CODEREPOS_GITHUB", res)
 
 
 
@@ -196,7 +197,7 @@ async def per_repository(output_directory, repository, config, since):
 
     masked_remote_url = mask_password(repo_url)
 
-    logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository.get('private')}")
+    #logger.info(f"The masked_repo url on the github is {masked_remote_url} and is Private: {repository.get('private')}")
     
     #include_gists = (args.include_gists or args.include_starred_gists)
     #if (args.include_repository or args.include_everything) \
@@ -221,7 +222,7 @@ async def per_repository(output_directory, repository, config, since):
                                 )
 
     else:
-        logger.error(f"No commit has been made to {repository.get('name')} if gist<<{repository.get('is_gist')}>> since it was last downloaded")
+        logger.debug(f"No commit has been made to {repository.get('name')} if gist<<{repository.get('is_gist')}>> since it was last downloaded")
 
     if repository.get('is_gist'):
         # dump gist information to a file as well
@@ -258,7 +259,6 @@ async def per_repository(output_directory, repository, config, since):
     await store(**repository)
 
     if repository.get('is_gist'):
-        logger.info(repository)
         msg = f"Backup of gist with url {repository.get('url')} completed"
     else:
         msg = f"Backup of repository with name {repository.get('name')} completed"

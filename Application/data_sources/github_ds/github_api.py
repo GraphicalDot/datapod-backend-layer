@@ -30,24 +30,21 @@ from .backup_new import retrieve_repositories, backup_repositories, per_reposito
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
 
-async def background_github_parse(config, username, password):
-    logger.info("Background repositories backup started")
+async def background_github_parse(config, username, password, re_backup=False):
     backup_path = os.path.join(config.RAW_DATA_PATH, "Coderepos/github")
-    logger.info(f"Path for backup of github repos is {backup_path}")
     ensure_directory(backup_path)
 
     authenticated_user = get_authenticated_user(username, password)
 
-    logger.info(f"The user for which the backup will happend {authenticated_user['login']}")
     repositories = retrieve_repositories(username, password)
-    logger.info("\nTHese are the repositories for the user\n")
     #repositories = filter_repositories(args, repositories)
-    await backup_repositories(username, password, backup_path, repositories, config)
+    await backup_repositories(username, password, backup_path, repositories, config, re_backup)
     # # backup_account(args, output_directory)
 
 
     ##after completeion og the github parse, update the datasources table with the COMPLETED status
-    update_datasources_status(config.DATASOURCES_TBL , "CODEREPOS/Github", username , config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "COMPLETED", "COMPLETED")
+    if not re_backup:
+        update_datasources_status(config.DATASOURCES_TBL , "CODEREPOS/Github", username , config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "COMPLETED", "COMPLETED")
 
 
     #generate_new_keys(username, password)
@@ -119,16 +116,16 @@ async def parse(request):
 
 
 
-@GITHUB_BP.get('/reparse')
-async def reparse(request):
+@GITHUB_BP.get('/re_backup_whole')
+async def re_backup_whole(request):
     """
     """
 
     try:
-        result = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
+        username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
     except:
         raise APIBadRequest("Credentials aren't present")
-    logger.info(result)
+    
 
     #update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "IN_PROGRESS", "PROGRESS")
 
@@ -136,12 +133,14 @@ async def reparse(request):
     #     raise APIBadRequest("Unknown format")
 
     # logger.info(f"THe request was successful with github path {request.json['path']}")
-    #request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
+    request.app.add_task(background_github_parse(request.app.config, username, password, re_backup=True))
 
     return response.json(
         {
         'error': False,
         'success': True,
+        "message": "Your whole github backup has started, Once done it will start reflecting on your github Dashboard",
+        "data": None, 
         })
 
 
@@ -328,8 +327,8 @@ async def backup_single_repo(request):
         {
         'error': False,
         'success': True,
-        'data': result,
-        'message': None
+        'message': f"Backup the repository {request.args.get('name')} has been started",
+        'data': None
         })
 
 
