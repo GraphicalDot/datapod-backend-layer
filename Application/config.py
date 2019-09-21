@@ -8,13 +8,17 @@ from database_calls.initialize_tables import intialize_db
 from database_calls.coderepos.github.initialize import coderepos_github_initialize
 from database_calls.facebook.initialize import facebook_initialize
 from database_calls.twitter.intiialize import twitter_initialize
-from loguru import logger as loguru_logger
-from custom_logger import datapod_logger
 from database_calls.credentials import update_datasources_status 
-
+from loguru import logger
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
+LOGFILE = os.path.join(MAIN_DIR, "applogs.log")
+logger.add(LOGFILE, retention="5 days")  # Cleanup after some time
+
+
+
+
 USER_INDEX = f"{MAIN_DIR}/user.index" #this file be creating when making backup and keeps record of all the files who are indexed for backup i.e changed or not
 KEYS_DIR = os.path.join(MAIN_DIR, "keys")
 USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
@@ -133,7 +137,6 @@ class Config:
     TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    LOGGER = datapod_logger
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
