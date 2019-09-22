@@ -17,7 +17,7 @@ from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
 from database_calls.credentials import get_credentials
 from loguru import logger
-
+from utils.utils import async_wrap
 
 class cd:
     """Context manager for changing the current working directory"""
@@ -79,7 +79,6 @@ class Backup(object):
         
         #r = requests.post(url, )
 
-        logger.info(f"Result sse message {result}")
 
         if result["error"]:
             logger.error(result["message"])
@@ -130,10 +129,14 @@ class Backup(object):
             raise APIBadRequest("The platform is not available for this os distribution")
 
         #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
+        initial_time = int(time.time())
+        next_time = initial_time+15
 
         for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
-            await self.send_sse_message(f"Archiving {out.split('/')[-1]}")
-            
+            if int(time.time()) >= next_time:
+                await self.send_sse_message(f"Archiving {out.split('/')[-1]}")
+                next_time += 10
+
         async for msg in self.split(backup_path_dir, temp.name):
             await self.send_sse_message(msg)
         

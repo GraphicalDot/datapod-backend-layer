@@ -21,7 +21,11 @@ def logout(credentials_tbl_obj):
     return 
 
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
-
+    person  = get_credentials(credentials_tbl_obj)
+    
+    if person["username"] == username:
+        raise Exception("Different usernames on same Application arent allowed")
+    
     try:
         credentials_tbl_obj.insert(username=convert_type(username),  
                                         password_hash=convert_type(password_hash),
@@ -99,7 +103,7 @@ def update_password_hash(credentials_tbl_obj, username, password_hash):
 def get_credentials(credentials_tbl_obj):
     res = credentials_tbl_obj.select().dicts()
 
-    logger.error(f"Number of entries in creds table is {len(res)}")
+    logger.info(f"Number of entries in creds table is {len(res)}")
     try:
         for person in credentials_tbl_obj.select().dicts():
             for key, value in person.items():

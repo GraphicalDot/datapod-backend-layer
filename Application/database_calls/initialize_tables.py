@@ -68,7 +68,7 @@ def intialize_db(path):
         ##blocfileds will be stored in bytes
         name = peewee.TextField(null=True)
         email = peewee.TextField(null=False)
-        username = peewee.CharField(unique=False)
+        username = peewee.CharField(unique=True)
         mnemonic = peewee.TextField(null=True)
         id_token = peewee.BlobField(null= True)
         access_token = peewee.BlobField(null= True)

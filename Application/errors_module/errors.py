@@ -53,7 +53,7 @@ class DuplicateEntryError(Exception):
 class APIBadRequest(ApiException):
     def __init__(self, message="Error happened in the api",
                         status_code=None):
-        super().__init__(message)
+        super().__init__(message, status_code)
 
 
 @add_status_code(400)

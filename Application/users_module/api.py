@@ -124,6 +124,9 @@ async def is_logged_in(request):
         size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        
         result["TWITTER"].update({"size": get_dir_size(size)})
         #result.pop("TWITTER")
+    
+    if result.get("BACKUP"):
+        result.pop("BACKUP")
 
     logger.info(result)
     return response.json({
@@ -145,8 +148,6 @@ async def login(request):
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
 
     r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": request.json["username"], "password": request.json["password"]}))
-    result = r.json()
-    logger.info(result)
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
@@ -160,7 +161,6 @@ async def login(request):
     #update_datasources_status(request.app.config.DATASOURCES_TBL, "Takeout", "PURCHASES", request.app.config.DATASOURCES_CODE["PURCHASES"], "Purchase parse completed")
     res = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
-    logger.info(list(res))
 
     return response.json(
         {

@@ -9,8 +9,7 @@ import humanize
 from utils.utils import revoke_time_stamp, update_tokens, id_token_validity, creation_date, modification_date
 from .back import Backup, S3Backup
 from loguru import logger
-
-
+from database_calls.credentials import  get_credentials,update_mnemonic 
 BACKUP_BP = Blueprint("backup", url_prefix="/backup")
 
 from database_calls.credentials import store_credentials, get_credentials, update_id_and_access_tokens,\
@@ -53,18 +52,22 @@ def backup_list_info(config):
     result = []
     def get_dir_size(dirpath):
         all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
-        _date = creation_date(all_files[0])
+        if len(all_files) >0:
+            _date = creation_date(all_files[0])
+        else:
+            _date = None
         files_and_sizes = [os.path.getsize(path) for path in all_files]
         return  humanize.naturalsize(sum(files_and_sizes)), _date
 
 
-
     for (path, dirs, files) in os.walk(config.BACKUP_PATH):
-        for _dir in dirs:
-            dirpath = os.path.join(path, _dir)
-            size, date = get_dir_size(dirpath)
-            result.append({"name": _dir, "size": size, "date": date})
-    
+        if len(dirs) != 0:
+            for _dir in dirs:
+                dirpath = os.path.join(path, _dir)
+                size, date = get_dir_size(dirpath)
+                result.append({"name": _dir, "size": size, "date": date})
+
+
     return result
     
 
@@ -92,8 +95,6 @@ async def backups_list(request):
         }
 
     )
-
-
 
 
 
@@ -139,7 +140,10 @@ async def make_backup(request):
     """
     ##TODO ADD entries to BACKUP_TBL
     """
-
+    ##This has a rare chance of happening, that users reach here and doesnt have mnemonic in the database but have mnemonic in the cloud
+    creds = get_credentials(request.app.config.CREDENTIALS_TBL)
+    if not creds.get("mnemonic"):
+        raise APIBadRequest("User Mnemonic is not present", 403)
 
     try:
             
