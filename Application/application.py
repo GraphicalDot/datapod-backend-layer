@@ -169,14 +169,15 @@ def main():
     # app.blueprint(MIDDLE_LAYER)
     #zmq = ZMQEventLoop()
     #asyncio.set_event_loop(zmq)
-    for _, (rule, _) in app.router.routes_names.items():
-        logger.info(rule)    
+    # for _, (rule, _) in app.router.routes_names.items():
+    #     logger.info(rule)    
 
 
     # app.config.user_data_path = config.user_data_path
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
+    logger.success(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
     #pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)

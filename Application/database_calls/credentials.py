@@ -23,7 +23,7 @@ def logout(credentials_tbl_obj):
 def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
     person  = get_credentials(credentials_tbl_obj)
     
-    if person["username"] == username:
+    if person["username"] != username:
         raise Exception("Different usernames on same Application arent allowed")
     
     try:

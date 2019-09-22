@@ -11,6 +11,8 @@ from database_calls.twitter.intiialize import twitter_initialize
 from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
+__VERSION__ = "0.11-Beta"
+
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
 LOGFILE = os.path.join(MAIN_DIR, "applogs.log")
@@ -83,6 +85,7 @@ def validate_fields(required_fields, request_json):
 #         fileobj.write(key)
 
 class Config:
+    VERSION = __VERSION__
     MAIN_DIR = MAIN_DIR
     USER_INDEX = USER_INDEX
     KEYS_DIR = KEYS_DIR

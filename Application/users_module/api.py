@@ -147,16 +147,18 @@ async def login(request):
 
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
 
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": request.json["username"], "password": request.json["password"]}))
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+    result = requests.post(request.app.config.LOGIN, data=json.dumps({"username": request.json["username"], "password": request.json["password"]}))
+   
+    logger.info(result.json())
+    if result.json().get("error"):
+        logger.error(result.json()["message"])
+        raise APIBadRequest(result.json()["message"])
     
 
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
-    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], password_hash, result["data"]["id_token"], 
-                 result["data"]["access_token"], result["data"]["refresh_token"], result["data"]["name"], result["data"]["email"])
+    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], password_hash, result.json()["data"]["id_token"], 
+                 result.json()["data"]["access_token"], result.json()["data"]["refresh_token"], result.json()["data"]["name"], result.json()["data"]["email"])
     
     #update_datasources_status(request.app.config.DATASOURCES_TBL, "Takeout", "PURCHASES", request.app.config.DATASOURCES_CODE["PURCHASES"], "Purchase parse completed")
     res = get_datasources_status(request.app.config.DATASOURCES_TBL)
@@ -168,8 +170,8 @@ async def login(request):
         'success': True,
         "message": "Logged in successfully",
         "data": {
-            "name": result["data"]["name"], 
-            "email": result["data"]["email"],
+            "name": result.json()["data"]["name"], 
+            "email": result.json()["data"]["email"],
             "username": request.json["username"],
             "datasources": list(res)
         }
