@@ -172,7 +172,7 @@ def store_account(**account_data):
 
 
 @async_wrap #makes function asynchronous
-def filter_tweet(tbl_object, page, number):
+def filter_tweet(tbl_object, skip, number):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -182,10 +182,25 @@ def filter_tweet(tbl_object, page, number):
     return tbl_object\
             .select()\
             .order_by(-tbl_object.created_at)\
-            .paginate(page, number)\
+            .offset(skip)\
+            .limit(number)\
              .dicts()
 
 
+@async_wrap #makes function asynchronous
+def count_tweets(tbl_object):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+
+    return tbl_object\
+            .select()\
+            .count()
+
+
+@async_wrap #makes function asynchronous
 def match_text(main_tbl_object, indexed_obj, matching_string, page, number,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
@@ -199,3 +214,16 @@ def match_text(main_tbl_object, indexed_obj, matching_string, page, number,  tim
                 .dicts())
     return list(query)
 
+@async_wrap #makes function asynchronous
+def count_filtered_tweets(main_tbl_object, indexed_obj, matching_string, time=None):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+    count = main_tbl_object\
+                .select()\
+                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where(indexed_obj.match(matching_string))\
+                .count()
+    return count
