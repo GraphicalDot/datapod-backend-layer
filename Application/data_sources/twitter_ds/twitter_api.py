@@ -9,13 +9,14 @@ import zipfile
 from errors_module.errors import APIBadRequest
 from .twitter_ds import _parse
 from loguru import logger
-from database_calls.twitter.calls import filter_tweet, match_text, count_tweets, count_filtered_tweets
+from database_calls.twitter.calls import filter_tweet, match_text
 import json
 import base64
 from io import BytesIO
 from PIL import Image
 import datetime
 from database_calls.credentials import update_datasources_status, datasource_status
+import dateparser
 
 TWITTER_BP = Blueprint("twitter", url_prefix="/twitter")
 
@@ -101,17 +102,33 @@ async def tweets(request):
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
     matching_string = request.args.get("match_string") 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if start_date < end_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
 
     if matching_string:
         logger.info(f"THis is the matchiing_String {matching_string}")
-        result = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
-            matching_string , int(skip), int(limit))
-        count = await count_filtered_tweets(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, matching_string)
+        result, count = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
+            matching_string , start_date, end_date,  int(skip), int(limit))
 
     else:
 
-        result = await filter_tweet(request.app.config.TWITTER_TBL, int(skip), int(limit))
-        count = await count_tweets(request.app.config.TWITTER_TBL)
+        result, count = await filter_tweet(request.app.config.TWITTER_TBL, start_date, end_date, int(skip), int(limit))
     
     # [repo.update({
     #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),

@@ -172,46 +172,102 @@ def store_account(**account_data):
 
 
 @async_wrap #makes function asynchronous
-def filter_tweet(tbl_object, skip, number):
+def filter_tweet(tbl_object, start_date, end_date, skip, limit):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
+    ##startDate must be greater then Enddate
 
-    return tbl_object\
-            .select()\
-            .order_by(-tbl_object.created_at)\
-            .offset(skip)\
-            .limit(number)\
-             .dicts()
+
+    if start_date and end_date:
+
+        query = tbl_object\
+                .select()\
+                .between(start_date, end_date)\
+                .order_by(-tbl_object.created_at)
+                
+        
+
+    elif start_date and not end_date:
+        query = tbl_object\
+                        .select()\
+                        .where(tbl_object.created_at> start_date)\
+                        .order_by(-tbl_object.created_at)\
+                        
+
+
+    elif end_date and not start_date:
+        query = tbl_object\
+                        .select()\
+                        .where(tbl_object.created_at < end_date)\
+                        .order_by(-tbl_object.created_at)\
+        
+
+
+    else: # not  start_date and  not end_date
+
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.created_at)\
+
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
+
 
 
 @async_wrap #makes function asynchronous
-def count_tweets(tbl_object):
+def match_text(main_tbl_object, indexed_obj, matching_string, start_date, end_date, skip, limit,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
 
-    return tbl_object\
-            .select()\
-            .count()
+
+    if start_date and end_date:
+        query = main_tbl_object\
+                .select()\
+                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where(indexed_obj.match(matching_string))\
+                .between(start_date, end_date)\
+                .order_by(-main_tbl_object.created_at)
+
+                
+        
+
+    elif start_date and not end_date:
+        query = main_tbl_object\
+                .select()\
+                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where((indexed_obj.match(matching_string)) & (main_tbl_object.created_at> start_date))\
+                .order_by(-main_tbl_object.created_at)
+
+        
 
 
-@async_wrap #makes function asynchronous
-def match_text(main_tbl_object, indexed_obj, matching_string, page, number,  time=None):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
+    elif end_date and not start_date:
+        query = main_tbl_object\
+                .select()\
+                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where((indexed_obj.match(matching_string)) &(main_tbl_object.created_at < end_date))\
+                .order_by(-main_tbl_object.created_at)
 
-    """
-    query = (main_tbl_object
-                .select()
-                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))
-                .where(indexed_obj.match(matching_string))
-                .dicts())
+
+
+    else: # not  start_date and  not end_date
+        query = main_tbl_object\
+                    .select()\
+                    .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                    .where(indexed_obj.match(matching_string))\
+
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
+
+
     return list(query)
 
 @async_wrap #makes function asynchronous
