@@ -105,6 +105,7 @@ async def tweets(request):
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
 
+    logger.info(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
 
@@ -114,7 +115,7 @@ async def tweets(request):
 
 
     if start_date and end_date:
-        if start_date < end_date:
+        if end_date < start_date:
             raise APIBadRequest("Start date should be less than End date")
 
     logger.info(f"This is the start_date {start_date}")
@@ -144,32 +145,32 @@ async def tweets(request):
     
 
 
-@TWITTER_BP.get('/tweets/match_text')
-async def match_text_email(request):
+# @TWITTER_BP.get('/tweets/match_text')
+# async def match_text_email(request):
     
 
-    page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 200][request.args.get("number") == None] 
+#     page = [request.args.get("page"), 1][request.args.get("page") == None] 
+#     number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
-    if not request.args.get("match_string"):
-        raise APIBadRequest("get params match_string is required")
+#     if not request.args.get("match_string"):
+#         raise APIBadRequest("get params match_string is required")
 
-    matching_string = request.args.get("match_string") 
+#     matching_string = request.args.get("match_string") 
 
 
-    logger.info(request.args)
-    logger.info(f"This is the matching string {matching_string}")
+#     logger.info(request.args)
+#     logger.info(f"This is the matching string {matching_string}")
 
     
-    res = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
-            matching_string , page, number)
+#     res = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
+#             matching_string , page, number)
 
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "data": res
-        })
+#     return response.json(
+#         {
+#         'error': False,
+#         'success': True,
+#         "data": res
+#         })
 
 
 @TWITTER_BP.get("/messages")

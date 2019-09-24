@@ -185,7 +185,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
-                .between(start_date, end_date)\
+                .where((tbl_object.created_at> start_date) &(tbl_object.created_at < end_date))\
                 .order_by(-tbl_object.created_at)
                 
         
