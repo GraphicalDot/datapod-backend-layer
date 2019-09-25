@@ -285,8 +285,6 @@ class Emails(object):
                     await self.send_sse_message(percentage)
 
                     #yield f"Parse email progress is  {i}"
-            if i == 2000:
-                break
             
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
