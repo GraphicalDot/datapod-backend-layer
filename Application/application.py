@@ -53,12 +53,17 @@ from sanic.exceptions import abort
 from sanic_sse import Sse
 from http import HTTPStatus
 #from sockets.sockets import sio
-from loguru import logger
+#from loguru import logger
+#from custom_logger import logger
 #from secrets.aws_secret_manager import get_secrets
 from database_calls.credentials import update_datasources_status
+from loguru import logger
+#from custom_logger import LOGGING
+
+from sentry_sdk import init
+init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
 
 app = Sanic(__name__)
-
 
 # app.config['CORS_AUTOMATIC_OPTIONS'] = True
 # app.config['CORS_SUPPORTS_CREDENTIALS'] = True
@@ -177,12 +182,12 @@ def main():
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
-    logger.success(f"This is Version number {config.config_object.VERSION}")
+    logger.info(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
     #pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
-    app.run(host="0.0.0.0", port=app.config.PORT, workers=1)
+    app.run(host="0.0.0.0", port=app.config.PORT, workers=1, access_log=True)
 
     """
     server = app.create_server(
