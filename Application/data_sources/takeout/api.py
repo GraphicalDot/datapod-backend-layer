@@ -22,7 +22,9 @@ from functools import partial
 import concurrent.futures
 from websockets.exceptions import ConnectionClosed
 from utils.utils import async_wrap, send_sse_message
-
+import base64
+from io import BytesIO
+from PIL import Image
 
 import string
 import random
@@ -345,7 +347,16 @@ async def reservations_filter(request):
         "message": None
         })
 
-
+@async_wrap
+def image_base64(path):
+    try:
+        image = Image.open(path)
+        buffered = BytesIO()
+        image.save(buffered, format=image.format)
+        img_str = base64.b64encode(buffered.getvalue())
+    except Exception as e:
+        logger.error(f"Error {e} while converting fb image to base64")
+    return img_str.decode()
 
 
 
@@ -365,14 +376,16 @@ async def images_filter(request):
     if request.args.get("number"):
         number = request.args.get("number")
     else:
-        number = 200
+        number = 20
 
 
     images = q_images_db.filter_date(request.app.config.IMAGES_TBL, page, number,  time=None)
     for image in images:
+        b64_data = await image_base64(image['image_path'])
         creation_time = image.pop("creation_time")
+        encoded_string = "data:image/jpeg;base64," + b64_data
         #data:image/png;base64
-        image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
+        image.update({"creation_time": creation_time.strftime("%Y-%m-%d"), "uri": encoded_string})
 
     logger.success(images)
     return response.json(
