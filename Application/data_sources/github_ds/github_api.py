@@ -411,6 +411,11 @@ def search_text(filepath, string):
 async def rawtext(request):
 
     raw_text = request.args.get("rawtext")
+
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 20][request.args.get("limit") == None] 
+
+
     if not raw_text:
         raise APIBadRequest("Raw text  which is to be searched is required")
 
@@ -448,6 +453,6 @@ async def rawtext(request):
         {
         'error': False,
         'success': True,
-        'data': None, 
-        'result': result
+        'data': result[skip: skip+limit], 
+        'message': None
         })
