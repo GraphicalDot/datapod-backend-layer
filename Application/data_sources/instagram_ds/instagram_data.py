@@ -254,13 +254,15 @@ async def get_instagram_images(pages, data_path):
     return results 
 
 if __name__ == "__main__":
+    username = "sauravverma86"
+    password = "Groot1234#"
     instagram_object = instagram_login(username, password)
     max_id, allposts = get_all_posts(instagram_object, myposts=[])
     print (allposts)
-    instagram_path = "/home/feynman/Programs/datapod-backend-layer/Application/userdata/instagram/images"
-    db_dir__path = "/home/feynman/Programs/datapod-backend-layer/Application/database"
-    if not os.path.exists(instagram_path):
-        logger.warning(f"Path doesnt exists creating {instagram_path}")
-        os.makedirs(instagram_path) 
-    save_instagram(allposts, instagram_path, db_dir__path)
+    # instagram_path = "/home/feynman/Programs/datapod-backend-layer/Application/userdata/instagram/images"
+    # db_dir__path = "/home/feynman/Programs/datapod-backend-layer/Application/database"
+    # if not os.path.exists(instagram_path):
+    #     logger.warning(f"Path doesnt exists creating {instagram_path}")
+    #     os.makedirs(instagram_path) 
+    # save_instagram(allposts, instagram_path, db_dir__path)
 

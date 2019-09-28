@@ -410,30 +410,40 @@ def search_text(filepath, string):
 @GITHUB_BP.get('/rawtext')
 async def rawtext(request):
 
-    if not request.args.get("rawtext"):
+    raw_text = request.args.get("rawtext")
+    if not raw_text:
         raise APIBadRequest("Raw text  which is to be searched is required")
 
-    backup_path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
-
-    all_directories = [os.path.join(backup_path, dirname) for dirname in os.listdir(backup_path)]
-    all_file = lambda dirpath: [os.path.join(path, name) for path, subdirs, files in os.walk(dirpath) for name in files]
-
-    logger.info(all_directories)
-
-    allfiles =[]
-    for dirpath in all_directories:
-        allfiles.extend(all_file(dirpath))
-
-
-    # result = []
-    # for filepath in allfiles: 
-    #     if await search_text(filepath, request.args.get("rawtext")): 
-    #         result.append(filepath)
-
-    tasks = [search_text(filepath, request.args.get("rawtext")) for filepath in allfiles]
-    result = await asyncio.gather(*tasks)
+    path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
     
-    logger.info(f"Total number of files are {len(allfiles)}")
+    grep_command = f"grep -nr {raw_text} {path}/*"
+
+    result = []
+    result = subprocess.getoutput(grep_command)
+    result = result.split("\n")
+
+    # for out in request.app.config.OS_COMMAND_OUTPUT(grep_command, "Files are in Sync"):
+    #     logger.info(out)
+    #     result.append(out)
+    # # all_directories = [os.path.join(backup_path, dirname) for dirname in os.listdir(backup_path)]
+    # all_file = lambda dirpath: [os.path.join(path, name) for path, subdirs, files in os.walk(dirpath) for name in files]
+
+    # logger.info(all_directories)
+
+    # allfiles =[]
+    # for dirpath in all_directories:
+    #     allfiles.extend(all_file(dirpath))
+
+
+    # # result = []
+    # # for filepath in allfiles: 
+    # #     if await search_text(filepath, request.args.get("rawtext")): 
+    # #         result.append(filepath)
+
+    # tasks = [search_text(filepath, request.args.get("rawtext")) for filepath in allfiles]
+    # result = await asyncio.gather(*tasks)
+    
+    #logger.info(f"Total number of files are {len(allfiles)}")
     return response.json(
         {
         'error': False,
