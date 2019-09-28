@@ -25,7 +25,7 @@ from utils.utils import async_wrap, send_sse_message
 import base64
 from io import BytesIO
 from PIL import Image
-
+import dateparser
 import string
 import random
 import time
@@ -361,25 +361,71 @@ def image_base64(path):
 
 
 
+# @TAKEOUT_BP.get('images/filter')
+# async def images_filter(request):
+#     """
+#     To get all the assets created by the requester
+#     """
+#     #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
+#     if request.args.get("page"):
+#         page = request.args.get("page")
+#     else:
+#         page = 1
+
+
+#     if request.args.get("number"):
+#         number = request.args.get("number")
+#     else:
+#         number = 20
+
+
+#     images = q_images_db.filter_images(request.app.config.IMAGES_TBL, page, number,  time=None)
+#     for image in images:
+#         b64_data = await image_base64(image['image_path'])
+#         creation_time = image.pop("creation_time")
+#         encoded_string = "data:image/jpeg;base64," + b64_data
+#         #data:image/png;base64
+#         image.update({"creation_time": creation_time.strftime("%Y-%m-%d"), "uri": encoded_string})
+
+#     logger.success(images)
+#     return response.json(
+#         {
+#         'error': False,
+#         'success': True,
+#         "data": images,
+#         "message": None
+#         })
+
+
 @TAKEOUT_BP.get('images/filter')
 async def images_filter(request):
-    """
-    To get all the assets created by the requester
-    """
-    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-    if request.args.get("page"):
-        page = request.args.get("page")
-    else:
-        page = 1
+
+    logger.info("Number is ", request.args.get("limit"))
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
 
 
-    if request.args.get("number"):
-        number = request.args.get("number")
-    else:
-        number = 20
+    if end_date:
+        end_date = dateparser.parse(end_date)
 
 
-    images = q_images_db.filter_date(request.app.config.IMAGES_TBL, page, number,  time=None)
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+
+
+    images, count = await q_images_db.filter_images(request.app.config.IMAGES_TBL, start_date, end_date, int(skip), int(limit))
+    logger.info(images)
     for image in images:
         b64_data = await image_base64(image['image_path'])
         creation_time = image.pop("creation_time")
@@ -387,13 +433,16 @@ async def images_filter(request):
         #data:image/png;base64
         image.update({"creation_time": creation_time.strftime("%Y-%m-%d"), "uri": encoded_string})
 
-    logger.success(images)
+    # [repo.update({
+    #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),
+    #     }) for repo in result]
+
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": images,
-        "message": None
+        'data': {"images": images, "count": count},
+        'message': None
         })
 
 
