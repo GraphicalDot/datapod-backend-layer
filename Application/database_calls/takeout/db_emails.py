@@ -93,32 +93,116 @@ def store_email_attachment(**data):
 
 
 @async_wrap
-def get_email_attachment(tbl_object, page, number,):
+def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
-    email_attachment_table = tbl_object
-    return email_attachment_table\
+    # email_attachment_table = tbl_object
+    # return email_attachment_table\
+    #             .select()\
+    #             .order_by(-email_attachment_table.date)\
+    #             .paginate(page, number)\
+    #             .dicts()
+
+    if start_date and end_date:
+        logger.info("Start date and  end date")
+
+        query = tbl_object\
                 .select()\
-                .order_by(-email_attachment_table.date)\
-                .paginate(page, number)\
-                .dicts()
+                .order_by(-tbl_object.date)\
+                .where(tbl_object.date> start_date) &(tbl_object.date < end_date)
+                
+        
+
+    elif start_date and not end_date:
+                        
+        logger.info("Start date and but not end date")
+
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where(tbl_object.date> start_date)
+                
+
+    elif end_date and not start_date:
+        logger.info("not Start date and but end date")
+        
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where(tbl_object.date < end_date)
+                
+
+
+    else: # not  start_date and  not end_date
+        logger.info("Start date and end date is not present")
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
 
 @async_wrap
-def get_emails(tbl_object, page, number, message_type):
+def search_emails():
+    pass
+
+@async_wrap
+def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
-    email_attachment_table = tbl_object
 
 
-    return email_attachment_table\
+    # return email_attachment_table\
+    #             .select()\
+    #             .order_by(-email_attachment_table.date)\
+    #             .where(email_attachment_table.message_type== message_type)\
+    #             .paginate(page, number)\
+    #             .dicts()
+
+
+
+    if start_date and end_date:
+        logger.info("Start date and  end date")
+
+        query = tbl_object\
                 .select()\
-                .order_by(-email_attachment_table.date)\
-                .where(email_attachment_table.message_type== message_type)\
-                .paginate(page, number)\
-                .dicts()
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date) &(tbl_object.date < end_date))
+                
+        
 
+    elif start_date and not end_date:
+                        
+        logger.info("Start date and but not end date")
+
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date))
+                
+
+    elif end_date and not start_date:
+        logger.info("not Start date and but end date")
+        
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.message_type== message_type)& (tbl_object.date < end_date))
+                
+
+
+    else: # not  start_date and  not end_date
+        logger.info("Start date and end date is not present")
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where(tbl_object.message_type== message_type)
+                
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
 
 def match_text(email_tbl_object, index_email_obj, matching_string, page, number,  time=None):
     """

@@ -12,7 +12,7 @@ import  database_calls.db_purchases as q_purchase_db
 import  database_calls.db_reservations as q_reservation_db
 import  database_calls.db_images as q_images_db
 from   database_calls.takeout.db_emails  import match_text as e_match_text
-from database_calls.takeout.db_emails  import  get_email_attachment, get_emails
+from database_calls.takeout.db_emails  import  get_email_attachment, get_emails, search_emails
 from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
@@ -452,20 +452,32 @@ async def attachements_filter(request):
     """
     To get all the assets created by the requester
     """
-    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-    if request.args.get("page"):
-        page = request.args.get("page")
-    else:
-        page = 1
+    logger.info(f"Args are {request.args.items()}")
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 50][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+
+    logger.info(f"Skip type is {skip}")
+    logger.info(f"limit type is {limit}")
+    logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+
+    if start_date:
+        start_date = dateparser.parse(start_date)
 
 
-    if request.args.get("number"):
-        number = request.args.get("number")
-    else:
-        number = 50
+    if end_date:
+        end_date = dateparser.parse(end_date)
 
 
-    attachments = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, page, number)
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+    attachments = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, start_date, end_date, int(skip), int(limit))
     # for iage in images:
     #     creation_time = image.pop("creation_time")
     #     #data:image/png;base64
@@ -488,35 +500,56 @@ async def emails_filter(request):
     """
     To get all the assets created by the requester
     """
-    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-    if request.args.get("page"):
-        page = request.args.get("page")
+
+    logger.info(f"Args are {request.args.items()}")
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 50][request.args.get("limit") == None] 
+    matching_string = request.args.get("match_string") 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    message_type = request.args.get("message_type")
+
+    logger.info(f"Message type is {message_type}")
+    logger.info(f"Skip type is {skip}")
+    logger.info(f"limit type is {limit}")
+    logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+
+    if matching_string:
+        emails = await search_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit), matching_string)
     else:
-        page = 1
+        logger.info("Without matching string")
+        emails, count = await get_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit))
 
 
-    if request.args.get("number"):
-        number = request.args.get("number")
-    else:
-        number = 200
-
-    if request.args.get("message_type"):
-        message_type = request.args.get("message_type")
-    else:
-        message_type = "Inbox"
-
-    emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)
+    # emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)
     for email in emails:
         creation_time = email.pop("date")
         #data:image/png;base64
         email.update({"date": creation_time.strftime("%d %b, %Y")})
 
-    logger.success(emails)
+    logger.success(f"Number of emails are {count}")
     return response.json(
         {
         'error': False,
         'success': True,
-        "data": emails,
+        "data": {"emails": emails, "count": count},
         "message": None
         })
 
