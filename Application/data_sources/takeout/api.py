@@ -457,6 +457,8 @@ async def attachements_filter(request):
     limit = [request.args.get("limit"), 50][request.args.get("limit") == None] 
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
+    message_type = request.args.get("message_type")
+    matching_string = request.args.get("match_string") 
 
     logger.info(f"Skip type is {skip}")
     logger.info(f"limit type is {limit}")
@@ -477,7 +479,10 @@ async def attachements_filter(request):
     logger.info(f"This is the start_date {start_date}")
     logger.info(f"This is the end_date {end_date}")
 
-    attachments = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, start_date, end_date, int(skip), int(limit))
+    if not matching_string:
+        attachments, count = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, message_type, start_date, end_date, int(skip), int(limit))
+    else:
+        raise APIBadRequest("Not been implemented Yet")
     # for iage in images:
     #     creation_time = image.pop("creation_time")
     #     #data:image/png;base64
@@ -488,7 +493,7 @@ async def attachements_filter(request):
         {
         'error': False,
         'success': True,
-        "data": attachments,
+        "data": {"result": attachments, "count": count},
         "message": None
         })
 
@@ -509,10 +514,10 @@ async def emails_filter(request):
     end_date = request.args.get("end_date") 
     message_type = request.args.get("message_type")
 
-    logger.info(f"Message type is {message_type}")
-    logger.info(f"Skip type is {skip}")
-    logger.info(f"limit type is {limit}")
-    logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+    # logger.info(f"Message type is {message_type}")
+    # logger.info(f"Skip type is {skip}")
+    # logger.info(f"limit type is {limit}")
+    # logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
 
     logger.info(f"Params are {request.args}")
     if start_date:
@@ -527,8 +532,8 @@ async def emails_filter(request):
         if end_date < start_date:
             raise APIBadRequest("Start date should be less than End date")
 
-    logger.info(f"This is the start_date {start_date}")
-    logger.info(f"This is the end_date {end_date}")
+    # logger.info(f"This is the start_date {start_date}")
+    # logger.info(f"This is the end_date {end_date}")
 
 
     if matching_string:

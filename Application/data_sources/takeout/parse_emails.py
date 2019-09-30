@@ -576,7 +576,7 @@ class Emails(object):
 
         data.update({"tbl_object": self.email_attachements_tbl})
         for attachment_path in attachments:
-            data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1]})
+            data.update({"path": attachment_path, "attachment_name" :attachment_path.split("/")[-1], "message_type": data["message_type"]})
             await store_email_attachment(**data)
 
         

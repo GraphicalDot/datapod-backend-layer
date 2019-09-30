@@ -112,6 +112,7 @@ def intialize_db(path):
         path = peewee.TextField()
         attachment_name = peewee.TextField()
         date = peewee.DateTimeField()
+        message_type = peewee.CharField()
 
 
     class Images(BaseModel):
@@ -229,7 +230,7 @@ def intialize_db(path):
     #db.drop_tables([Images])
     
     
-    #db.drop_tables([Credentials])
+    #db.drop_tables([EmailAttachment])
     # for person in Credentials.select().dicts():
     #     print(person)
     # print ("\n\n")

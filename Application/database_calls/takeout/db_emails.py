@@ -75,6 +75,7 @@ def store_email_attachment(**data):
         email_attachment_table.insert(email_id=data["email_id"], 
                         path=data["path"], 
                         attachment_name=data["attachment_name"], 
+                        message_type= data["message_type"],
                        date=data["date"]).execute()
 
         # logger.success(f"Success on insert attachement for  email_id --{data['email_id']}--  \
@@ -93,7 +94,7 @@ def store_email_attachment(**data):
 
 
 @async_wrap
-def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
+def get_email_attachment(tbl_object, message_type, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
@@ -110,7 +111,7 @@ def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where(tbl_object.date> start_date) &(tbl_object.date < end_date)
+                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date) &(tbl_object.date < end_date))
                 
         
 
@@ -121,7 +122,7 @@ def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where(tbl_object.date> start_date)
+                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date))
                 
 
     elif end_date and not start_date:
@@ -130,7 +131,7 @@ def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where(tbl_object.date < end_date)
+                .where((tbl_object.message_type== message_type)& (tbl_object.date < end_date))
                 
 
 
@@ -139,6 +140,7 @@ def get_email_attachment(tbl_object, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
+                .where(tbl_object.message_type== message_type)
                 
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
@@ -216,6 +218,8 @@ def match_text(email_tbl_object, index_email_obj, matching_string, page, number,
                 .where(index_email_obj.match(matching_string))
                 .dicts())
     return list(query)
+
+    
 
         # if time:
         #     if type(time) != datetime.datetime:
