@@ -12,7 +12,8 @@ RUN apt-get update && \
 RUN apt-get update -y
 
 RUN apt-get install -y build-essential python3.7 python3.7-dev python3-pip python3.7-venv && \
-        apt-get install -y libssl-dev libffi-dev
+        apt-get install -y libssl-dev libffi-dev libzmq-dev
+
 
 # update pip
 RUN python3.7 -m pip install pip --upgrade && \
