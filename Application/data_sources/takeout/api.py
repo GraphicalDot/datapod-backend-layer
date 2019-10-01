@@ -12,7 +12,7 @@ import  database_calls.db_purchases as q_purchase_db
 import  database_calls.db_reservations as q_reservation_db
 import  database_calls.db_images as q_images_db
 from   database_calls.takeout.db_emails  import match_text as e_match_text
-from database_calls.takeout.db_emails  import  get_email_attachment, get_emails, search_emails
+from database_calls.takeout.db_emails  import  get_email_attachment, get_emails, match_text
 from utils.utils import check_production
 from .images import ParseGoogleImages
 import datetime
@@ -537,7 +537,7 @@ async def emails_filter(request):
 
 
     if matching_string:
-        emails = await search_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit), matching_string)
+        emails, count = await match_text(request.app.config.EMAILS_TBL,  request.app.config.INDEX_EMAIL_CONTENT_TBL, matching_string, message_type, start_date, end_date, int(skip), int(limit))
     else:
         logger.info("Without matching string")
         emails, count = await get_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit))
@@ -545,6 +545,7 @@ async def emails_filter(request):
 
     # emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)
     for email in emails:
+        logger.info(email)
         creation_time = email.pop("date")
         #data:image/png;base64
         email.update({"date": creation_time.strftime("%d %b, %Y")})

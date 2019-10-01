@@ -146,9 +146,6 @@ def get_email_attachment(tbl_object, message_type, start_date, end_date, skip, l
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
 
-@async_wrap
-def search_emails():
-    pass
 
 @async_wrap
 def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
@@ -206,35 +203,56 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
-def match_text(email_tbl_object, index_email_obj, matching_string, page, number,  time=None):
+@async_wrap
+def match_text(tbl_object, indexed_obj, matching_string, message_type, start_date, end_date, skip, limit):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
-    query = (email_tbl_object
-                .select()
-                .join(index_email_obj, on=(email_tbl_object.email_id == index_email_obj.email_id))
-                .where(index_email_obj.match(matching_string))
-                .dicts())
-    return list(query)
+    # query = (tbl_object
+    #             .select()
+    #             .join(index_email_obj, on=(email_tbl_object.email_id == index_email_obj.email_id))
+    #             .where(index_email_obj.match(matching_string))
+    #             .dicts())
+    # return list(query)
 
     
 
-        # if time:
-        #     if type(time) != datetime.datetime:
-        #         raise APIBadRequest("Datetime format is wrong")
-        #     return tbl_object\
-        #             .select()\
-        #             .where(tbl_object.creation_time == time)\
-        #             .order_by(-tbl_object.time)\
-        #             .paginate(page, number)\
-        #             .dicts()
-        # else:
-        #     return tbl_object\
-        #             .select()\
-        #             .order_by(-tbl_object.creation_time)\
-        #             .paginate(page, number)\
-        #             .dicts()
+    if start_date and end_date:
+        query = tbl_object\
+                .select()\
+                .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                .where(indexed_obj.match(matching_string) & (tbl_object.date> start_date) &(tbl_object.date < end_date) &(tbl_object.message_type== message_type))\
+                .order_by(-tbl_object.date)
+
+                
+        
+
+    elif start_date and not end_date:
+        query = tbl_object\
+                .select()\
+                .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                .where((indexed_obj.match(matching_string)) & (tbl_object.date> start_date) &(tbl_object.message_type== message_type))\
+                .order_by(-tbl_object.date)
+
+        
 
 
+    elif end_date and not start_date:
+        query = tbl_object\
+                .select()\
+                .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                .where((indexed_obj.match(matching_string)) &(tbl_object.date < end_date) & (tbl_object.message_type== message_type))\
+                .order_by(-tbl_object.date)
+
+
+
+    else: # not  start_date and  not end_date
+        query = tbl_object\
+                    .select()\
+                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id) &(tbl_object.message_type== message_type))\
+                    .where(indexed_obj.match(matching_string))\
+
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()

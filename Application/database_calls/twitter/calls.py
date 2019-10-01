@@ -219,7 +219,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
 
 
 @async_wrap #makes function asynchronous
-def match_text(main_tbl_object, indexed_obj, matching_string, start_date, end_date, skip, limit,  time=None):
+def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, skip, limit,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -228,39 +228,38 @@ def match_text(main_tbl_object, indexed_obj, matching_string, start_date, end_da
 
 
     if start_date and end_date:
-        query = main_tbl_object\
+        query = tbl_object\
                 .select()\
-                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where(indexed_obj.match(matching_string))\
-                .between(start_date, end_date)\
-                .order_by(-main_tbl_object.created_at)
+                .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where(indexed_obj.match(matching_string) & (tbl_object.created_at> start_date) &(tbl_object.created_at < end_date) )\
+                .order_by(-tbl_object.created_at)
 
                 
         
 
     elif start_date and not end_date:
-        query = main_tbl_object\
+        query = tbl_object\
                 .select()\
-                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where((indexed_obj.match(matching_string)) & (main_tbl_object.created_at> start_date))\
-                .order_by(-main_tbl_object.created_at)
+                .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where((indexed_obj.match(matching_string)) & (tbl_object.created_at> start_date))\
+                .order_by(-tbl_object.created_at)
 
         
 
 
     elif end_date and not start_date:
-        query = main_tbl_object\
+        query = tbl_object\
                 .select()\
-                .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where((indexed_obj.match(matching_string)) &(main_tbl_object.created_at < end_date))\
-                .order_by(-main_tbl_object.created_at)
+                .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                .where((indexed_obj.match(matching_string)) &(tbl_object.created_at < end_date))\
+                .order_by(-tbl_object.created_at)
 
 
 
     else: # not  start_date and  not end_date
-        query = main_tbl_object\
+        query = tbl_object\
                     .select()\
-                    .join(indexed_obj, on=(main_tbl_object.tweet_hash == indexed_obj.tweet_hash))\
+                    .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
                     .where(indexed_obj.match(matching_string))\
 
 
