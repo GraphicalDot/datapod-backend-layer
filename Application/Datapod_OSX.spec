@@ -6,12 +6,20 @@ block_cipher = None
 import distutils
 if distutils.distutils_path.endswith('__init__.py'):
     distutils.distutils_path = os.path.dirname(distutils.distutils_path)
-    
+
+
+
+from PyInstaller.utils.hooks import collect_data_files, eval_statement, collect_submodules
+
+datas = collect_submodules( 'sentry_sdk')
+
+hidden_imports = ['engineio.async_eventlet',  '_striptime', 'engineio.async_gevent'] + datas
+
 a = Analysis(['application.py'],
              pathex=['/Users/kaali/Programs/datapod-backend-layer/Application'],
              binaries=[],
              datas=[],
-             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent'],
+             hiddenimports=hidden_imports,
              hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],
              excludes=[],

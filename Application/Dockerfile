@@ -37,10 +37,10 @@ COPY  . .
 RUN ls .
 EXPOSE 8000
 
-RUN pyi-makespec -F --hidden-import engineio.async_eventlet \
- --hidden-import _striptime --hidden-import engineio.async_gevent \
- --additional-hooks-dir pyinstaller_hooks --onefile --windowed \
- --icon datapod.ico --name Datapod_ubuntu  application.py
+# RUN pyi-makespec -F --hidden-import engineio.async_eventlet \
+#  --hidden-import _striptime --hidden-import engineio.async_gevent \
+#  --additional-hooks-dir pyinstaller_hooks --onefile --windowed \
+#  --icon datapod.ico --name Datapod_ubuntu  application.py
 RUN pyinstaller Datapod_ubuntu.spec --distpath releases/
 
 
