@@ -537,7 +537,8 @@ async def emails_filter(request):
 
 
     if matching_string:
-        emails, count = await match_text(request.app.config.EMAILS_TBL,  request.app.config.INDEX_EMAIL_CONTENT_TBL, matching_string, message_type, start_date, end_date, int(skip), int(limit))
+        emails, count = await match_text(request.app.config.EMAILS_TBL,  request.app.config.INDEX_EMAIL_CONTENT_TBL, \
+                matching_string, message_type, start_date, end_date, int(skip), int(limit))
     else:
         logger.info("Without matching string")
         emails, count = await get_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit))
@@ -545,12 +546,10 @@ async def emails_filter(request):
 
     # emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)
     for email in emails:
-        logger.info(email)
         creation_time = email.pop("date")
         #data:image/png;base64
         email.update({"date": creation_time.strftime("%d %b, %Y")})
 
-    logger.success(f"Number of emails are {count}")
     return response.json(
         {
         'error': False,
@@ -585,45 +584,3 @@ async def takeout_location_history(request):
         })
     
 
-@TAKEOUT_BP.get('email/match_text')
-async def match_text_email(request):
-    
-
-
-    if request.args.get("page"):
-        page = request.args.get("page")
-    else:
-        page = 1
-
-
-    if request.args.get("number"):
-        number = request.args.get("number")
-    else:
-        number = 200
-
-    if not request.args.get("match_string"):
-        raise APIBadRequest("get params match_string is required")
-
-    matching_string = request.args.get("match_string") 
-
-
-    logger.info(request.args)
-    logger.info(f"This is the matching string {matching_string}")
-
-
-    res = e_match_text(request.app.config.EMAILS_TBL, request.app.config.INDEX_EMAIL_CONTENT_TBL, \
-            matching_string , page, number)
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "data": res
-        })
-
-    # while True:
-    #     data = 'hello!'
-    #     print('Sending: ' + data)
-    #     await ws.send(data)
-    #     data = await ws.recv()
-    #     print('Received: ' + data)

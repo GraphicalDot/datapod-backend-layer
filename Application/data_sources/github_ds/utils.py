@@ -92,6 +92,13 @@ class GithubIdentity(object):
 
         self.ssh_config_file_path = os.path.join(self.ssh_dir, "config")
 
+        ##if the config file doesnt exists in a rare scenario, then ccreate this 
+        ##file with 644 permissions, i.e -rw for file owner, -r- for group and -r- for anyone else
+        if not os.path.exists(self.ssh_config_file_path):
+            with open(self.ssh_config_file_path , "wt") as _: 
+                os.chmod(self.ssh_config_file_path , 0o644) 
+
+
         self.private_key_path = os.path.join(self.config.KEYS_DIR, f"git_priv_{self._key_name}_{self.timestamp}.key")
         self.public_key_path = os.path.join(self.config.KEYS_DIR, f"git_pub_{self._key_name}_{self.timestamp}.key")
 

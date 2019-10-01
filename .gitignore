@@ -11,4 +11,17 @@ temp/
 build/
 dist/
 __pycache__/
+__pycache__/*
 
+*.log
+
+*.pot
+
+*.pyc
+
+*/*/*/__pycache__/
+
+*/*/__pycache__/
+
+*/__pycache__/
+extra_modules/
