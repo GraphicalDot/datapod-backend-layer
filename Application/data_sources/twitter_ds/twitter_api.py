@@ -9,7 +9,7 @@ import zipfile
 from errors_module.errors import APIBadRequest
 from .twitter_ds import _parse
 from loguru import logger
-from database_calls.twitter.calls import filter_tweet, match_text
+from database_calls.twitter.calls import filter_tweet, match_text, get_account
 import json
 import base64
 from io import BytesIO
@@ -37,6 +37,20 @@ TWITTER_BP = Blueprint("twitter", url_prefix="/twitter")
 # async def parse(request):
 
 
+
+@TWITTER_BP.get('/dashboard')
+async def dashboard(request):
+    res = await get_account(request.app.config.TWITTER_ACC_TBL)
+
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': res,
+        "message": None
+        })
 
 
 @TWITTER_BP.post('/parse')
@@ -145,33 +159,6 @@ async def tweets(request):
     
 
 
-# @TWITTER_BP.get('/tweets/match_text')
-# async def match_text_email(request):
-    
-
-#     page = [request.args.get("page"), 1][request.args.get("page") == None] 
-#     number = [request.args.get("number"), 200][request.args.get("number") == None] 
-
-#     if not request.args.get("match_string"):
-#         raise APIBadRequest("get params match_string is required")
-
-#     matching_string = request.args.get("match_string") 
-
-
-#     logger.info(request.args)
-#     logger.info(f"This is the matching string {matching_string}")
-
-    
-#     res = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
-#             matching_string , page, number)
-
-#     return response.json(
-#         {
-#         'error': False,
-#         'success': True,
-#         "data": res
-#         })
-
 
 @TWITTER_BP.get("/messages")
 async def messages(request):
@@ -185,29 +172,29 @@ async def messages(request):
             })
 
 
-@TWITTER_BP.get("/followers")
-async def followers(request):
+# @TWITTER_BP.get("/followers")
+# async def followers(request):
 
-    return response.json(
-            {
-            'error': False,
-            'success': True,
-            "message": None, 
-            "data": []
-            })
+#     return response.json(
+#             {
+#             'error': False,
+#             'success': True,
+#             "message": None, 
+#             "data": []
+#             })
 
 
 
-@TWITTER_BP.get("/following")
-async def following(request):
+# @TWITTER_BP.get("/following")
+# async def following(request):
 
-    return response.json(
-            {
-            'error': False,
-            'success': True,
-            "message": None, 
-            "data": []
-            })
+#     return response.json(
+#             {
+#             'error': False,
+#             'success': True,
+#             "message": None, 
+#             "data": []
+#             })
 
 
 

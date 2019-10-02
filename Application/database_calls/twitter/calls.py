@@ -133,11 +133,19 @@ def store(**tweet):
 @async_wrap
 def store_account(**account_data):
     table = account_data["tbl_object"]
-
+    logger.info(account_data)
     try:
         table.insert(
                     phone_number=account_data.get("phoneNumber"),
                     email=account_data.get("email"),
+                    follower_count=  account_data.get("follower_count"),
+                    following_count=  account_data.get("following_count"),
+                    list_created=  account_data.get("list_created"),
+                    list_subscribed= account_data.get("list_subscribed"),
+                    list_member=  account_data.get("list_member"),
+                    likes=  account_data.get("likes"),
+                    contacts=  account_data.get("contacts"),
+                    tweets= account_data.get("tweets"),
                     created_at = account_data.get("createdAt"),
                     username = account_data.get("username"),
                     account_id = account_data.get("accountId"),
@@ -149,6 +157,14 @@ def store_account(**account_data):
         table.update(
                     phone_number=account_data.get("phoneNumber"),
                     email=account_data.get("email"),
+                    follower_count=  account_data.get("followers"),
+                    following_count=  account_data.get("following"),
+                    list_created=  account_data.get("list_created"),
+                    list_subscribed= account_data.get("list_subscribed"),
+                    list_member=  account_data.get("list_member"),
+                    likes=  account_data.get("likes"),
+                    contacts=  account_data.get("contacts"),
+                    tweets= account_data.get("tweets"),
                     created_at = account_data.get("createdAt"),
                     username = account_data.get("username"),
                     account_id = account_data.get("accountId"),
@@ -158,18 +174,24 @@ def store_account(**account_data):
                         .execute()
         #raise DuplicateEntryError(tweet['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Twitter Account Data insertion failed {account_data.get('accountDisplayName')} with Duplicate Key but update assucessful")
-        pass
+        logger.error(f"Twitter Account Data insertion failed {account_data.get('accountDisplayName')} with Duplicate Key but update assucessful with {e}")
 
     except Exception as e:
         #raise DuplicateEntryError(tweet['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Tweet tweet insertion failed {account_data.get('accountDisplayName')} with {e}")
+        logger.error(f"Twitter Account data insertion failed {account_data.get('accountDisplayName')} with {e}")
     return 
     
 
-
-
+@async_wrap
+def get_account(tbl_object):
+    logger.info(f"Get account called with tbl_object {tbl_object}")
+    res =  tbl_object\
+                .select()\
+                .dicts()
+    for e in res:
+        logger.info(e)
+    return res
 
 @async_wrap #makes function asynchronous
 def filter_tweet(tbl_object, start_date, end_date, skip, limit):

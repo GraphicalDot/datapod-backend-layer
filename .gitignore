@@ -12,7 +12,7 @@ build/
 dist/
 __pycache__/
 __pycache__/*
-
+releases/
 *.log
 
 *.pot
@@ -25,3 +25,4 @@ __pycache__/*
 
 */__pycache__/
 extra_modules/
+releases/*

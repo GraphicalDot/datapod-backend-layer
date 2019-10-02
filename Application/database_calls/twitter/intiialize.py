@@ -34,6 +34,15 @@ def twitter_initialize(db):
         created_at=peewee.DateTimeField(null=True)
         account_display_name = peewee.TextField(null=True)
 
+
+        follower_count = peewee.IntegerField() 
+        following_count = peewee.IntegerField()
+        list_created = peewee.IntegerField()
+        list_subscribed= peewee.IntegerField()
+        list_member = peewee.IntegerField()
+        likes = peewee.IntegerField()
+        contacts = peewee.IntegerField()
+        tweets = peewee.IntegerField()
     
 
     class TweetObject(BaseModel):
@@ -71,8 +80,8 @@ def twitter_initialize(db):
             TweetAccountData
         ])
 
-    #db.drop_tables([#TweetObject, IndexTweetContent, TweetAccountData])
-    #db.drop_tables([ TweetAccountData])
+    #db.drop_tables([TweetObject, IndexTweetContent, TweetAccountData])
+    #db.drop_tables([TweetAccountData])
 
 
 

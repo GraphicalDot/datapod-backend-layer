@@ -174,8 +174,8 @@ def main():
     # app.blueprint(MIDDLE_LAYER)
     #zmq = ZMQEventLoop()
     #asyncio.set_event_loop(zmq)
-    # for _, (rule, _) in app.router.routes_names.items():
-    #     logger.info(rule)    
+    for _, (rule, _) in app.router.routes_names.items():
+        logger.info(rule)    
 
 
     # app.config.user_data_path = config.user_data_path
