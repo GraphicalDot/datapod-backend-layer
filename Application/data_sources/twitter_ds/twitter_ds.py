@@ -7,14 +7,14 @@ import functools
 from database_calls.credentials import update_datasources_status, datasource_status
 from loguru import logger
 from utils.utils import async_wrap, send_sse_message
-
+from collections import Counter
 
 
 async def _parse(config, path):
     update_datasources_status(config.DATASOURCES_TBL , "TWITTER", None, config.DATASOURCES_CODE["TWITTER"], "Twitter data aprsing has been completed", "PROGRESS")
     
-    number_of_tweets = await read_tweet(config, path)
-    account_display_name = await account(config, path, number_of_tweets)
+    number_of_tweets, common_hashtags, common_user_mentions  = await read_tweet(config, path)
+    account_display_name = await account(config, path, number_of_tweets, common_hashtags, common_user_mentions)
 
 
     update_datasources_status(config.DATASOURCES_TBL , "TWITTER", account_display_name, config.DATASOURCES_CODE["TWITTER"], "Twitter data aprsing has been completed", "COMPLETED")
@@ -35,9 +35,13 @@ async def read_tweet(config, path):
 
     i = 100/len(jsonObj)
 
+
+    hash_tag_list, user_mention_list = [], []
     for num, tweet in enumerate(jsonObj):
         tweet.update({"tbl_object": config.TWITTER_TBL, "indexed_tbl_object": config.TWITTER_INDEXED_TBL})
-        await  store(**tweet)
+        hash_tag, user_mention = await  store(**tweet)
+        hash_tag_list.extend(hash_tag)
+        user_mention_list.extend(user_mention)
 
         res = {"message": "Processing tweet", "percentage": int(i*(num+1))}
         await send_sse_message(config, config.TWITTER_SSE_TOPIC, res)
@@ -52,10 +56,14 @@ async def read_tweet(config, path):
     #                 functools.partial(q_images_db.store, **args)) for args in images_data],
     #         return_when=asyncio.ALL_COMPLETED
     #     )
-    return num
+    logger.info(f"User Mention list {user_mention_list}")
+    logger.info(f"Hash tag list list {hash_tag_list}")
 
 
-async def account(config, path, number_of_tweets):
+    return num, most_common(hash_tag_list), most_common(user_mention_list)
+
+
+async def account(config, path, number_of_tweets, common_hashtags, common_user_mentions):
     file_path = os.path.join(path, "account.js")
     with open(file_path, 'rb') as f: 
         lines = f.read().decode().replace("\n", "") 
@@ -72,6 +80,9 @@ async def account(config, path, number_of_tweets):
     account_data.update({"likes":  await likes(path)})
     account_data.update({"contacts":  await contacts(path)})
     account_data.update({"tweets":  number_of_tweets})
+    account_data.update({"common_hashtags":  json.dumps(common_hashtags)})
+    account_data.update({"common_user_mentions":  json.dumps(common_user_mentions)})
+
 
     if account_data:
         logger.info(f"Account table for Twitter  {config.TWITTER_ACC_TBL}")
@@ -132,3 +143,10 @@ async def read_file(path, filename):
         logger.error(e)
         return  _list, 0
     return 
+
+
+def most_common(array, items=10):
+    if len(array) > 0:
+        res = Counter(array)
+        return res.most_common()[0: items]
+    return []

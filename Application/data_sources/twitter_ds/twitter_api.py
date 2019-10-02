@@ -42,13 +42,15 @@ TWITTER_BP = Blueprint("twitter", url_prefix="/twitter")
 async def dashboard(request):
     res = await get_account(request.app.config.TWITTER_ACC_TBL)
 
+    result = res[0]
+    result.update({"common_hashtags":  json.loads(result["common_hashtags"]), "common_user_mentions": json.loads(result["common_user_mentions"])})  
 
 
     return response.json(
         {
         'error': False,
         'success': True,
-        'data': res,
+        'data': result, 
         "message": None
         })
 

@@ -43,7 +43,9 @@ def twitter_initialize(db):
         likes = peewee.IntegerField()
         contacts = peewee.IntegerField()
         tweets = peewee.IntegerField()
-    
+        common_hashtags = peewee.BlobField(null=True) 
+        common_user_mentions = peewee.BlobField(null=True)
+
 
     class TweetObject(BaseModel):
         tweet_hash = peewee.TextField(index=True, unique=True,null=False)
@@ -57,6 +59,9 @@ def twitter_initialize(db):
         possibly_sensitive = peewee.BooleanField(null=True)
         truncated=peewee.BooleanField(null=True)
         retweet_count=peewee.TextField(null=True)
+        hashtags=peewee.TextField(null=True)
+        user_mentions = peewee.TextField(null=True)
+    
         created_at=peewee.DateTimeField(null=True)
         favorited=peewee.BooleanField(null=True)
         full_text=peewee.TextField(null=False)

@@ -68,21 +68,25 @@ def store(**tweet):
     ##this will extract all the hashtags from the tweet, if the present and creates 
     ## a string with all the hashtags in it
     hashtags = ""  
+    hashtag_list  = []  
     
     if tweet.get('entities'): 
         if tweet['entities'].get("hashtags"): 
             for tag in tweet['entities'].get("hashtags"): 
                 hashtags= hashtags + ", " + tag.get('text') 
+                hashtag_list.append(tag.get('text'))
     logger.info(f"hashtags == {hashtags}") 
 
     ##this will extract all the user mentions from the tweet, if the present and creates 
     ## a string with all the hashtags in it
 
     user_mentions=""
+    user_mentions_list = []
     if tweet.get('entities'): 
         if tweet['entities'].get("user_mentions"): 
             for tag in tweet['entities'].get("user_mentions"): 
                 user_mentions= user_mentions + ", " + tag.get('name')+ ", " +tag.get('screen_name') 
+                user_mentions_list.append(tag.get('screen_name'))
     logger.info(f"user_mentions == {user_mentions}") 
 
 
@@ -105,6 +109,8 @@ def store(**tweet):
                     id_str=tweet.get("id_str"),
                     possibly_sensitive = tweet.get("possibly_sensitive"),
                     truncated=tweet.get("truncated"),
+                    hashtags = hashtags,
+                    user_mentions = user_mentions,
                     retweet_count=tweet.get("retweet_count"),
                     created_at=parse(tweet.get("created_at")),
                     favorited=tweet.get("favorited"),
@@ -127,7 +133,8 @@ def store(**tweet):
         #raise DuplicateEntryError(tweet['email_id'], "Email")
         #use with tenacity
         logger.error(f"Tweet tweet insertion failed {tweet.get('id_str')} with {e}")
-    return 
+    
+    return hashtag_list, user_mentions_list
 
 
 @async_wrap
@@ -150,6 +157,9 @@ def store_account(**account_data):
                     username = account_data.get("username"),
                     account_id = account_data.get("accountId"),
                     created_via= account_data.get("createdVia"),
+                    common_hashtags = account_data.get("common_hashtags"), 
+                    common_user_mentions = account_data.get("common_user_mentions"),
+
                     account_display_name = account_data.get("accountDisplayName")).execute()
 
         #logger.success(f"Success on insert email_id --{tweet['email_id']}-- path --{tweet['path']}--")
@@ -168,6 +178,8 @@ def store_account(**account_data):
                     created_at = account_data.get("createdAt"),
                     username = account_data.get("username"),
                     account_id = account_data.get("accountId"),
+                    common_hashtags = account_data.get("common_hashtags"), 
+                    common_user_mentions = account_data.get("common_user_mentions"),
                     created_via= account_data.get("createdVia"),
                     account_display_name = account_data.get("accountDisplayName")).\
                         where(table.account_id==account_data.get("accountId"))\
