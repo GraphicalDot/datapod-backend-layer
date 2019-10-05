@@ -167,8 +167,8 @@ def store_account(**account_data):
         table.update(
                     phone_number=account_data.get("phoneNumber"),
                     email=account_data.get("email"),
-                    follower_count=  account_data.get("followers"),
-                    following_count=  account_data.get("following"),
+                    follower_count=  account_data.get("follower_count"),
+                    following_count=  account_data.get("following_count"),
                     list_created=  account_data.get("list_created"),
                     list_subscribed= account_data.get("list_subscribed"),
                     list_member=  account_data.get("list_member"),

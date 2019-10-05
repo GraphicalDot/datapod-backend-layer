@@ -35,14 +35,14 @@ def twitter_initialize(db):
         account_display_name = peewee.TextField(null=True)
 
 
-        follower_count = peewee.IntegerField() 
-        following_count = peewee.IntegerField()
-        list_created = peewee.IntegerField()
-        list_subscribed= peewee.IntegerField()
-        list_member = peewee.IntegerField()
-        likes = peewee.IntegerField()
-        contacts = peewee.IntegerField()
-        tweets = peewee.IntegerField()
+        follower_count = peewee.IntegerField(null=True) 
+        following_count = peewee.IntegerField(null=True)
+        list_created = peewee.IntegerField(null=True)
+        list_subscribed= peewee.IntegerField(null=True)
+        list_member = peewee.IntegerField(null=True)
+        likes = peewee.IntegerField(null=True)
+        contacts = peewee.IntegerField(null=True)
+        tweets = peewee.IntegerField(null=True)
         common_hashtags = peewee.BlobField(null=True) 
         common_user_mentions = peewee.BlobField(null=True)
 
