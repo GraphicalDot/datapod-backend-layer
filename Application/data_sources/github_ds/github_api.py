@@ -26,7 +26,7 @@ from utils.utils import async_wrap
 from utils.utils import creation_date
 from .backup_new import retrieve_repositories, backup_repositories, per_repository
 #from gitsuggest import GitSuggest
-
+from github import Github , BadCredentialsException, GithubException
 GITHUB_BP = Blueprint("github", url_prefix="/github")
 
 
@@ -83,6 +83,20 @@ async def parse(request):
     """
 
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
+
+
+    try:
+        logger.info(f'Github username {request.json["username"]}')
+
+        logger.info(f'Github username {request.json["password"]}')
+
+        g = Github(request.json["username"], request.json["password"] ) 
+        g.get_user().disk_usage 
+    except BadCredentialsException:
+        raise APIBadRequest("User credentials are incorrect")
+    except Exception as e:
+        raise APIBadRequest(e)
+
     try:
         inst = await GithubIdentity(request.app.config, "github.com", "datapod", request.json["username"], request.json["password"])
         await inst.keys_path()
@@ -90,16 +104,21 @@ async def parse(request):
 
 
     except IdentityAlreadyExists as e:
-        logger.success(f"GithubDS Error {e}")
+        logger.warning(f"GithubDS Error {e}")
 
     except IdentityDoesntExists as e:
-        await inst.add(request.json["username"], request.json["password"])
-        logger.success(f"GithubDS Error {e}")
+        logger.info(f"Github Keys doesnt exists creating one")
+        await inst.add()
 
     except IdentityExistsNoPath as e:
         ##this implies host is present in config but path of privatekey doesnt exists
-        logger.success(f"GithubDS Error {e}")
+        logger.warning(f"Github Warning {e}")
         await inst.update()
+
+    except Exception as e :
+        ##this implies host is present in config but path of privatekey doesnt exists
+        logger.error(f"GithubDS Error {e}")
+        raise APIBadRequest(e)
 
     await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
     update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , \

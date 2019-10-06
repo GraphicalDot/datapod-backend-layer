@@ -95,8 +95,10 @@ class GithubIdentity(object):
         ##if the config file doesnt exists in a rare scenario, then ccreate this 
         ##file with 644 permissions, i.e -rw for file owner, -r- for group and -r- for anyone else
         if not os.path.exists(self.ssh_config_file_path):
+            logger.error("SSh config file doesnt exists")
             with open(self.ssh_config_file_path , "wt") as _: 
                 os.chmod(self.ssh_config_file_path , 0o644) 
+            logger.success("SSh config file created")
 
 
         self.private_key_path = os.path.join(self.config.KEYS_DIR, f"git_priv_{self._key_name}_{self.timestamp}.key")
@@ -147,8 +149,13 @@ class GithubIdentity(object):
         Returns:
 
         """
-        res = SSHConfig.load(self.ssh_config_file_path)
-        res.parse()
+        try:
+            res = SSHConfig.load(self.ssh_config_file_path)
+            res.parse()
+        except Exception as e:
+            logger.warning("ssh config doesnt exists")
+            return False
+
         try:
             res.get(self.hostname)
             private_key_path = res.host_key(self.hostname, "IdentityFile")
