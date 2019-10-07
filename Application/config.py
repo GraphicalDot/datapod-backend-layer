@@ -50,7 +50,7 @@ TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Obje
 
 """
 
-########update_datasources_status(Datasources , "BACKUP", "backup" ,80, "Backup Completed", "SETUP_COMPLETED")
+########update_datasources_status(Datasources , "BACKUP", "backup",80, "Backup Completed", "SETUP_COMPLETED")
 """
 
 # logger.info("Deleting tables")
@@ -138,6 +138,7 @@ class Config:
     FB_IMAGES_TBL = FB_IMAGES_TBL
     TWITTER_TBL = TWITTER_TBL
     TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
+    FB_SSE_TOPIC = "FB_PROGRESS"
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api

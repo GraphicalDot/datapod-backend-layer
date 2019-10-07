@@ -8,6 +8,7 @@ import pytz
 import sys
 from errors_module.errors import APIBadRequest
 from loguru import logger
+from utils.utils import async_wrap, send_sse_message
 
 from database_calls.credentials import update_datasources_status
 from database_calls.facebook.calls import store_image
@@ -40,13 +41,17 @@ async def __parse(config, path):
     update_datasource_table(config, "PROGRESS")
     
     async def change_uri(json_data, prefix_path):
-        for entry in json_data["photos"]:
+        i = 100/len(json_data["photos"])
+        for  num, entry in enumerate(json_data["photos"]):
             uri = os.path.join(prefix_path, entry["uri"])
             #timestamp = indian_time_stamp(entry["creation_timestamp"])
             timestamp = datetime.datetime.fromtimestamp(entry["creation_timestamp"])
             entry.update({"uri": uri, "creation_timestamp": timestamp, "tbl_object": config.FB_IMAGES_TBL})
             logger.info(entry)
+            res = {"message": "Progress", "percentage": int(i*(num+1))}
+
             await store_image(**entry)
+            await send_sse_message(config, config.FB_SSE_TOPIC, res)
 
         return json_data["photos"]
 
@@ -64,6 +69,8 @@ async def __parse(config, path):
 
 
     update_datasource_table(config, "COMPLETED")
+    res = {"message": "completed", "percentage": 100}
+    await send_sse_message(config, config.FB_SSE_TOPIC, res)
     return 
 
 

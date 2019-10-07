@@ -34,7 +34,7 @@ def facebook_initialize(db):
 
     class FBImages(BaseModel):
         title = peewee.TextField()
-        uri = peewee.TextField(index=True, null=False)
+        uri = peewee.TextField(index=True, unique=True, null=False)
         creation_timestamp = peewee.DateTimeField()
         media_metadata = peewee.BlobField()
         comments =  peewee.BlobField(null=True)
