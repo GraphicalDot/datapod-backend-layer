@@ -11,7 +11,7 @@ from database_calls.twitter.intiialize import twitter_initialize
 from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
-__VERSION__ = "0.13-Beta"
+__VERSION__ = "0.14-Beta"
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
