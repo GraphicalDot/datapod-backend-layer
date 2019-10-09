@@ -20,7 +20,6 @@ logger.add(LOGFILE, retention="2 days")  # Cleanup after some time
 
 
 
-
 USER_INDEX = f"{MAIN_DIR}/user.index" #this file be creating when making backup and keeps record of all the files who are indexed for backup i.e changed or not
 KEYS_DIR = os.path.join(MAIN_DIR, "keys")
 USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
