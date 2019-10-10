@@ -6,17 +6,17 @@ from sanic.request import RequestParameters
 from sanic import response
 import os
 import zipfile
-from .facebook_ds import __parse, update_datasource_table
+from .utils import __parse, update_datasource_table
 from errors_module.errors import APIBadRequest
 from loguru import logger
-from database_calls.facebook.calls import filter_images
+from .db_calls import filter_images
 import json
 import base64
 from io import BytesIO
 from PIL import Image
 import datetime
 
-FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
+# FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 
 
 
@@ -37,7 +37,16 @@ FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 
 
 
-@FACEBOOK_BP.post('/parse')
+async def stats(request):
+    pass
+
+
+async def status(request):
+    pass
+
+
+
+# @FACEBOOK_BP.post('/parse')
 async def parse(request):
     """
     To get all the assets created by the requester
@@ -102,7 +111,7 @@ def image_base64(path):
         logger.error(f"Error {e} while converting fb image to base64")
     return img_str.decode()
 
-@FACEBOOK_BP.get('/images')
+# @FACEBOOK_BP.get('/images')
 async def images(request):
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 20][request.args.get("number") == None] 
@@ -162,7 +171,7 @@ def read_chat(config, chat_type, chat_id, all_messages=False):
     return result    
 
 
-@FACEBOOK_BP.get('/chats')
+# @FACEBOOK_BP.get('/chats')
 async def allchats(request):
     """
     To get all the chats created by the user
@@ -207,7 +216,7 @@ async def allchats(request):
         "data": result
         })
 
-@FACEBOOK_BP.get('/chat')
+# @FACEBOOK_BP.get('/chat')
 async def single_chat(request):
     """
     To get all the chats created by the user

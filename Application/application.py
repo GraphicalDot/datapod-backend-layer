@@ -174,14 +174,28 @@ def main():
     # app.blueprint(MIDDLE_LAYER)
     #zmq = ZMQEventLoop()
     #asyncio.set_event_loop(zmq)
-    # for _, (rule, _) in app.router.routes_names.items():
-    #     logger.info(rule)    
+
 
 
     # app.config.user_data_path = config.user_data_path
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
+    from datasources.facebook.settings import Routes as FBRoutes
+    inst = FBRoutes(app.config["DB_OBJECT"])
+    logger.info(inst.config)
+    logger.info(inst.routes)
+
+    for (http_method, route_list) in inst.routes.items():
+        for (route_name, handler_function) in route_list:
+            logger.info
+            app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
+
+
+    for _, (rule, _) in app.router.routes_names.items():
+        logger.info(rule)    
+
+
     logger.info(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
     #pprint.pprint(app.config)

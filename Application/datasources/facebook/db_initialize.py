@@ -1,3 +1,6 @@
+
+
+
 import peewee
 import datetime
 import sqlite3
@@ -13,16 +16,7 @@ def initialize(db):
             database = db
 
 
-    # class Owner(BaseModel):
-    #     login = peewee.TextField()
-    #     id = peewee.IntegerField()
-    #     node_id = peewee.TextField()
-    #     avatar_url = peewee.TextField()
-    #     gravatar_id = peewee.TextField(null=True)
-    #     url = peewee.TextField()
-    #     html_url = peewee.TextField()
-    #     type = peewee.TextField()
-    #     site_admin = peewee.BooleanField()
+
 
     class Creds(BaseModel):
         username = peewee.TextField(unique=True, null=False)
@@ -51,7 +45,7 @@ def initialize(db):
         attachments = peewee.BlobField(null=True)
         title = peewee.TextField(null=True)
 
-    class Content(FTSModel):
+    class ContentDDD(FTSModel):
         content = peewee.TextField()
         account_id = peewee.TextField()
         content_hash = peewee.TextField()
@@ -62,12 +56,14 @@ def initialize(db):
 
     db.create_tables([
             Creds, 
-            Images
+            Images,
+            OtherPosts,
+            ContentDDD
         ])
 
     #db.drop_tables([FBImages])
 
 
 
-    return Creds, Images
+    return Creds, Images, OtherPosts, ContentDDD
 

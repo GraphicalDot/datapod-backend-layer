@@ -6,12 +6,12 @@ from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from database_calls.initialize_tables import intialize_db
 from database_calls.coderepos.github.initialize import coderepos_github_initialize
-from database_calls.facebook.initialize import facebook_initialize
+#from database_calls.facebook.initialize import facebook_initialize
 from database_calls.twitter.intiialize import twitter_initialize
 from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
-__VERSION__ = "0.14-Beta"
+__VERSION__ = "0.15-Beta"
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
@@ -44,7 +44,7 @@ DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, Cry
     Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
 GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
-FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
+#FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
 TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Object)
 
 
@@ -134,8 +134,8 @@ class Config:
     TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
     TWITTER_ACC_TBL = TweetAccountData
     RESERVATIONS_TBL = Reservations
-    FB_CREDS_TBL= FB_CREDS_TBL 
-    FB_IMAGES_TBL = FB_IMAGES_TBL
+    # FB_CREDS_TBL= FB_CREDS_TBL 
+    # FB_IMAGES_TBL = FB_IMAGES_TBL
     TWITTER_TBL = TWITTER_TBL
     TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
     FB_SSE_TOPIC = "FB_PROGRESS"
