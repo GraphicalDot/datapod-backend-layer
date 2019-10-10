@@ -20,7 +20,7 @@ from signal import signal, SIGINT
 import sys
 import json
 from asyncinit import asyncinit
-
+import importlib
 from sanic import Sanic
 from sanic_cors import CORS
 from zmq.asyncio import ZMQEventLoop
@@ -159,6 +159,42 @@ def finish(app, loop):
     return 
 
 
+def add_routes(app):
+    import datasources
+    import pkgutil
+    list_name = []
+    for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
+        if name.startswith('datapod_'):
+            logger.info(name)
+            module_name = f"{name}.settings"
+            # m = importlib.import_module(name)
+            # logger.info("module_name")
+
+            module_name = __import__(name)
+            logger.info("module_name")
+
+            inst = m.Routes(app.config["DB_OBJECT"])
+            logger.info(inst.config)
+            logger.info(inst.routes)
+
+    
+    # from datasources.facebook.settings import Routes as FBRoutes
+    # inst = FBRoutes(app.config["DB_OBJECT"])
+    # logger.info(inst.config)
+    # logger.info(inst.routes)
+
+    # for (http_method, route_list) in inst.routes.items():
+    #     for (route_name, handler_function) in route_list:
+    #         app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
+
+    # app.config.update({inst.datasource_name: inst.config})
+
+
+
+
+
+
+
 def main():
     #app.blueprint(ACCOUNTS_BP)
     #app.blueprint(ERRORS_BP)
@@ -181,16 +217,8 @@ def main():
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
-    from datasources.facebook.settings import Routes as FBRoutes
-    inst = FBRoutes(app.config["DB_OBJECT"])
-    logger.info(inst.config)
-    logger.info(inst.routes)
-
-    for (http_method, route_list) in inst.routes.items():
-        for (route_name, handler_function) in route_list:
-            logger.info
-            app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
-
+    
+    add_routes(app)
 
     for _, (rule, _) in app.router.routes_names.items():
         logger.info(rule)    
@@ -198,7 +226,7 @@ def main():
 
     logger.info(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
-    #pprint.pprint(app.config)
+    pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
 
     app.run(host="0.0.0.0", port=app.config.PORT, workers=1, access_log=True)

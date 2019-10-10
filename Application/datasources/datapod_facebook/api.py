@@ -46,12 +46,10 @@ async def status(request):
 
 
 
-# @FACEBOOK_BP.post('/parse')
 async def parse(request):
     """
     To get all the assets created by the requester
     """
-    import zipfile
     request.app.config.VALIDATE_FIELDS(["path"], request.json)
 
 
