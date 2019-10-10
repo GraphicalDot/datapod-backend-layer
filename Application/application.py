@@ -165,30 +165,25 @@ def add_routes(app):
     list_name = []
     for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
         if name.startswith('datapod_'):
-            logger.info(name)
-            module_name = f"{name}.settings"
-            # m = importlib.import_module(name)
-            # logger.info("module_name")
-
-            module_name = __import__(name)
-            logger.info("module_name")
+            logger.success(f"Reading module {name}")
+            module_name = f"datasources.{name}.settings"
+            m = importlib.import_module(module_name)
 
             inst = m.Routes(app.config["DB_OBJECT"])
-            logger.info(inst.config)
-            logger.info(inst.routes)
+            # logger.info(inst.config)
+            # logger.info(inst.routes)
+            # module_name = __import__(name)
+            # logger.info("module_name")
+            for (http_method, route_list) in inst.routes.items():
+                for (route_name, handler_function) in route_list:
+                    logger.info(f"Registering {http_method} for {route_name} for datasource {inst.datasource_name}")
+                    app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
+
+            logger.info(f"Updating Appication config with {inst.datasource_name} configurations ")
+            app.config.update({inst.datasource_name: inst.config})
+
 
     
-    # from datasources.facebook.settings import Routes as FBRoutes
-    # inst = FBRoutes(app.config["DB_OBJECT"])
-    # logger.info(inst.config)
-    # logger.info(inst.routes)
-
-    # for (http_method, route_list) in inst.routes.items():
-    #     for (route_name, handler_function) in route_list:
-    #         app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
-
-    # app.config.update({inst.datasource_name: inst.config})
-
 
 
 
