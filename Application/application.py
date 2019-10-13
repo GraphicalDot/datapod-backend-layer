@@ -167,13 +167,12 @@ def add_routes(app):
         if name.startswith('datapod_'):
             logger.success(f"Reading module {name}")
             module_name = f"datasources.{name}.settings"
+
             m = importlib.import_module(module_name)
 
             inst = m.Routes(app.config["DB_OBJECT"])
-            # logger.info(inst.config)
-            # logger.info(inst.routes)
-            # module_name = __import__(name)
-            # logger.info("module_name")
+            inst.config.update({"code": hash(inst.datasource_name)%10000})                 
+            
             for (http_method, route_list) in inst.routes.items():
                 for (route_name, handler_function) in route_list:
                     logger.info(f"Registering {http_method} for {route_name} for datasource {inst.datasource_name}")

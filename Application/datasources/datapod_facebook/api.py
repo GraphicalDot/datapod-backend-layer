@@ -1,11 +1,9 @@
-import shutil
 import asyncio
 import aiohttp
 from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
-import zipfile
 from .utils import __parse, update_datasource_table
 from errors_module.errors import APIBadRequest
 from loguru import logger
@@ -14,7 +12,10 @@ import json
 import base64
 from io import BytesIO
 from PIL import Image
-import datetime
+from datasources.shared.extract import extract
+
+DATASOURCE_NAME = "Facebook"
+
 
 # FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
 
@@ -50,39 +51,46 @@ async def parse(request):
     """
     To get all the assets created by the requester
     """
-    request.app.config.VALIDATE_FIELDS(["path"], request.json)
+    request.app.config.VALIDATE_FIELDS(["path", "username"], request.json)
+
+    config = request.app.config
+    dst_path_prefix = os.path.join(config.RAW_DATA_PATH,DATASOURCE_NAME) 
+    logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
+    
+    checksum, dst_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
+    
 
 
 
+    # if not os.path.exists(request.json["path"]):
+    #     raise APIBadRequest("This path doesnt exists")
 
-    if not os.path.exists(request.json["path"]):
-        raise APIBadRequest("This path doesnt exists")
-
-    try:
-        the_zip_file = zipfile.ZipFile(request.json["path"])
-    except:
-        raise APIBadRequest("Invalid zip takeout file")
-
-
-    logger.info(f"Testing zip {request.json['path']} file")
-    ret = the_zip_file.testzip()
-
-    if ret is not None:
-        raise APIBadRequest("Invalid zip takeout file")
-
-    ##check if mbox file exists or not
+    # try:
+    #     the_zip_file = zipfile.ZipFile(request.json["path"])
+    # except:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
 
+    # logger.info(f"Testing zip {request.json['path']} file")
+    # ret = the_zip_file.testzip()
 
-    logger.info("Copying and extracting facebook data")
+    # if ret is not None:
+    #     raise APIBadRequest("Invalid zip takeout file")
 
-    ds_path = os.path.join(request.app.config.RAW_DATA_PATH, "facebook")
-    try:
-        shutil.unpack_archive(request.json["path"], extract_dir=ds_path, format=None)
-    except:
-        raise APIBadRequest("Invalid zip facebook file")
+    # ##check if mbox file exists or not
 
-    logger.info("Copying and extracting facebook data completed")
+
+
+    # logger.info("Copying and extracting facebook data")
+
+    # ds_path = os.path.join(request.app.config.RAW_DATA_PATH, "facebook")
+    # try:
+    #     shutil.unpack_archive(request.json["path"], extract_dir=ds_path, format=None)
+    # except:
+    #     raise APIBadRequest("Invalid zip facebook file")
+
+    # logger.info("Copying and extracting facebook data completed")
+
 
 
 
