@@ -8,10 +8,8 @@ import pytz
 import sys
 from errors_module.errors import APIBadRequest
 from loguru import logger
-from utils.utils import async_wrap, send_sse_message
 
-from database_calls.credentials import update_datasources_status
-from .db_calls import store_image
+from .db_calls import store_image, update_datasources_status
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
@@ -20,38 +18,28 @@ sys.path.append(parent_module_path)
 #from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
 
 
-def indian_time_stamp(naive_timestamp=None):
-    tz_kolkata = pytz.timezone('Asia/Kolkata')
-    time_format = "%Y-%m-%d %H:%M:%S"
-    if naive_timestamp:
-        aware_timestamp = tz_kolkata.localize(datetime.datetime.fromtimestamp(naive_timestamp))
-    else:
-        naive_timestamp = datetime.datetime.now()
-        aware_timestamp = tz_kolkata.localize(naive_timestamp)
-    return aware_timestamp.strftime(time_format + " %Z%z")
 
-
-
-
-
-async def __parse(config, path):
+async def __parse(config, path, username, checksum, datasource_name):
     ##add this if this has to executed periodically
     ##while True:
     #path = /home/feynman/.datapod/userdata/raw/facebook/
-    update_datasource_table(config, "PROGRESS")
+    await update_datasources_status(config[datasource_name]["tables"]["status"], datasource_name, username, "PROGRESS")
     
     async def change_uri(json_data, prefix_path):
         i = 100/len(json_data["photos"])
         for  num, entry in enumerate(json_data["photos"]):
             uri = os.path.join(prefix_path, entry["uri"])
             #timestamp = indian_time_stamp(entry["creation_timestamp"])
-            timestamp = datetime.datetime.fromtimestamp(entry["creation_timestamp"])
-            entry.update({"uri": uri, "creation_timestamp": timestamp, "tbl_object": config.FB_IMAGES_TBL})
+            timestamp = datetime.datetime.utcfromtimestamp(entry["creation_timestamp"])
+            entry.update({"uri": uri, "creation_timestamp": timestamp, 
+                "tbl_object": config[datasource_name]["tables"]["image_table"], 
+                "username": username, "checksum": checksum})
+            
             logger.info(entry)
             res = {"message": "Progress", "percentage": int(i*(num+1))}
 
             await store_image(**entry)
-            await send_sse_message(config, config.FB_SSE_TOPIC, res)
+            await config["send_sse_message"](config, datasource_name, res)
 
         return json_data["photos"]
 
@@ -68,9 +56,11 @@ async def __parse(config, path):
             images.extend(await change_uri(data, path))
 
 
-    update_datasource_table(config, "COMPLETED")
+    await update_datasources_status(config[datasource_name]["tables"]["status"], datasource_name, username, "COMPLETED")
+
     res = {"message": "completed", "percentage": 100}
-    await send_sse_message(config, config.FB_SSE_TOPIC, res)
+    await config["send_sse_message"](config, datasource_name, res)
+
     return 
 
 
@@ -87,20 +77,3 @@ def profile(config):
         name = "Dummy facebook name"
 
     return name
-
-
-def update_datasource_table(config, status):
-    """
-    Update data sources table after successful parsing of takeout and emails 
-    """
-    if status not in ["PROGRESS", "COMPLETED"]:
-        raise APIBadRequest("Invalid status")
-
-    data = {"tbl_object": config.DATASOURCES_TBL,
-            "name": profile(config), 
-            "source": "FACEBOOK", "message": "fb data parsing started",
-            "code": config.DATASOURCES_CODE["FACEBOOK"],
-            "status": status }
-
-    update_datasources_status(**data)
-    return 

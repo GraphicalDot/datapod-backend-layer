@@ -24,6 +24,23 @@ def initialize(db):
         identifier = peewee.TextField(null=False)
 
 
+    class FacebookStatus(BaseModel):
+        source = peewee.TextField(index=True, unique=True)
+        username = peewee.TextField(null=True)
+        status = peewee.TextField(null=True)
+        last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
+
+
+    class FacebookStats(BaseModel):
+        source = peewee.TextField(index=True, unique=True)
+        name = peewee.TextField(null=True)
+        code = peewee.IntegerField(index=True, unique=True)
+        message = peewee.TextField(null=True)
+        last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
+        status = peewee.TextField(null=True)
+
+
+
     class FacebookArchives(BaseModel):
         path = peewee.TextField(null=False)
         username = peewee.TextField(unique=True, null=False)
@@ -76,19 +93,24 @@ def initialize(db):
             FacebookImages,
             FacebookYourPosts,
             FacebookOtherPosts,
-            FacebookContent
+            FacebookContent,
+            FacebookStatus
         ])
 
     db.drop_tables([  
-        # FacebookCreds,
-        #     FacebookArchives, 
-        #     FacebookImages,
-        #     FacebookYourPosts,
-        #     FacebookOtherPosts,
-        #     FacebookContent
+            FacebookCreds,
+            FacebookArchives, 
+            FacebookImages,
+            FacebookYourPosts,
+            FacebookOtherPosts,
+            FacebookContent,
+            FacebookStatus
+
         ])
 
 
 
-    return FacebookCreds, FacebookArchives, FacebookImages, FacebookYourPosts, FacebookOtherPosts, FacebookContent
+    return FacebookCreds, FacebookArchives, FacebookImages, \
+            FacebookYourPosts, FacebookOtherPosts, FacebookContent,\
+            FacebookStatus
 

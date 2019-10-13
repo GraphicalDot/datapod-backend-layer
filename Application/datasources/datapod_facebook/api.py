@@ -4,7 +4,7 @@ from sanic import Blueprint
 from sanic.request import RequestParameters
 from sanic import response
 import os
-from .utils import __parse, update_datasource_table
+from .utils import __parse
 from errors_module.errors import APIBadRequest
 from loguru import logger
 from .db_calls import filter_images
@@ -57,7 +57,7 @@ async def parse(request):
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH,DATASOURCE_NAME) 
     logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
     
-    checksum, dst_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
+    checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
     
 
 
@@ -95,7 +95,7 @@ async def parse(request):
 
 
 
-    request.app.add_task(__parse(request.app.config, ds_path))
+    request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum,  DATASOURCE_NAME))
 
     return response.json(
         {

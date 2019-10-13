@@ -59,7 +59,7 @@ from http import HTTPStatus
 from database_calls.credentials import update_datasources_status
 from loguru import logger
 #from custom_logger import LOGGING
-
+from utils.utils import send_sse_message
 from sentry_sdk import init
 init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
 
@@ -222,7 +222,7 @@ def main():
     #app.config["SIO"] = sio
     pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
-
+    app.config.update({"send_sse_message": send_sse_message})
     app.run(host="0.0.0.0", port=app.config.PORT, workers=1, access_log=True)
 
     """

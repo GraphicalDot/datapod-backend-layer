@@ -6,12 +6,34 @@ from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 from tenacity import *
 from loguru import logger
-from utils.utils import async_wrap
-
+import aiomisc
 #@retry(stop=stop_after_attempt(2))
 
 
-@async_wrap
+@aiomisc.threaded
+def update_datasources_status(facebook_status_table, datasource_name, username, status):
+    try:
+        facebook_status_table.insert(source=datasource_name,  
+                                    username=username,
+                                    status=status,
+                                    ).execute()
+                                    
+
+    except IntegrityError as e:
+        logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
+
+        facebook_status_table.update(
+            status=status).\
+        where(facebook_status_table.username==username).\
+        execute()
+
+    except Exception as e:
+        logger.error(f"Couldnt {datasource_name} updated because of {e}")
+    return 
+
+
+
+@aiomisc.threaded
 def store_creds(tbl_object, username, password):
     """
     purchases: a list of purchases dict
@@ -32,7 +54,7 @@ def store_creds(tbl_object, username, password):
     return 
 
 
-@async_wrap
+@aiomisc.threaded
 def store_image(**data):
     """
     purchases: a list of purchases dict
@@ -56,6 +78,8 @@ def store_image(**data):
                     media_metadata = media_metadata,
                     uri = data["uri"],
                     creation_timestamp = data.get("creation_timestamp"),
+                    username = data.get("username"),
+                    checksum=data.get("checksum")
                     ).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
@@ -72,7 +96,7 @@ def store_image(**data):
     return 
 
 
-@async_wrap #makes function asynchronous
+@aiomisc.threaded
 def filter_images(tbl_object, page, number):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
@@ -85,47 +109,3 @@ def filter_images(tbl_object, page, number):
             .order_by(-tbl_object.creation_timestamp)\
             .paginate(page, number)\
              .dicts()
-
-
-@async_wrap
-def get_single_repository(tbl_object, name):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
-
-    """
-    query = (tbl_object\
-            .select()\
-            .where(tbl_object.name==name).dicts())
-    return list(query)
-
-
-
-
-
-@async_wrap
-def counts(tbl_object):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
-
-    """
-    gists = tbl_object\
-            .select()\
-            .where(tbl_object.is_gist==True).count()
-    
-    repos = tbl_object\
-            .select()\
-            .where(tbl_object.is_gist != True, tbl_object.is_starred != True).count()
-
-    starred = tbl_object\
-            .select()\
-            .where(tbl_object.is_starred==True).count()
-
-
-
-    return {
-        "gists_count": gists,
-        "starred_count": starred,
-        "repos_count": repos,
-    }
