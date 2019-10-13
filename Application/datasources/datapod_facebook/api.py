@@ -13,37 +13,38 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-
-DATASOURCE_NAME = "Facebook"
-
-
-# FACEBOOK_BP = Blueprint("facebook", url_prefix="/facebook")
-
-
-
-
-
-# @FACEBOOK_BP.route('/serve')
-# async def serve(request):
-#     path = request.args.get("path")
-
-#     request.app.url_for(path) 
-
-# FACEBOOK_BP.static('/profile',  "~/.datapod/userdata/raw/facebook/photos_and_videos/Profilepictures_IHIxz3DIcQ/")
-
-
-# @FACEBOOK_BP.post('/parse')
-# async def parse(request):
-
+from .db_calls import get_datasources_status
+from .variables import DATASOURCE_NAME
+import subprocess
 
 
 
 async def stats(request):
+    
+    def get_dir_size(dirpath):
+        subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+
+
+    datasource_dir = os.path.join(request.app.config["RAW_DATA_PATH"], DATASOURCE_NAME)
+    usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
+
+    for username in usernames:
+        size = get_dir_size(username["path"])
+
+
     pass
 
 
 async def status(request):
-    pass
+    res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": None, 
+        "data": res
+        })
 
 
 
@@ -59,42 +60,6 @@ async def parse(request):
     
     checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
     
-
-
-
-    # if not os.path.exists(request.json["path"]):
-    #     raise APIBadRequest("This path doesnt exists")
-
-    # try:
-    #     the_zip_file = zipfile.ZipFile(request.json["path"])
-    # except:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-
-    # logger.info(f"Testing zip {request.json['path']} file")
-    # ret = the_zip_file.testzip()
-
-    # if ret is not None:
-    #     raise APIBadRequest("Invalid zip takeout file")
-
-    # ##check if mbox file exists or not
-
-
-
-    # logger.info("Copying and extracting facebook data")
-
-    # ds_path = os.path.join(request.app.config.RAW_DATA_PATH, "facebook")
-    # try:
-    #     shutil.unpack_archive(request.json["path"], extract_dir=ds_path, format=None)
-    # except:
-    #     raise APIBadRequest("Invalid zip facebook file")
-
-    # logger.info("Copying and extracting facebook data completed")
-
-
-
-
-
     request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum,  DATASOURCE_NAME))
 
     return response.json(
@@ -117,13 +82,40 @@ def image_base64(path):
         logger.error(f"Error {e} while converting fb image to base64")
     return img_str.decode()
 
+
 # @FACEBOOK_BP.get('/images')
 async def images(request):
-    page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 20][request.args.get("number") == None] 
-    result = await filter_images(request.app.config.FB_IMAGES_TBL , page, number)
-    for image_data in result:
 
+    logger.info("Number is ", request.args.get("limit"))
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    username = request.args.get("username")
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+    logger.info(f'Name of the Facebook Table {request.app.config[DATASOURCE_NAME]["tables"]["image_table"]}')
+
+    images, count = await filter_images(request.app.config[DATASOURCE_NAME]["tables"]["image_table"], start_date, end_date, int(skip), int(limit), username)
+
+
+    for image_data in images:
+        logger.info(image_data)
         path = image_data['uri']
         logger.info(path)
         encoded_string = "data:image/jpeg;base64," + image_base64(path)
@@ -133,13 +125,14 @@ async def images(request):
             image_data.update({"comments": comments})
         
         image_data.update({"path": path, "uri": encoded_string, "creation_timestamp": image_data["creation_timestamp"].strftime("%d %b, %Y")})
-    
+
+
     return response.json(
         {
         'error': False,
         'success': True,
         "message": None, 
-        "data": result
+        "data": {"images": images, "count": count}
         })
 
 def read_chat(config, chat_type, chat_id, all_messages=False):

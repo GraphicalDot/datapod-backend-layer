@@ -6,16 +6,19 @@ import zipfile
 import datetime
 import pytz
 import sys
+import subprocess
 from errors_module.errors import APIBadRequest
 from loguru import logger
-
-from .db_calls import store_image, update_datasources_status
+from .variables import DATASOURCE_NAME
+import humanize
+from .db_calls import store_image, update_datasources_status, update_stats
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
 sys.path.append(parent_module_path)
 
 #from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
+import aiomisc
 
 
 
@@ -61,6 +64,7 @@ async def __parse(config, path, username, checksum, datasource_name):
     res = {"message": "completed", "percentage": 100}
     await config["send_sse_message"](config, datasource_name, res)
 
+    await update_stats_table(config, datasource_name, username, "manual")
     return 
 
 
@@ -77,3 +81,32 @@ def profile(config):
         name = "Dummy facebook name"
 
     return name
+
+@aiomisc.threaded_separate
+def get_dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+
+
+@aiomisc.threaded_separate
+def calc_data_items(dirpath):
+    return len([os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files])
+
+
+
+async def update_stats_table(config, datasource_name, username, sync_type):
+    path = os.path.join(config.RAW_DATA_PATH, f"{DATASOURCE_NAME}/{username}")
+
+    size = await get_dir_size(path)
+
+    data_items = await calc_data_items(path)
+
+    logger.info(f"Total size for {datasource_name} is {size}") 
+    logger.info(f"Total data items for {datasource_name} is {data_items}") 
+    u = datetime.datetime.utcnow()
+    f  = datetime.timedelta(days=7)
+    next_sync = u +f
+    await update_stats(config[datasource_name]["tables"]["stats"], DATASOURCE_NAME, username, 
+            data_items, size, config.DEFAULT_SYNC_FREQUENCY, sync_type, next_sync)
+
+    return 
+

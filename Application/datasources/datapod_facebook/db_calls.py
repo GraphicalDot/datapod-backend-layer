@@ -32,6 +32,46 @@ def update_datasources_status(facebook_status_table, datasource_name, username, 
     return 
 
 
+@aiomisc.threaded
+def update_stats(facebook_stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):
+    """
+
+    """
+    try:
+        facebook_stats_table.insert(
+                source = datasource_name,
+                username = username,
+                data_items = data_items,
+                disk_space_used = size,
+                sync_frequency = sync_frequency,
+                sync_type = sync_type,
+                next_sync = next_sync).execute()
+                                    
+    except IntegrityError as e:
+        logger.error(f"Couldnt insert stats for  {datasource_name} because of {e} so updating it")
+
+        facebook_stats_table.update(
+                            data_items = data_items,
+                disk_space_used = size,
+                sync_frequency = sync_frequency,
+                sync_type = sync_type,
+                next_sync = next_sync).\
+        where(facebook_stats_table.username==username).\
+        execute()
+
+    except Exception as e:
+        logger.error(f"Couldnt {datasource_name} updated because of {e}")
+    return 
+
+
+
+
+@aiomisc.threaded
+def get_datasources_status(facebook_status_table):
+    return facebook_status_table.select().dicts()
+                                    
+
+
 
 @aiomisc.threaded
 def store_creds(tbl_object, username, password):
@@ -97,15 +137,41 @@ def store_image(**data):
 
 
 @aiomisc.threaded
-def filter_images(tbl_object, page, number):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
+def filter_images(tbl_object, start_date, end_date, skip, limit, username):
+    logger.error(f"Name of the tanble is {tbl_object} --- {username}")
 
-    """
+    if start_date and end_date:
 
-    return tbl_object\
-            .select()\
-            .order_by(-tbl_object.creation_timestamp)\
-            .paginate(page, number)\
-             .dicts()
+        query = tbl_object\
+                .select()\
+                .where((tbl_object.creation_timestamp> start_date) &(tbl_object.creation_timestamp < end_date) & (tbl_object.username==username))\
+                .order_by(-tbl_object.creation_timestamp)
+                
+        
+
+    elif start_date and not end_date:
+        query = tbl_object\
+                        .select()\
+                        .where((tbl_object.creation_timestamp> start_date)& (tbl_object.username==username))\
+                        .order_by(-tbl_object.creation_timestamp)
+                        
+
+
+    elif end_date and not start_date:
+        query = tbl_object\
+                        .select()\
+                        .where((tbl_object.creation_timestamp < end_date)&((tbl_object.username==username)))\
+                        .order_by(-tbl_object.creation_timestamp)
+        
+
+
+    else: # not  start_date and  not end_date
+
+        query = tbl_object\
+                .select()\
+                .where(tbl_object.username==username)\
+                .order_by(-tbl_object.creation_timestamp)
+
+    
+    return query.offset(skip).limit(limit).dicts(), query.count()
+    

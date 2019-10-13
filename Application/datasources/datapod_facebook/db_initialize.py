@@ -25,21 +25,21 @@ def initialize(db):
 
 
     class FacebookStatus(BaseModel):
-        source = peewee.TextField(index=True, unique=True)
-        username = peewee.TextField(null=True)
+        source = peewee.TextField(index=True)
+        username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
 
 
     class FacebookStats(BaseModel):
-        source = peewee.TextField(index=True, unique=True)
-        name = peewee.TextField(null=True)
-        code = peewee.IntegerField(index=True, unique=True)
-        message = peewee.TextField(null=True)
-        last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
-        status = peewee.TextField(null=True)
-
-
+        source = peewee.TextField(index=True)
+        username = peewee.TextField(null=True, unique=True)
+        data_items = peewee.IntegerField(null=True)
+        disk_space_used = peewee.TextField(null=True)
+        sync_frequency = peewee.TextField(null=True)
+        sync_type = peewee.TextField(null=True)
+        last_sync = peewee.DateTimeField(default=datetime.datetime.now)
+        next_sync = peewee.DateTimeField(default=datetime.datetime.now)
 
     class FacebookArchives(BaseModel):
         path = peewee.TextField(null=False)
@@ -94,17 +94,18 @@ def initialize(db):
             FacebookYourPosts,
             FacebookOtherPosts,
             FacebookContent,
-            FacebookStatus
+            FacebookStatus, 
+            FacebookStats
         ])
 
     db.drop_tables([  
-            FacebookCreds,
-            FacebookArchives, 
-            FacebookImages,
-            FacebookYourPosts,
-            FacebookOtherPosts,
-            FacebookContent,
-            FacebookStatus
+            # FacebookCreds,
+            # FacebookArchives, 
+            # FacebookImages,
+            # FacebookYourPosts,
+            # FacebookOtherPosts,
+            # FacebookContent,
+            # FacebookStatus
 
         ])
 
@@ -112,5 +113,5 @@ def initialize(db):
 
     return FacebookCreds, FacebookArchives, FacebookImages, \
             FacebookYourPosts, FacebookOtherPosts, FacebookContent,\
-            FacebookStatus
+            FacebookStatus, FacebookStats
 
