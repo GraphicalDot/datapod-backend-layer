@@ -4,7 +4,6 @@ import json
 import datetime
 from peewee import IntegrityError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
-from tenacity import *
 from loguru import logger
 import aiomisc
 #@retry(stop=stop_after_attempt(2))
