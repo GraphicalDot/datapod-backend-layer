@@ -340,7 +340,7 @@ def store_images(**data):
                         description=data["description"],
                         url=data["url"], 
                         title=data["title"], 
-                        geo_data=data["geo_data"], 
+                        geo_data=geo_data, 
                         image_path=data["image_path"]).execute()
 
         logger.success(f"IMAGES: success on insert {data['username']} image {data['image_path']}")

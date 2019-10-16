@@ -31,7 +31,6 @@ class ParseGoogleImages(object):
             data = await self.image_data(image_path, image_json_path)
             #self.images_data.append(res)
             data.update({"username": self.username, "checksum": self.checksum, "tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["image_table"]})
-            logger.info(data)
             await store_images(**data)
 
         return 

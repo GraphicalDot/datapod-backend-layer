@@ -115,7 +115,7 @@ def initialize(db):
         url = peewee.TextField(null=True)
         title = peewee.TextField(null=False, index=True)
         image_path = peewee.TextField( null=False)
-        geo_data = peewee.BlobField()
+        geo_data = peewee.BlobField(null=True)
         class Meta:
             indexes = (
                 # create a unique on from/to/date
