@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
 
 from .db_initialize import initialize
-from .api import parse, images, allchats, stats, status 
+from .api import parse, emails_filter, purchase_filter, reservation_filter,  image_filter,  attachment_filter, stats, status 
 import os
 from .variables import DATASOURCE_NAME
 
@@ -17,13 +17,13 @@ class Routes:
             ('journal_mode', 'wal2'),
             ('cache_size', -1024*64)]
         
-        self.db_path = os.path.join(db_path, f"{DATASOURCE_NAME}.db")        
+        self.db_path = os.path.join(db_path, DATASOURCE_NAME, f"{DATASOURCE_NAME}.db")        
         self.db_object = SqliteExtDatabase(self.db_path, pragmas=pragmas,  detect_types=sqlite3.PARSE_DECLTYPES)
 
 
         creds_table, status_table, stats_table, email_table,\
              email_attachment_table, email_content_table,\
-             image_table, purchase_table, reservation_table = initialize(self.db_object)                  
+             image_table, purchase_table, reservation_table, archives_table = initialize(self.db_object)                  
         self.datasource_name = DATASOURCE_NAME
 
         self.config  = { 
@@ -34,6 +34,7 @@ class Routes:
                 "email_attachment_table": email_attachment_table,
                 "email_content_table": email_content_table,
                 "purchase_table": purchase_table,
+                "archives_table": archives_table,
                 "reservation_table": reservation_table,
                 "stats_table": stats_table, 
                 "status_table": status_table},
@@ -43,7 +44,8 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [("images", images), ("chats", allchats), ("stats", stats), ("status", status)], 
+        self.routes = {"GET": [("emails/filter", emails_filter), ("images/filter", image_filter), 
+                    ("purchases/filter", purchase_filter), ("reservations/filter", status), ("attachments/filter", attachment_filter)], 
                     "POST": [("parse", parse)] } 
         
         

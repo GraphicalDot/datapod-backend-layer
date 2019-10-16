@@ -22,10 +22,8 @@ import email
 import datetime
 import hashlib
 import datetime
-import asyncio
-import functools
-import aiohttp
 import concurrent.futures
+import aiomisc
 #from tenacity import *
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
 # from database_calls.credentials import update_datasources_status
@@ -33,9 +31,10 @@ from utils.utils import async_wrap, send_sse_message
 from email.header import Header, decode_header, make_header
 
 
-from datapod_google.db_calls import update_datasources_status, store_email, store_email_attachment, store_email_content
-from datapod_google.variables import DATASOURCE_NAME
+from ..db_calls import update_datasources_status, store_email, store_email_attachment, store_email_content
+from ..variables import DATASOURCE_NAME
 
+import chardet
 
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
 
@@ -49,8 +48,9 @@ class EmailParse(object):
     
         ##to keep track of all the to_addr email ids and their respective frequencies 
         # self.db_dir_path = db_dir_path
+        ## dest_path : path for the destination like ex /home/feynman/.datapod/userdata/raw/Google/houzier.saurav@gmail.com/16-10-2019-56c3eccc615e71f1e2fcd0d0b07220532947651bc13c0e0fdfa621a2a1783c35/
         self.config = config
-        
+        self.dest_path = dest_path
         self.datasources_tbl = config.DATASOURCES_TBL
         self.checksum = checksum
         self.username = username
@@ -93,7 +93,7 @@ class EmailParse(object):
         logger.info(f"Total number of emails {sum(total_emails)}")        
         logger.info(f"Mbox objects {self.mbox_objects}")        
         self.email_count = sum(total_emails)
-        update_datasources_status(config[DATASOURCE_NAME]["status_table"], DATASOURCE_NAME, self.username, "PROGRESS")
+        await update_datasources_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, self.username, "PROGRESS")
     
 
     @aiomisc.threaded_separate
@@ -149,14 +149,14 @@ class Emails(object):
         self.email_count = email_count
         self.email_dir_html = os.path.join(config.PARSED_DATA_PATH, DATASOURCE_NAME, self.username, "mails/gmail/email_html")
 
-        self.email_table = config[DATASOURCE_NAME]["email_table"]
-        # this wil store the content of the email to be searchable through content
-        # store subject+content+to_addr in this as a content
-        self.indexed_email_content_tbl = config[DATASOURCE_NAME]["email_content_table"]
-
+        self.email_table = config[DATASOURCE_NAME]["tables"]["email_table"]
+        # this wil store the content of the email to be s
         # this is a seperate table which will store the attachments of the
-        # the email
-        self.email_attachements_tbl = config[DATASOURCE_NAME]["email_attachment_table"]
+        # the emailearchable through content
+        # store subject+content+to_addr in this as a content
+        self.indexed_email_content_tbl = config[DATASOURCE_NAME]["tables"]["email_content_table"]
+
+        self.email_attachements_tbl = config[DATASOURCE_NAME]["tables"]["email_attachment_table"]
 
         if not os.path.exists(self.email_dir_html):
             logger.warning(f"Path doesnt exists creating {self.email_dir_html}")
@@ -239,12 +239,13 @@ class Emails(object):
                     # percentage = f"{completion_percentage.index(i) +1 }"
                     percentage = (self.start+self.step)//self.step
                     logger.info(f"Percentage of completion {percentage}% at {self.start} emails")
-                    await self.send_sse_message(percentage)
 
                     res = {"message": "PROGRESS", "percentage": int(percentage)}
 
-                    await self.config["send_sse_message"](config, DATASOURCE_NAME, res)
-
+                    await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+            
+            if i == 200:
+                break
 
 
                     #yield f"Parse email progress is  {i}"

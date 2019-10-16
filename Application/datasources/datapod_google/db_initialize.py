@@ -10,7 +10,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 #from playhouse.apsw_ext import APSWDatabase
 
 
-def intialize(db):
+def initialize(db):
     
     class BaseModel(peewee.Model):
         class Meta:
@@ -21,6 +21,7 @@ def intialize(db):
         username = peewee.TextField(unique=True, null=False)
         password = peewee.TextField(null=False)
         identifier = peewee.TextField(null=False)
+
 
 
     class Status(BaseModel):
@@ -41,7 +42,11 @@ def intialize(db):
         next_sync = peewee.DateTimeField(default=datetime.datetime.now)
 
 
-    
+    class Archives(BaseModel):
+        path = peewee.TextField(null=False)
+        username = peewee.TextField(unique=True, null=False)
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+        checksum = peewee.TextField(index=True, null=False)    
 
 
 
@@ -64,7 +69,7 @@ def intialize(db):
         class Meta:
             indexes = (
                    # create a unique on from/to/date
-                (('from_addr', 'to_addr', 'date'), True),
+                (('username', 'from_addr', 'to_addr', 'date'), True),
                 (('from_addr', 'to_addr'), False),
             )
 
@@ -99,7 +104,7 @@ def intialize(db):
 
 
     class Images(BaseModel):
-        username = peewee.TextField()
+        username = peewee.TextField(index=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField()
         
@@ -109,18 +114,18 @@ def intialize(db):
         description = peewee.TextField(null=True)
         url = peewee.TextField(null=True)
         title = peewee.TextField(null=False, index=True)
-        image_path = peewee.TextField(index=True, null=False)
-        geo_data = peewee.BareField()
+        image_path = peewee.TextField( null=False)
+        geo_data = peewee.BlobField()
         class Meta:
             indexes = (
                 # create a unique on from/to/date
-                (('creation_time', 'title'), True),
+                (('username', 'creation_time', 'title'), True),
             )
 
     
 
     class Purchases(BaseModel):
-        username = peewee.TextField()
+        username = peewee.TextField(index=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField()
 
@@ -135,7 +140,7 @@ def intialize(db):
             )
     
     class Reservations(BaseModel):
-        username = peewee.TextField()
+        username = peewee.TextField(index=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField()
 
@@ -164,6 +169,7 @@ def intialize(db):
         Images,
         Purchases,
         Reservations, 
+        Archives
         ])
 
     return Creds, \
@@ -174,6 +180,7 @@ def intialize(db):
         IndexEmailContent,\
         Images,\
         Purchases,\
-        Reservations 
+        Reservations, \
+        Archives 
 
 

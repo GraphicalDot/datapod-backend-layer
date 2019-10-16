@@ -2,10 +2,11 @@
 import os
 import json
 from pprint import pprint
+from loguru import logger
 import datetime 
-from datapod_google.variables import DATASOURCE_NAME
+from ..variables import DATASOURCE_NAME
 import aiomisc
-from datapod_google.db_calls import store_images
+from ..db_calls import store_images
 
 class ParseGoogleImages(object):
     
@@ -29,7 +30,8 @@ class ParseGoogleImages(object):
         for (image_path, image_json_path) in self.images:
             data = await self.image_data(image_path, image_json_path)
             #self.images_data.append(res)
-            data.update({"username": self.username, "checksum": self.checksum, "tbl_object": self.app_config[DATASOURCE_NAME]["image_table"]})
+            data.update({"username": self.username, "checksum": self.checksum, "tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["image_table"]})
+            logger.info(data)
             await store_images(**data)
 
         return 
@@ -83,8 +85,8 @@ class ParseGoogleImages(object):
         #with open(image_json_path, "rb") as fi:
         async with aiomisc.io.async_open(image_json_path, "rb") as res:
 
-            data = json.loads(await fi.read())
-            logger.info(f"reading file {image_path}")
+            data = json.loads(await res.read())
+            logger.info(f"reading file {image_path} and image_json_path =={image_json_path}")
             #pprint (data)
             res = {'creation_time': datetime.datetime.utcfromtimestamp(int(data["creationTime"]["timestamp"])), 
                     'modification_time' : datetime.datetime.utcfromtimestamp(int(data["modificationTime"]["timestamp"])),
@@ -94,7 +96,6 @@ class ParseGoogleImages(object):
                     'title': data["title"],
                      'geo_data':  data["geoData"],
                     'image_path': image_path,
-                    "source": DATASOURCE_NAME
             }
             return res
 

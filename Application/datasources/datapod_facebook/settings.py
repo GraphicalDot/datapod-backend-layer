@@ -17,7 +17,7 @@ class Routes:
             ('journal_mode', 'wal2'),
             ('cache_size', -1024*64)]
         
-        self.db_path = os.path.join(db_path, f"{DATASOURCE_NAME}.db")        
+        self.db_path = os.path.join(db_path, DATASOURCE_NAME, f"{DATASOURCE_NAME}.db")        
         self.db_object = SqliteExtDatabase(self.db_path, pragmas=pragmas,  detect_types=sqlite3.PARSE_DECLTYPES)
 
         creds_table, archives_table, images_table, \

@@ -34,8 +34,8 @@ from geopy.geocoders import Nominatim
 from loguru import logger
 from utils.utils import timezone_timestamp
 
-from datapod_google.variables import DATASOURCE_NAME
-from datapod_google.db_calls import store_purchases, store_reservations
+from ..variables import DATASOURCE_NAME
+from ..db_calls import store_purchases, store_reservations
 
 @asyncinit
 class PurchaseReservations(object):
@@ -79,12 +79,12 @@ class PurchaseReservations(object):
                     logger.error(f"In DATA {data} error is  <<{e}>>, filename is {filepath}" )
 
         for purchase in purchases:
-            purchase.update({"tbl_object": config[DATASOURCE_NAME]["purchase_table"], "username": self.username, "checksum": self.checksum}) 
+            purchase.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["purchase_table"], "username": self.username, "checksum": self.checksum}) 
             await store_purchases(**purchase)
 
         for reservation in reservations:
             reservation.pop("products")
-            reservation.update({"tbl_object": config[DATASOURCE_NAME]["reservation_table"], "username": self.username, "checksum": self.checksum}) 
+            reservation.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["reservation_table"], "username": self.username, "checksum": self.checksum}) 
             await store_reservations(**reservation)
             
 

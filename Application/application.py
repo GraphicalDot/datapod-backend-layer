@@ -168,9 +168,25 @@ def add_routes(app):
             logger.success(f"Reading module {name}")
             module_name = f"datasources.{name}.settings"
 
+
+
+            ##reading every module vairables.py file to find out the DATASOURCE_NAME
+            module_variable_name = f"datasources.{name}.variables"
+            m = importlib.import_module(module_variable_name)
+
+            
+            datasource_name = m.DATASOURCE_NAME
+            ##ensuring this directory exists
+            path = os.path.join(app.config['RAW_DATA_PATH'], datasource_name)
+            if not os.path.exists(path):
+                logger.warning(f"Creating {path} Directory")
+                os.makedirs(path)
+
+
+
             m = importlib.import_module(module_name)
 
-            inst = m.Routes(app.config["DB_PATH"])
+            inst = m.Routes(app.config["RAW_DATA_PATH"])
             inst.config.update({"code": hash(inst.datasource_name)%10000})                 
             
             for (http_method, route_list) in inst.routes.items():

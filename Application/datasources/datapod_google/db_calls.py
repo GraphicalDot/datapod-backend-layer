@@ -2,7 +2,7 @@ import aiomisc
 #@retry(stop=stop_after_attempt(2))
 import json
 import datetime
-from peewee import IntegrityError
+from peewee import IntegrityError, OperationalError
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 from loguru import logger
 
@@ -330,8 +330,8 @@ def store_images(**data):
     table = data["tbl_object"]
 
     try:
-        geo_data = json.dumps(geo_data)
-        table.insert(source=data["source"], 
+        geo_data = json.dumps(data['geo_data'])
+        table.insert( 
                         creation_time=data["creation_time"], 
                         modification_time=data["modification_time"], 
                            username = data["username"],
@@ -343,16 +343,16 @@ def store_images(**data):
                         geo_data=data["geo_data"], 
                         image_path=data["image_path"]).execute()
 
-        logger.success(f"IMAGES: success on insert {source} image {image_path}")
+        logger.success(f"IMAGES: success on insert {data['username']} image {data['image_path']}")
 
-    except peewee.OperationalError  as e:
-        logger.error(f"IMAGES: Couldnt save image data {source}  because of {e}")
+    except OperationalError  as e:
+        logger.error(f"IMAGES: Couldnt save image data {data['username']}  because of {e}")
 
-    except peewee.IntegrityError as e:
-        logger.error(f"IMAGES: Duplicate image key exists {source}  because of {e}")
+    except IntegrityError as e:
+        logger.error(f"IMAGES: Duplicate image key exists {data['username']}  because of {e}")
 
-    except Exception as e:
-        logger.error(f"IMAGES: {source}  because of {e}")
+    # except Exception as e:
+    #     logger.error(f"IMAGES: {data['username']}  because of {e}")
 
     return 
 
@@ -417,13 +417,12 @@ def store_purchases(**data):
                                     products=data["products"], 
                                     username = data["username"],
                                     checksum=data["checksum"],
-                                    source=data["source"], 
                                     time=data["time"]).execute()
-        logger.info(f"On insert the purchase for  {merchant_name}")
-    except peewee.OperationalError  as e:
+        logger.info(f"On insert the purchase for  {data['merchant_name']}")
+    except OperationalError  as e:
         logger.error(f"PURCHASES: Couldnt save purchase data {data['merchant_name']}  because of {e}")
 
-    except peewee.IntegrityError as e:
+    except IntegrityError as e:
         logger.error(f"PURCHASES: Duplicate key exists {data['merchant_name']}  because of {e}")
     
     return 
@@ -441,14 +440,13 @@ def store_reservations(**data):
                             dest=data["dest"],
                             username = data["username"],
                             checksum=data["checksum"],
-                            source=data["source"], 
                             time=data["time"]).execute()
 
         logger.info(f"On insert the reservations for  {data['merchant_name']}")
-    except peewee.OperationalError  as e:
+    except OperationalError  as e:
         logger.error(f"RESERVATIONS: Couldnt save reservations data {data['merchant_name']}  because of {e}")
 
-    except peewee.IntegrityError as e:
+    except IntegrityError as e:
         logger.error(f"RESERVATIONS: Duplicate key exists {data['merchant_name']}  because of {e}")
 
     return 

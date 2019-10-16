@@ -4,9 +4,9 @@ from sanic import Blueprint
 from sanic import response
 import os
 from errors_module.errors import APIBadRequest
-from  utils.parse_emails import EmailParse
-from  utils.location import  LocationHistory
-from utils.purchases_n_reservations import PurchaseReservations
+from .utils.parse_emails import EmailParse
+from  .utils.location import  LocationHistory
+from .utils.purchases_n_reservations import PurchaseReservations
 import base64
 
 # import  database_calls.db_purchases as q_purchase_db
@@ -17,14 +17,12 @@ import base64
 
 
 
-from utils.utils import check_production
-from utils.images import ParseGoogleImages
+from .utils.images import ParseGoogleImages
 import datetime
 import asyncio
 import functools
 from functools import partial
 import concurrent.futures
-from utils.utils import async_wrap, send_sse_message
 import base64
 from io import BytesIO
 from PIL import Image
@@ -37,7 +35,7 @@ from datasources.shared.extract import extract
 import aiomisc
 
 from .db_calls import update_datasources_status
-
+from .variables import DATASOURCE_NAME
 
 
 
@@ -79,104 +77,104 @@ async def status(request):
 
 
 
-async def parse_images(config, loop, executor):
-    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+# async def parse_images(config, loop, executor):
+#     path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    ins = await ParseGoogleImages(path, config)
-    await ins.parse()
-    images_data = ins.images_data
+#     ins = await ParseGoogleImages(path, config)
+#     await ins.parse()
+#     images_data = ins.images_data
 
-    for image_data in images_data:
-        image_data.update({"tbl_object": config.IMAGES_TBL}) 
+#     for image_data in images_data:
+#         image_data.update({"tbl_object": config.IMAGES_TBL}) 
         
 
-    _, _ = await asyncio.wait(
-            fs=[loop.run_in_executor(executor, 
-                    functools.partial(q_images_db.store, **args)) for args in images_data],
-            return_when=asyncio.ALL_COMPLETED
-        )
+#     _, _ = await asyncio.wait(
+#             fs=[loop.run_in_executor(executor, 
+#                     functools.partial(q_images_db.store, **args)) for args in images_data],
+#             return_when=asyncio.ALL_COMPLETED
+#         )
 
-    for args in images_data:
-        await q_images_db.store(**args)
+#     for args in images_data:
+#         await q_images_db.store(**args)
 
-    return 
+#     return 
 
-async def purchase_n_reservations(config, loop, executor):
-    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+# async def purchase_n_reservations(config, loop, executor):
+#     path = os.path.join(config.RAW_DATA_PATH, "Takeout")
 
-    try:
-        ins = await PurchaseReservations(path, config)
-    except Exception as e:
-        logger.error(f"Parsing of purchases and reservations failed {e}")
-    reservations, purchases = await ins.parse()
-    
-
-    for purchase in purchases:
-        purchase.update({"tbl_object": config.PURCHASES_TBL}) 
-
-    for reservation in reservations:
-        reservation.pop("products")
-        reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
-
-
-    # await asyncio.wait(
-    #         fs=[loop.run_in_executor(executor,  
-    #             functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
-    #         return_when=asyncio.ALL_COMPLETED)
-    for purchase in purchases:
-        await q_purchase_db.store(**purchase)
-    
-    # await asyncio.wait(
-    #         fs=[loop.run_in_executor(executor,  
-    #             functools.partial(q_reservation_db.store, **reservation)) for reservation in reservations],
-    #         return_when=asyncio.ALL_COMPLETED)
-    
-    for reservation in reservations:
-        await q_reservation_db.store(**reservation)
-    
-
-
-
-    return 
-
-
-async def asyncparse_takeout(config, loop, executor):
-    ##add this if this has to executed periodically
-    ##while True:
-    logger.info('Periodic task has begun execution')
-
-    instance = TakeoutEmails(config)
-
-    await asyncio.gather(*[
-                instance.download_emails(loop, executor), 
-                parse_images(config, loop, executor),
-                purchase_n_reservations(config, loop, executor)
-                ])
-
-    logger.info('Periodic task has finished execution')
-
-    
-    return 
-
-
-# async def broadcast(config, message):
-#     broadcast = config.SIO.emit("takeout_response", {'data': message }, namespace="/takeout")
-
-#     #broadcasts = [ws.send(message) for ws in app.ws_clients]
-#     #for result in asyncio.as_completed(broadcasts):
 #     try:
-#         await asyncio.wait(broadcast)
-#         logger.info(f"completed {message}")
+#         ins = await PurchaseReservations(path, config)
+#     except Exception as e:
+#         logger.error(f"Parsing of purchases and reservations failed {e}")
+#     reservations, purchases = await ins.parse()
     
-#     except Exception as ex:
-#         template = f"An exception of type {ex} occurred"
-#         logger.error(template)
+
+#     for purchase in purchases:
+#         purchase.update({"tbl_object": config.PURCHASES_TBL}) 
+
+#     for reservation in reservations:
+#         reservation.pop("products")
+#         reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
+
+
+#     # await asyncio.wait(
+#     #         fs=[loop.run_in_executor(executor,  
+#     #             functools.partial(q_purchase_db.store, **purchase)) for purchase in purchases],
+#     #         return_when=asyncio.ALL_COMPLETED)
+#     for purchase in purchases:
+#         await q_purchase_db.store(**purchase)
+    
+#     # await asyncio.wait(
+#     #         fs=[loop.run_in_executor(executor,  
+#     #             functools.partial(q_reservation_db.store, **reservation)) for reservation in reservations],
+#     #         return_when=asyncio.ALL_COMPLETED)
+    
+#     for reservation in reservations:
+#         await q_reservation_db.store(**reservation)
+    
+
+
+
 #     return 
 
 
+# async def asyncparse_takeout(config, loop, executor):
+#     ##add this if this has to executed periodically
+#     ##while True:
+#     logger.info('Periodic task has begun execution')
+
+#     instance = TakeoutEmails(config)
+
+#     await asyncio.gather(*[
+#                 instance.download_emails(loop, executor), 
+#                 parse_images(config, loop, executor),
+#                 purchase_n_reservations(config, loop, executor)
+#                 ])
+
+#     logger.info('Periodic task has finished execution')
+
+    
+#     return 
 
 
-async def parse_takeout(config, dest_path, username, checksum,  datasource_name):
+# # async def broadcast(config, message):
+# #     broadcast = config.SIO.emit("takeout_response", {'data': message }, namespace="/takeout")
+
+# #     #broadcasts = [ws.send(message) for ws in app.ws_clients]
+# #     #for result in asyncio.as_completed(broadcasts):
+# #     try:
+# #         await asyncio.wait(broadcast)
+# #         logger.info(f"completed {message}")
+    
+# #     except Exception as ex:
+# #         template = f"An exception of type {ex} occurred"
+# #         logger.error(template)
+# #     return 
+
+
+
+
+async def __parse(config, path, username):
     """
 
     datasource_name: This will be Google in this case, always
@@ -184,36 +182,28 @@ async def parse_takeout(config, dest_path, username, checksum,  datasource_name)
     """
     ##add this if this has to executed periodically
     ##while True:
+
     logger.info('Periodic task has begun execution')
+    dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
+
+    checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
+
+
     #path = os.path.join(config.RAW_DATA_PATH, "Takeout")
-    email_parsing_instance = await EmailParse(config, dest_path, username, checksum,  datasource_name)
+    #email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
 
-    ##parsing all the email data from the takeout
-    await email_parsing_instance.download_emails()
-    #await config.SIO.emit("takeout_response", {'data': i }, namespace="/takeout")
-    #await broadcast(config, i)
-    try:
-        ins = ParseGoogleImages(config, dest_path, username, checksum)
-        await ins.parse()
-        # images_data = ins.images_data
 
-        # for image_data in images_data:
-        #     logger.info(image_data)
-        #     image_data.update({"tbl_object": config.IMAGES_TBL}) 
-        #     await q_images_db.store(**image_data)
-    except Exception as e:
-        logger.error(f"Parsing Image data Failed {e}")    
-        pass
+
+
+    # await email_parsing_instance.download_emails()
+    ins = ParseGoogleImages(config, dest_path, username, checksum)
+    await ins.parse()
     
     res = {"message": "PROGRESS", "percentage": 98}
-    await self.config["send_sse_message"](config, DATASOURCE_NAME, res)
+    await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
-    try:
-        ins = await PurchaseReservations(config, dest_path, username, checksum)
-        reservations, purchases = await ins.parse()
-    except Exception as e:
-        logger.error(f"Purchases and reservation parsing failed {e}")    
-        return                                                                        
+    ins = await PurchaseReservations(config, dest_path, username, checksum)
+    reservations, purchases = await ins.parse()
 
     # for purchase in purchases:
     #     purchase.update({"tbl_object": config.PURCHASES_TBL}) 
@@ -227,7 +217,7 @@ async def parse_takeout(config, dest_path, username, checksum,  datasource_name)
     # logger.info('Periodic task has finished execution')
 
     res = {"message": "PROGRESS", "percentage": 100}
-    await self.config["send_sse_message"](config, DATASOURCE_NAME, res)
+    await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
     # ##updating datasources table with the status that parsing of the takeout is completed
     logger.info("Trying to update data source table with status completed")
@@ -249,13 +239,17 @@ async def parse(request):
     """
     request.app.config.VALIDATE_FIELDS(["path", "username"], request.json)
 
-    config = request.app.config
-    dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
-    logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
+    # config = request.app.config
+    # dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
+    # logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
     
-    checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
-    
-    request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum,  DATASOURCE_NAME))
+    # checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
+
+
+    # request.app.add_task(extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"]))
+
+
+    request.app.add_task(__parse(request.app.config, request.json["path"], request.json["username"]))
 
 
     # request.app.add_task(parse_takeout(request.app.config))
@@ -311,7 +305,7 @@ async def purchase_filter(request):
         })
 
 
-async def reservations_filter(request):
+async def reservation_filter(request):
     """
     Page is the page number 
     NUmber is the number of items on the page 
@@ -399,7 +393,7 @@ def image_base64(path):
 #         })
 
 
-async def images_filter(request):
+async def image_filter(request):
 
     logger.info("Number is ", request.args.get("limit"))
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
@@ -448,7 +442,7 @@ async def images_filter(request):
 
 
 
-async def attachements_filter(request):
+async def attachment_filter(request):
     """
     To get all the assets created by the requester
     """
@@ -559,7 +553,6 @@ async def emails_filter(request):
 
 
 
-@check_production()
 async def takeout_location_history(request):
     """
     To get all the assets created by the requester
