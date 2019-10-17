@@ -78,14 +78,17 @@ class PurchaseReservations(object):
                 except Exception as e: 
                     logger.error(f"In DATA {data} error is  <<{e}>>, filename is {filepath}" )
 
-        for purchase in purchases:
-            purchase.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["purchase_table"], "username": self.username, "checksum": self.checksum}) 
-            await store_purchases(**purchase)
-
         for reservation in reservations:
             reservation.pop("products")
             reservation.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["reservation_table"], "username": self.username, "checksum": self.checksum}) 
             await store_reservations(**reservation)
+
+
+        for purchase in purchases:
+            purchase.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["purchase_table"], "username": self.username, "checksum": self.checksum}) 
+            await store_purchases(**purchase)
+
+
             
 
 

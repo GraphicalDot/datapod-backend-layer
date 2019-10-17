@@ -19,6 +19,7 @@ import base64
 
 from .utils.images import ParseGoogleImages
 import datetime
+import json
 import asyncio
 import functools
 from functools import partial
@@ -34,7 +35,7 @@ from loguru import logger
 from datasources.shared.extract import extract
 import aiomisc
 
-from .db_calls import update_datasources_status
+from .db_calls import update_datasources_status, get_emails, match_text, filter_images, filter_attachments, filter_purchases, filter_reservations
 from .variables import DATASOURCE_NAME
 
 
@@ -189,13 +190,11 @@ async def __parse(config, path, username):
     checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
 
 
-    #path = os.path.join(config.RAW_DATA_PATH, "Takeout")
-    #email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
-
-
-
-
-    # await email_parsing_instance.download_emails()
+    path = os.path.join(config.RAW_DATA_PATH, "Takeout")
+    email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
+    await email_parsing_instance.download_emails()
+    
+    
     ins = ParseGoogleImages(config, dest_path, username, checksum)
     await ins.parse()
     
@@ -203,7 +202,7 @@ async def __parse(config, path, username):
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
     ins = await PurchaseReservations(config, dest_path, username, checksum)
-    reservations, purchases = await ins.parse()
+    await ins.parse()
 
     # for purchase in purchases:
     #     purchase.update({"tbl_object": config.PURCHASES_TBL}) 
@@ -223,7 +222,7 @@ async def __parse(config, path, username):
     logger.info("Trying to update data source table with status completed")
 
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
-    update_datasources_status(config[DATASOURCE_NAME]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    update_datasources_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
 
     # logger.info("Updated data source table with status completed")
     return 
@@ -266,45 +265,6 @@ async def parse(request):
 
 
 
-async def purchase_filter(request):
-    """
-    Page is the page number 
-    NUmber is the number of items on the page 
-    """
-    #request.app.config.VALIDATE_FIELDS(["page", "number"], request.json)
-
-    if request.args.get("page"):
-        try:
-            page = int(request.args.get("page"))
-        except:
-            raise APIBadRequest("Invalid page type")
-
-    else:
-        page = 1
-
-
-    if request.args.get("number"):
-        try:
-            number = int(request.args.get("number"))
-        except:
-            raise APIBadRequest("Invalid Number type")
-    else:
-        number = request.app.config.DEFAULT_ITEMS_NUMBER
-
-
-    result =  [q_purchase_db.format(request.app.config, purchase) for purchase in \
-                q_purchase_db.filter_merchant_name(request.app.config.PURCHASES_TBL, 
-                page, number,  request.args.get("merchant_name"))] 
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "data": result,
-        "message": None
-        })
-
-
 async def reservation_filter(request):
     """
     Page is the page number 
@@ -344,6 +304,7 @@ async def reservation_filter(request):
         })
 
 
+@aiomisc.threaded
 def image_base64(path):
     try:
         image = Image.open(path)
@@ -419,7 +380,7 @@ async def image_filter(request):
 
 
 
-    images, count = await q_images_db.filter_images(request.app.config.IMAGES_TBL, start_date, end_date, int(skip), int(limit))
+    images, count = await filter_images(request.app.config[DATASOURCE_NAME]["tables"]["image_table"], start_date, end_date, int(skip), int(limit))
     logger.info(images)
     for image in images:
         b64_data = await image_base64(image['image_path'])
@@ -474,7 +435,7 @@ async def attachment_filter(request):
     logger.info(f"This is the end_date {end_date}")
 
     if not matching_string:
-        attachments, count = await get_email_attachment(request.app.config.EMAIL_ATTACHMENT_TBL, message_type, start_date, end_date, int(skip), int(limit))
+        attachments, count = await filter_attachments(request.app.config[DATASOURCE_NAME]["tables"]["email_attachment_table"], message_type, start_date, end_date, int(skip), int(limit))
     else:
         raise APIBadRequest("Not been implemented Yet")
     # for iage in images:
@@ -493,6 +454,107 @@ async def attachment_filter(request):
 
 
 
+def format_purchase(config, db_purchase_obj):
+    """
+    db_purchase_obj: retrived from the db
+    """
+    logger.info(db_purchase_obj)
+    products = json.loads(db_purchase_obj["products"])
+    return {
+            "merchant_name": db_purchase_obj["merchant_name"],
+            "products": products,
+            "time": db_purchase_obj["time"]
+    }
+
+
+async def purchases_filter(request):
+
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    merchant_name = request.args.get("merchant_name") 
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+
+
+    purchases, count = await filter_purchases(request.app.config[DATASOURCE_NAME]["tables"]["purchase_table"], start_date, end_date, int(skip), int(limit), merchant_name)
+
+    #result = [format_purchase(request.app.config, purchase) for purchase in purchases] 
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': {"purchases": purchases, "count": count},
+        'message': None
+        })
+
+
+async def reservations_filter(request):
+
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    src = request.args.get("src") 
+    dest = request.args.get("dest") 
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+    logger.info(f"This is the start_date {start_date}")
+    logger.info(f"This is the end_date {end_date}")
+
+
+
+    reservations, count = await filter_reservations(request.app.config[DATASOURCE_NAME]["tables"]["purchase_table"], start_date, end_date, int(skip), int(limit), src, dest)
+
+    #result = [format_purchase(request.app.config, purchase) for purchase in purchases] 
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': {"reservations": reservations, "count": count},
+        'message': None
+        })
+
+
+
+
+
+
+
+
+
+
+
 
 async def emails_filter(request):
     """
@@ -506,6 +568,9 @@ async def emails_filter(request):
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
     message_type = request.args.get("message_type")
+
+    if not message_type:
+        raise APIBadRequest("message type is required")
 
     # logger.info(f"Message type is {message_type}")
     # logger.info(f"Skip type is {skip}")
@@ -530,11 +595,11 @@ async def emails_filter(request):
 
 
     if matching_string:
-        emails, count = await match_text(request.app.config.EMAILS_TBL,  request.app.config.INDEX_EMAIL_CONTENT_TBL, \
+        emails, count = await match_text(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], request.app.config[DATASOURCE_NAME]["tables"]["email_content_table"], \
                 matching_string, message_type, start_date, end_date, int(skip), int(limit))
     else:
         logger.info("Without matching string")
-        emails, count = await get_emails(request.app.config.EMAILS_TBL, message_type, start_date, end_date, int(skip), int(limit))
+        emails, count = await get_emails(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], message_type, start_date, end_date, int(skip), int(limit))
 
 
     # emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)

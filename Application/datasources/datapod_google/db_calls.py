@@ -158,7 +158,7 @@ def store_email_attachment(**data):
 
 
 @aiomisc.threaded
-def get_email_attachment(tbl_object, message_type, start_date, end_date, skip, limit):
+def filter_attachments(tbl_object, message_type, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
@@ -226,7 +226,7 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
     #             .dicts()
 
 
-
+    logger.info(f"table object is {tbl_object}")
     if start_date and end_date:
         logger.info("Start date and  end date")
 
@@ -428,6 +428,7 @@ def store_purchases(**data):
     return 
 
 
+@aiomisc.threaded
 def store_reservations(**data):
     """
     purchases: a list of purchases dict
@@ -450,3 +451,152 @@ def store_reservations(**data):
         logger.error(f"RESERVATIONS: Duplicate key exists {data['merchant_name']}  because of {e}")
 
     return 
+
+
+
+
+@aiomisc.threaded
+def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_name):
+    logger.info(f"Merchant name received is {merchant_name}")
+    if start_date and end_date:
+        if merchant_name:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.merchant_name==merchant_name))\
+                    .order_by(-tbl_object.time)
+        else:
+            query = tbl_object\
+                        .select()\
+                        .where((tbl_object.time> start_date) &(tbl_object.time < end_date))\
+                        .order_by(-tbl_object.time)
+
+    elif start_date and not end_date:
+        if merchant_name:
+            query = tbl_object\
+                            .select()\
+                            .where((tbl_object.time> start_date)&(tbl_object.merchant_name==merchant_name))\
+                            .order_by(-tbl_object.time)
+                            
+        else:
+            query = tbl_object\
+                            .select()\
+                            .where(tbl_object.time> start_date)\
+                            .order_by(-tbl_object.time)
+        
+
+    elif end_date and not start_date:
+        if merchant_name:
+            query = tbl_object\
+                            .select()\
+                            .where((tbl_object.time < end_date)&(tbl_object.merchant_name==merchant_name))\
+                            .order_by(-tbl_object.time)
+        else:
+            query = tbl_object\
+                            .select()\
+                            .where(tbl_object.time < end_date)\
+                            .order_by(-tbl_object.time)\
+
+
+    else: # not  start_date and  not end_date
+        if merchant_name:
+            query = tbl_object\
+                    .select()\
+                    .where(tbl_object.merchant_name**f'%{merchant_name}%')\
+                    .order_by(-tbl_object.time)
+        else:
+            query = tbl_object\
+                    .select()\
+                    .order_by(-tbl_object.time)\
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
+
+
+@aiomisc.threaded
+def filter_reservations(tbl_object, start_date, end_date, skip, limit, src, dest):
+    logger.info(f"Merchant name received is {merchant_name}")
+    if start_date and end_date:
+        if src and not dest:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.src**f'%{src}%'))\
+                    .order_by(-tbl_object.time)
+        elif dest and not src:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+        else:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date)&\
+                                (tbl_object.time < end_date)&\
+                                (tbl_object.src**f'%{src}%')&\
+                                    (tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+
+
+    elif start_date and not end_date:
+        if src and not dest:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date) &(tbl_object.src**f'%{src}%'))\
+                    .order_by(-tbl_object.time)
+        elif dest and not src:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date) &(tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+        else:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time> start_date)&\
+                                (tbl_object.src**f'%{src}%')&\
+                                    (tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)        
+
+
+    elif end_date and not start_date:
+        if src and not dest:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time < end_date)&(tbl_object.src**f'%{src}%'))\
+                    .order_by(-tbl_object.time)
+        elif dest and not src:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time < end_date)&(tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+        else:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.time < end_date)&\
+                                (tbl_object.src**f'%{src}%')&\
+                                    (tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+    else: # not  start_date and  not end_date
+        if src and not dest:
+            query = tbl_object\
+                    .select()\
+                    .where(tbl_object.src**f'%{src}%')\
+                    .order_by(-tbl_object.time)
+        elif dest and not src:
+            query = tbl_object\
+                    .select()\
+                    .where(tbl_object.dest**f'%{dest}%')\
+                    .order_by(-tbl_object.time)
+
+        else:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.src**f'%{src}%')&\
+                                    (tbl_object.dest**f'%{dest}%'))\
+                    .order_by(-tbl_object.time)
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+

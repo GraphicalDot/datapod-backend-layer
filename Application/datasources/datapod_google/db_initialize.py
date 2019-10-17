@@ -130,7 +130,7 @@ def initialize(db):
         checksum = peewee.TextField()
 
         merchant_name = peewee.CharField(index=True, null=False)
-        products = peewee.CharField(index=True, null=False)
+        products = peewee.BlobField(index=True, null=False)
         time = peewee.DateTimeField(index=True, null=False)
         class Meta:
             indexes = (
