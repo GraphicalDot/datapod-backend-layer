@@ -58,7 +58,7 @@ def update_stats(stats_table, reposource, username, data_items, size, sync_frequ
         execute()
 
     except Exception as e:
-        logger.error(f"Couldnt {datasource_name} updated because of {e}")
+        logger.error(f"Couldnt {reposource} updated because of {e}")
     return 
 
 
@@ -170,7 +170,7 @@ def store(**data):
                     is_gist=data.get("is_gist"),
                     default_branch=data.get("default_branch")).execute()
 
-        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+        logger.success(f"Success on insert github repo --{data['path']}-- username --{data['username']}--")
     except IntegrityError as e:
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
@@ -224,7 +224,7 @@ def store(**data):
                     default_branch=data.get("default_branch"))\
                         .where(table.id==str(data["id"]))\
                         .execute()
-        logger.success(f'Success in Updating --{data.get("name")}-- in table --GithubRepo-- ')
+        logger.success(f'Success in Updating --{data.get("username")}-- in table --GithubRepo-- ')
 
         #raise DuplicateEntryError(data['name'], "GithubRepo")
 
@@ -242,6 +242,7 @@ def filter_repos(tbl_object, page, number):
          print(tweet.message, tweet.created_date)
 
     """
+    logger.info("Filter_repos has been caled")
 
     return tbl_object\
             .select(tbl_object.name, tbl_object.git_url, 
@@ -288,7 +289,7 @@ def filter_gists(tbl_object, page, number):
          print(tweet.message, tweet.created_date)
 
     """
-
+    logger.info("Filter_gists has been caled")
     return tbl_object\
             .select(tbl_object.name, tbl_object.git_pull_url, 
                     tbl_object.downloaded_at, 

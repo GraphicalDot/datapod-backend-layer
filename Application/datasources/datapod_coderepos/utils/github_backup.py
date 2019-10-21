@@ -7,7 +7,7 @@ from .common import construct_request, get_response, ensure_directory, \
 
 from .github_identity import GithubIdentity
 from .github_utils import  backup_issues, backup_pulls
-from database_calls.coderepos.github.calls import store, get_single_repository
+from ..db_calls import store, get_single_repository
 import codecs
 import time 
 from loguru import logger
@@ -259,7 +259,7 @@ async def per_repository(username, output_directory, repository, config, since):
     #     backup_releases(args, repo_cwd, repository, repos_template,
     #                     include_assets=args.include_assets or args.include_everything)
 
-    repository.update({"tbl_object": config.CODE_GITHUB_TBL, "path": repo_dir, "reposource": GITHUB_DATASOURCE_NAME, "username": username})
+    repository.update({"tbl_object": config[DATASOURCE_NAME]["tables"]["repos_table"], "path": repo_dir, "reposource": GITHUB_DATASOURCE_NAME, "username": username})
     await store(**repository)
 
     if repository.get('is_gist'):

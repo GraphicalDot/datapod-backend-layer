@@ -43,8 +43,6 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
     Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
-GITHUB_TBL, GITHUB_CREDS_TBL = coderepos_github_initialize(DB_Object)
-#FB_CREDS_TBL, FB_IMAGES_TBL =  facebook_initialize(DB_Object)
 TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Object)
 
 
@@ -121,24 +119,12 @@ class Config:
     LOGS_TBL = Logs
     BACKUPS_TBL = Backup
     CREDENTIALS_TBL = Credentials
-    DATASOURCES_TBL = Datasources
-    EMAILS_TBL = Emails
-    PURCHASES_TBL = Purchases
-    IMAGES_TBL = Images
-    CODE_GITHUB_TBL =GITHUB_TBL
-    CODE_GITHUB_CREDS_TBL = GITHUB_CREDS_TBL
     CRYPTO_CRED_TBL = CryptCreds 
     CRYPTO_EXG_BINANCE = CryptoExgBinance
-    EMAIL_ATTACHMENT_TBL = EmailAttachment
-    INDEX_EMAIL_CONTENT_TBL = IndexEmailContent
+
     TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
     TWITTER_ACC_TBL = TweetAccountData
-    RESERVATIONS_TBL = Reservations
-    # FB_CREDS_TBL= FB_CREDS_TBL 
-    # FB_IMAGES_TBL = FB_IMAGES_TBL
     TWITTER_TBL = TWITTER_TBL
-    TWITTER_SSE_TOPIC = "TWITTER_PROGRESS"
-    FB_SSE_TOPIC = "FB_PROGRESS"
     DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
@@ -146,7 +132,6 @@ class Config:
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
     #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
-    DATASOURCES_CODE = {"TAKEOUT": 1, "FACEBOOK": 2, "WHATSAPP": 3, "INSTAGRAM": 4, "CRYPTO": 5, "REPOSITORY": {"GITHUB": 6}, "TWITTER": 8, "BACKUP": 80}
     STATES = ["COMPLETED", "PROGRESS", 'STARTED', "NULL", "SETUP_COMPLETED"]
     DEFAULT_SYNC_FREQUENCY = "5 8 * * 0"
 

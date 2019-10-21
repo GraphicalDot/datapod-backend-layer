@@ -1,6 +1,4 @@
 
-
-
 #-*- coding: utf-8 -*-
 from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
@@ -46,7 +44,6 @@ class Routes:
                                     ("github/backup_single_repo", github_backup_single_repo), 
                                     ("github/list_starred_repos", github_list_starred_repos), 
                                     ("github/list_gists", github_list_gist), 
-                                    ("github/github_list_repos", github_list_repos), 
                                     ("get_suggestions", get_suggestions),
                                     ("codesearch", codesearch)
                         ], 

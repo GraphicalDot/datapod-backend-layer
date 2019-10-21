@@ -61,15 +61,15 @@ def files_count(dirpath):
     return sum([len(files) for r, d, files in os.walk(dirpath)])
 
 async def background_github_parse(config, username, password, re_backup=False):
-    # backup_path = os.path.join(config.RAW_DATA_PATH,  f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username)
-    # ensure_directory(backup_path)
+    backup_path = os.path.join(config.RAW_DATA_PATH,  f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username)
+    ensure_directory(backup_path)
 
-    # authenticated_user = get_authenticated_user(username, password)
+    authenticated_user = get_authenticated_user(username, password)
 
-    # repositories = retrieve_repositories(username, password)
-    # #repositories = filter_repositories(args, repositories)
-    # await backup_repositories(username, password, backup_path, repositories, config, re_backup)
-    # # # backup_account(args, output_directory)
+    repositories = retrieve_repositories(username, password)
+    #repositories = filter_repositories(args, repositories)
+    await backup_repositories(username, password, backup_path, repositories, config, re_backup)
+    # # backup_account(args, output_directory)
 
 
     ##after completeion og the github parse, update the datasources table with the COMPLETED status
@@ -135,8 +135,8 @@ def deactivate():
     """
     ##somwhow remove hostname github in config in .ssh
     ##delete the datapod key of the rmeote Code Repo like github
-
     return 
+
 
 async def github_parse(request):
     """
@@ -229,7 +229,7 @@ async def github_list_repos(request):
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
-    result = await filter_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+    result = await filter_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
     [repo.update({
             "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
             "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
@@ -273,10 +273,15 @@ async def github_identity(request):
 async def github_list_starred_repos(request):
     """
     """
+    res = await counts(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
+    logger.info(res)
+
+
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
-    result = await filter_starred_repos(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+    logger.info(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
+    result = await filter_starred_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
     for repo in result:
         try:
             repo.update({
@@ -304,7 +309,9 @@ async def github_list_gist(request):
     page = [request.args.get("page"), 1][request.args.get("page") == None] 
     number = [request.args.get("number"), 200][request.args.get("number") == None] 
 
-    result = await filter_gists(request.app.config.CODE_GITHUB_TBL, int(page), int(number))
+    logger.info(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
+    result = await filter_gists(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
+    logger.info(result)
     [repo.update({
             "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
             "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
@@ -320,26 +327,6 @@ async def github_list_gist(request):
         })
 
 
-async def github_list_repos(request):
-    """
-    """
-    if not request.args.get("name"):
-        raise APIBadRequest("Name of the repository is required")
-    
-    result = await get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
-    if result:
-        result = result[0]
-        logger.info(result)
-        owner = json.loads(result["owner"])
-        result.update({"owner": owner})
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        'data': result,
-        'message': None
-        })
 
 
 async def github_backup_single_repo(request):
@@ -350,7 +337,7 @@ async def github_backup_single_repo(request):
     
     logger.info(request.app.config.CODE_GITHUB_TBL)
 
-    result = await get_single_repository(request.app.config.CODE_GITHUB_TBL, request.args.get("name"))
+    result = await get_single_repository(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], request.args.get("name"))
     
     if not result:
         raise APIBadRequest("No repo exists")
