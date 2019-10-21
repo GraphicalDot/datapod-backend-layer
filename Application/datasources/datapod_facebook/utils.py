@@ -17,9 +17,16 @@ parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())
 
 sys.path.append(parent_module_path)
 
-#from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, delete_key
 import aiomisc
 
+
+def dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+
+
+
+def files_count(dirpath):
+    return sum([len(files) for r, d, files in os.walk(dirpath)])
 
 
 async def __parse(config, path, username, checksum, datasource_name):
@@ -65,6 +72,20 @@ async def __parse(config, path, username, checksum, datasource_name):
     await config["send_sse_message"](config, datasource_name, res)
 
     await update_stats_table(config, datasource_name, username, "manual")
+
+    takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
+
+
+    # usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
+    size = dir_size(takeout_dir)
+    data_items = files_count(takeout_dir) 
+    logger.success(f"username == {takeout_dir} size == {size} dataitems == {data_items}")
+
+    await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+                DATASOURCE_NAME, 
+                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+
+
     return 
 
 

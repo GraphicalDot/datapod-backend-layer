@@ -32,7 +32,7 @@ class Routes:
                 "yourposts_table": yourposts_table,
                 "other_posts": other_posts,
                 "content": content,
-                "stats": stats_table, 
+                "stats_table": stats_table, 
                 "status": status_table},
             "utils":{
                 "stats": stats, 

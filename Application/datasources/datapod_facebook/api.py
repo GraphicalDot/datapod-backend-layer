@@ -13,38 +13,28 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-from .db_calls import get_datasources_status
+from .db_calls import get_stats, get_status
 from .variables import DATASOURCE_NAME
 import subprocess
 
 
-
 async def stats(request):
+    res = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
+    return res
+
+
     
-    def get_dir_size(dirpath):
-        subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
-
-
-    datasource_dir = os.path.join(request.app.config["RAW_DATA_PATH"], DATASOURCE_NAME)
-    usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
-
-    for username in usernames:
-        size = get_dir_size(username["path"])
-
-
-    pass
-
 
 async def status(request):
-    res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
-    
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": None, 
-        "data": res
-        })
+    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    return res
+
+
+
+
+
+
+
 
 
 

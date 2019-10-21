@@ -50,10 +50,7 @@ def update_stats(stats_table, reposource, username, data_items, size, sync_frequ
 
         stats_table.update(
                             data_items = data_items,
-                disk_space_used = size,
-                sync_frequency = sync_frequency,
-                sync_type = sync_type,
-                next_sync = next_sync).\
+                disk_space_used = size).\
         where(stats_table.username==username).\
         execute()
 
@@ -64,10 +61,16 @@ def update_stats(stats_table, reposource, username, data_items, size, sync_frequ
 
 
 @aiomisc.threaded
+def get_status(status_table):
+    return status_table.select().dicts()
+
+
+
+@aiomisc.threaded
 def get_stats(stats_table):
-    return stats_table\
-            .select()\
-             .dicts()
+    return stats_table.select().dicts()
+
+
 
 @aiomisc.threaded
 def store_creds(tbl_object, username, password, reposource):

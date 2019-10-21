@@ -51,10 +51,7 @@ def update_stats(facebook_stats_table, datasource_name, username, data_items, si
 
         facebook_stats_table.update(
                             data_items = data_items,
-                disk_space_used = size,
-                sync_frequency = sync_frequency,
-                sync_type = sync_type,
-                next_sync = next_sync).\
+                disk_space_used = size).\
         where(facebook_stats_table.username==username).\
         execute()
 
@@ -66,10 +63,15 @@ def update_stats(facebook_stats_table, datasource_name, username, data_items, si
 
 
 @aiomisc.threaded
-def get_datasources_status(facebook_status_table):
+def get_status(facebook_status_table):
     return facebook_status_table.select().dicts()
                                     
 
+
+@aiomisc.threaded
+def get_stats(facebook_stats_table):
+    return facebook_stats_table.select().dicts()
+        
 
 
 @aiomisc.threaded

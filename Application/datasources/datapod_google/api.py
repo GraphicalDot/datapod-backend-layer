@@ -35,11 +35,9 @@ from loguru import logger
 from datasources.shared.extract import extract
 import aiomisc
 
-from .db_calls import update_datasources_status, get_emails, match_text, filter_images, filter_attachments, filter_purchases, filter_reservations
+from .db_calls import update_datasources_status, get_emails, match_text, filter_images,\
+         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status
 from .variables import DATASOURCE_NAME
-
-
-
 
 
 
@@ -52,15 +50,8 @@ async def stats(request):
     
 
 async def status(request):
-    res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
-    
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": None, 
-        "data": res
-        })
+    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    return res
 
 
 
@@ -222,19 +213,17 @@ async def __parse(config, path, username):
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
     update_datasources_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
     
-    takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME)
-    username_paths = glob(f"{takeout_dir}/*")
+    takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
 
 
     # usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
-    for path in username_paths:
-        size = dir_size(path)
-        data_items = files_count(path) 
-        logger.success(f"username == {path} size == {size} dataitems == {data_items}")
+    size = dir_size(takeout_dir)
+    data_items = files_count(takeout_dir) 
+    logger.success(f"username == {takeout_dir} size == {size} dataitems == {data_items}")
 
-        await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
-                  GITHUB_DATASOURCE_NAME, 
-                    username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+    await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+                GITHUB_DATASOURCE_NAME, 
+                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
 
     return 

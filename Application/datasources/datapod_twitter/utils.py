@@ -7,7 +7,17 @@ from loguru import logger
 from utils.utils import async_wrap, send_sse_message
 from collections import Counter
 from .variables import DATASOURCE_NAME
+from glob import glob
+import subprocess
+import datetime
 
+def dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+
+
+
+def files_count(dirpath):
+    return sum([len(files) for r, d, files in os.walk(dirpath)])
 
 async def _parse(config, path, username, checksum):
     
@@ -24,6 +34,23 @@ async def _parse(config, path, username, checksum):
 
 
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+
+
+
+
+    ##updating stats table with relevant information
+    target_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
+
+    logger.success(f"This is the target dir {target_dir}")
+    size = dir_size(path)
+    data_items = files_count(path) 
+    logger.success(f"username == {path} size == {size} dataitems == {data_items}")
+
+    await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+            DATASOURCE_NAME, 
+                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+
+
 
     return 
 

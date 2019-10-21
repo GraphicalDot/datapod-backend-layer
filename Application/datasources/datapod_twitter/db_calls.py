@@ -56,10 +56,7 @@ def update_stats(stats_table, datasource_name, username, data_items, size, sync_
 
         stats_table.update(
                             data_items = data_items,
-                disk_space_used = size,
-                sync_frequency = sync_frequency,
-                sync_type = sync_type,
-                next_sync = next_sync).\
+                disk_space_used = size).\
         where(stats_table.username==username).\
         execute()
 

@@ -23,6 +23,7 @@ from datasources.shared.extract import extract
 
 
 
+
 async def stats(request):
     res = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
     return res
@@ -31,26 +32,8 @@ async def stats(request):
     
 
 async def status(request):
-    res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
-    
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": None, 
-        "data": res
-        })
-
-
-
-
-def dir_size(dirpath):
-    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
-
-
-
-def files_count(dirpath):
-    return sum([len(files) for r, d, files in os.walk(dirpath)])
+    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    return res
 
 
 

@@ -199,9 +199,6 @@ def intialize_db(path):
             )
 
 
-        
-
-
 
     result = db.create_tables([
         Logs,

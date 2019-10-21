@@ -13,7 +13,7 @@ from dateutil.parser import parse as date_parse
 from .utils.github_auth import get_auth
 from errors_module.errors import APIBadRequest, IdentityAlreadyExists,  IdentityExistsNoPath, IdentityDoesntExists
 from .db_calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts,\
-                 store_creds, get_creds, update_status, update_stats, get_stats
+                 store_creds, get_creds, update_status, update_stats, get_stats, get_status
 
 from loguru import logger
 from .utils.common import construct_request, get_response, ensure_directory, \
@@ -39,15 +39,8 @@ async def stats(request):
     
 
 async def status(request):
-    res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
-    
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": None, 
-        "data": res
-        })
+    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    return res
 
 
 
@@ -77,19 +70,15 @@ async def background_github_parse(config, username, password, re_backup=False):
         await update_status(config[DATASOURCE_NAME]["tables"]["status_table"] , f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username, "COMPLETED")
 
 
-    github_dir = os.path.join(config["RAW_DATA_PATH"], f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}")
-    username_paths = glob(f"{github_dir}/*")
+    github_dir = os.path.join(config["RAW_DATA_PATH"], f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username)
 
+    size = dir_size(github_dir)
+    data_items = files_count(github_dir) 
+    logger.success(f"username == {github_dir} size == {size} dataitems == {data_items}")
 
-    # usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
-    for path in username_paths:
-        size = dir_size(path)
-        data_items = files_count(path) 
-        logger.success(f"username == {path} size == {size} dataitems == {data_items}")
-
-        await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
-                  GITHUB_DATASOURCE_NAME, 
-                    username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+    await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+                GITHUB_DATASOURCE_NAME, 
+                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
 
     # ##TODO
