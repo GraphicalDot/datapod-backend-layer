@@ -5,9 +5,7 @@ import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from database_calls.initialize_tables import intialize_db
-from database_calls.coderepos.github.initialize import coderepos_github_initialize
 #from database_calls.facebook.initialize import facebook_initialize
-from database_calls.twitter.intiialize import twitter_initialize
 from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
@@ -40,10 +38,10 @@ for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH,
 ##Intializing database and intialize the table object of the sqlite db
 
 
-DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
-    Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
+# DB_Object, Logs, Backup, Credentials, Emails, Purchases, Images, CryptCreds, CryptoExgBinance, \
+#     Datasources, EmailAttachment,IndexEmailContent, Reservations   = intialize_db(os.path.join(DB_PATH, "database.db"))
 
-TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Object)
+# TWITTER_TBL, TWITTER_INDEXED_TBL, TweetAccountData =  twitter_initialize(DB_Object)
 
 
 """
@@ -115,17 +113,17 @@ class Config:
     GRACEFUL_SHUTDOWN_TIMEOUT = 15.0
     ACCESS_LOG = True   
     OS_COMMAND_OUTPUT  = os_command_output
-    DB_OBJECT = DB_Object
-    LOGS_TBL = Logs
-    BACKUPS_TBL = Backup
-    CREDENTIALS_TBL = Credentials
-    CRYPTO_CRED_TBL = CryptCreds 
-    CRYPTO_EXG_BINANCE = CryptoExgBinance
 
-    TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
-    TWITTER_ACC_TBL = TweetAccountData
-    TWITTER_TBL = TWITTER_TBL
-    DB_OBJECT = DB_Object
+    # LOGS_TBL = Logs
+    # BACKUPS_TBL = Backup
+    # CREDENTIALS_TBL = Credentials
+    # CRYPTO_CRED_TBL = CryptCreds 
+    # CRYPTO_EXG_BINANCE = CryptoExgBinance
+
+    # TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
+    # TWITTER_ACC_TBL = TweetAccountData
+    # TWITTER_TBL = TWITTER_TBL
+    # DB_OBJECT = DB_Object
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
