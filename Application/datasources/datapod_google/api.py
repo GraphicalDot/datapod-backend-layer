@@ -42,21 +42,14 @@ from .variables import DATASOURCE_NAME
 
 
 
+
+
 async def stats(request):
+    res = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
+    return res
+
+
     
-    def get_dir_size(dirpath):
-        subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
-
-
-    datasource_dir = os.path.join(request.app.config["RAW_DATA_PATH"], DATASOURCE_NAME)
-    usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
-
-    for username in usernames:
-        size = get_dir_size(username["path"])
-
-
-    pass
-
 
 async def status(request):
     res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
@@ -72,8 +65,13 @@ async def status(request):
 
 
 
+def dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
 
 
+
+def files_count(dirpath):
+    return sum([len(files) for r, d, files in os.walk(dirpath)])
 
 
 
@@ -223,8 +221,22 @@ async def __parse(config, path, username):
 
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
     update_datasources_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    
+    takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME)
+    username_paths = glob(f"{takeout_dir}/*")
 
-    # logger.info("Updated data source table with status completed")
+
+    # usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
+    for path in username_paths:
+        size = dir_size(path)
+        data_items = files_count(path) 
+        logger.success(f"username == {path} size == {size} dataitems == {data_items}")
+
+        await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+                  GITHUB_DATASOURCE_NAME, 
+                    username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+
+
     return 
 
 
