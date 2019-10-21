@@ -1,0 +1,4 @@
+
+
+DATASOURCE_NAME = "Coderepos"
+GITHUB_DATASOURCE_NAME = "github"

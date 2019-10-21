@@ -14,7 +14,7 @@ import os
 import json
 import datetime
 from loguru import logger
-from ..errors.errors import APIBadRequest, IdentityAlreadyExists, IdentityExistsNoPath, IdentityDoesntExists
+from errors_module.errors import APIBadRequest, IdentityAlreadyExists, IdentityExistsNoPath, IdentityDoesntExists
 from ..errors.errors import request_http_error, request_url_error
 from .github_auth import get_auth,  get_github_api_host
 

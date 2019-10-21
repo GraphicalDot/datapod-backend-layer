@@ -18,20 +18,19 @@ def initialize(db):
     class Creds(BaseModel):
         username = peewee.TextField(unique=True, null=False)
         password = peewee.TextField(null=False)
-        identifier = peewee.TextField(null=False)
         reposource = peewee.TextField(index=True)
 
 
     class Status(BaseModel):
-        reposource = peewee.TextField(index=True)
-        username = peewee.TextField(null=True, unique=True)
+        source = peewee.TextField(index=True) #like Github, Gitlab, Bitbucket or any other datasource 
+        username = peewee.TextField(null=False, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
 
 
     class Stats(BaseModel):
-        reposource = peewee.TextField(index=True)
-        username = peewee.TextField(null=True, unique=True)
+        reposource = peewee.TextField(index=True, null=False)
+        username = peewee.TextField(null=False, unique=True)
         data_items = peewee.IntegerField(null=True)
         disk_space_used = peewee.TextField(null=True)
         sync_frequency = peewee.TextField(null=True)
@@ -40,14 +39,17 @@ def initialize(db):
         next_sync = peewee.DateTimeField(default=datetime.datetime.now)
 
     class Archives(BaseModel):
-        reposource = peewee.TextField(index=True) #We will have diifferent code repo sources, for example github, gitlab, bitbucket etc, this will help us identify this.
         path = peewee.TextField(null=False)
-        username = peewee.TextField(unique=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+        reposource = peewee.TextField(index=True, null=False)#We will have diifferent code repo aources, for example github, gitlab, bitbucket etc, this will help us identify this.
+        username = peewee.TextField(null=False, unique=True)
+
+
 
     class Repos(BaseModel):
-        reposource = peewee.TextField(index=True) #We will have diifferent code repo aources, for example github, gitlab, bitbucket etc, this will help us identify this.
-        username = peewee.TextField(null=True, unique=True)
+
+        reposource = peewee.TextField(index=True, null=False)#We will have diifferent code repo aources, for example github, gitlab, bitbucket etc, this will help us identify this.
+        username = peewee.TextField(null=False, unique=True)
 
         path = peewee.TextField(index=True, null=False)
         owner = peewee.BlobField()

@@ -5,7 +5,7 @@ import subprocess
 import json
 from dateutil.parser import parse as date_parse 
 from .utils.github_auth import get_auth
-from .errors.errors import APIBadRequest
+from errors_module.errors import APIBadRequest
 
 from loguru import logger
 import aiomisc

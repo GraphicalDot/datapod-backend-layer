@@ -159,15 +159,32 @@ def finish(app, loop):
     return 
 
 
+
+async def datasource_stats(request):
+
+    # for datasource in rquest.app.config.registered_modules:
+    datasource = "coderepos"
+    res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
+
+
+    return response.json({
+            "success": True, 
+            "error": False,
+            "data": {datasource: res}
+    })
+
+
+
 def add_routes(app):
     import datasources
     import pkgutil
-    list_name = []
+    registered_modules = []
+
     for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
         if name.startswith('datapod_'):
             logger.success(f"Reading module {name}")
             module_name = f"datasources.{name}.settings"
-
+            registered_modules.append(name.replace('datapod_', ""))
 
 
             ##reading every module vairables.py file to find out the DATASOURCE_NAME
@@ -198,7 +215,8 @@ def add_routes(app):
             app.config.update({inst.datasource_name: inst.config})
 
 
-    
+    app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
+    app.config["registered_modules"] = registered_modules
 
 
 
@@ -209,7 +227,7 @@ def main():
     #app.blueprint(ACCOUNTS_BP)
     #app.blueprint(ERRORS_BP)
     #app.blueprint(ASSETS_BP)
-    app.blueprint(DATASOURCES_BP)
+    #app.blueprint(DATASOURCES_BP)
     app.blueprint(ERRORS_BP)
     app.blueprint(USERS_BP)
     app.blueprint(BACKUP_BP)

@@ -11,15 +11,16 @@ import humanize
 import json
 from dateutil.parser import parse as date_parse 
 from .utils.github_auth import get_auth
-from .errors.errors import APIBadRequest, IdentityAlreadyExists,  IdentityExistsNoPath, IdentityDoesntExists
-from .db_calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts, store_creds, get_creds, update_status, update_stats
+from errors_module.errors import APIBadRequest, IdentityAlreadyExists,  IdentityExistsNoPath, IdentityDoesntExists
+from .db_calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts,\
+                 store_creds, get_creds, update_status, update_stats, get_stats
 
 from loguru import logger
 from .utils.common import construct_request, get_response, ensure_directory, \
         c_pretty_print, mask_password, logging_subprocess, \
              retrieve_data, retrieve_data_gen, get_authenticated_user
 from .utils.github_identity import GithubIdentity
-
+from glob import glob 
 import mmap
 import humanize
 import aiomisc
@@ -28,23 +29,14 @@ from .utils.github_backup import retrieve_repositories, backup_repositories, per
 #from gitsuggest import GitSuggest
 from github import Github , BadCredentialsException, GithubException
 
-
+from .variables import DATASOURCE_NAME, GITHUB_DATASOURCE_NAME
 
 async def stats(request):
+    res = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
+    return res
+
+
     
-    def get_dir_size(dirpath):
-        subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
-
-
-    datasource_dir = os.path.join(request.app.config["RAW_DATA_PATH"], DATASOURCE_NAME)
-    usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
-
-    for username in usernames:
-        size = get_dir_size(username["path"])
-
-
-    pass
-
 
 async def status(request):
     res = await get_datasources_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
@@ -59,21 +51,61 @@ async def status(request):
 
 
 
+
+def dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+
+
+
+def files_count(dirpath):
+    return sum([len(files) for r, d, files in os.walk(dirpath)])
+
 async def background_github_parse(config, username, password, re_backup=False):
-    backup_path = os.path.join(config.RAW_DATA_PATH, "Coderepos/github")
-    ensure_directory(backup_path)
+    # backup_path = os.path.join(config.RAW_DATA_PATH,  f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username)
+    # ensure_directory(backup_path)
 
-    authenticated_user = get_authenticated_user(username, password)
+    # authenticated_user = get_authenticated_user(username, password)
 
-    repositories = retrieve_repositories(username, password)
-    #repositories = filter_repositories(args, repositories)
-    await backup_repositories(username, password, backup_path, repositories, config, re_backup)
-    # # backup_account(args, output_directory)
+    # repositories = retrieve_repositories(username, password)
+    # #repositories = filter_repositories(args, repositories)
+    # await backup_repositories(username, password, backup_path, repositories, config, re_backup)
+    # # # backup_account(args, output_directory)
 
 
     ##after completeion og the github parse, update the datasources table with the COMPLETED status
     if not re_backup:
-        update_datasources_status(config.DATASOURCES_TBL , "CODEREPOS/Github", username , config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "COMPLETED", "COMPLETED")
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"] , f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username, "COMPLETED")
+
+
+    github_dir = os.path.join(config["RAW_DATA_PATH"], f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}")
+    username_paths = glob(f"{github_dir}/*")
+
+
+    # usernames = [{"username": x[0], "path": os.path.join(datasource_dir, x[0])} for x in os.walk(datasource_dir)]
+    for path in username_paths:
+        size = dir_size(path)
+        data_items = files_count(path) 
+        logger.success(f"username == {path} size == {size} dataitems == {data_items}")
+
+        await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
+                  GITHUB_DATASOURCE_NAME, 
+                    username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+
+
+    # ##TODO
+    # await update_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"], 
+    #                         f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", 
+    #                         request.json["username"],)
+
+    #         reposource = peewee.TextField(index=True, null=False)
+    #     username = peewee.TextField(null=False, unique=True)
+    #     data_items = peewee.IntegerField(null=True)
+    #     disk_space_used = peewee.TextField(null=True)
+    #     sync_frequency = peewee.TextField(null=True)
+    #     sync_type = peewee.TextField(null=True)
+    #     last_sync = peewee.DateTimeField(default=datetime.datetime.now)
+    #     next_sync = peewee.DateTimeField(default=datetime.datetime.now)
+
 
 
     #generate_new_keys(username, password)
@@ -126,7 +158,7 @@ async def github_parse(request):
         raise APIBadRequest(e)
 
     try:
-        inst = await GithubIdentity(request.app.config, "github.com", "datapod", request.json["username"], request.json["password"])
+        inst = await GithubIdentity(request.app.config,  "datapod", request.json["username"], request.json["password"])
         await inst.keys_path()
 
 
@@ -148,10 +180,9 @@ async def github_parse(request):
         logger.error(f"GithubDS Error {e}")
         raise APIBadRequest(e)
 
-    await store_creds(request.app.config.CODE_GITHUB_CREDS_TBL, request.json["username"], request.json["password"] )
-    update_datasources_status(request.app.config.DATASOURCES_TBL , "CODEREPOS/Github",request.json["username"] , \
-            request.app.config.DATASOURCES_CODE["REPOSITORY"]["GITHUB"], "github parse completed", "PROGRESS")
+    await store_creds(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], request.json["password"], GITHUB_DATASOURCE_NAME )
 
+    await update_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"] , f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", request.json["username"], "PROGRESS")
 
     request.app.add_task(background_github_parse(request.app.config, request.json["username"], request.json["password"]))
 

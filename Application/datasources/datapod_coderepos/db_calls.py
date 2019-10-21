@@ -31,13 +31,13 @@ def update_status(status_table, datasource_name, username, status):
 
 
 @aiomisc.threaded
-def update_stats(stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):
+def update_stats(stats_table, reposource, username, data_items, size, sync_frequency, sync_type, next_sync):
     """
 
     """
     try:
         stats_table.insert(
-                source = datasource_name,
+                reposource = reposource,
                 username = username,
                 data_items = data_items,
                 disk_space_used = size,
@@ -64,7 +64,13 @@ def update_stats(stats_table, datasource_name, username, data_items, size, sync_
 
 
 @aiomisc.threaded
-def store_creds(tbl_object, username, password):
+def get_stats(stats_table):
+    return stats_table\
+            .select()\
+             .dicts()
+
+@aiomisc.threaded
+def store_creds(tbl_object, username, password, reposource):
     """
     purchases: a list of purchases dict
     """
@@ -73,14 +79,23 @@ def store_creds(tbl_object, username, password):
     try:
         tbl_object.insert(
                     username = username,
+                    reposource = reposource,
                     password=password).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
-   
-    except Exception as e:
+        logger.success(f"Success on insert {reposource} creds for --{username}--")
+        
+    except IntegrityError as e:
+
+        tbl_object.update(
+                    password=password).where(tbl_object.username==username).execute()
         #raise DuplicateEntryError(data['email_id'], "Email")
         #use with tenacity
-        logger.error(f"Github creds data insertion failed {username} with {e}")
+        logger.error(f"Github creds data insertion failed so updating it  {username}")
+
+    except Exception as e:
+        logger.error(f"Github creds data insertion failed {username} with error {e}")
+
     return 
 
 @aiomisc.threaded

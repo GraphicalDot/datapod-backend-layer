@@ -20,6 +20,11 @@ import functools
 import concurrent.futures
 import aiomisc
 import os
+from ..variables import DATASOURCE_NAME, GITHUB_DATASOURCE_NAME
+
+
+
+
 FNULL = open(os.devnull, 'w')
 
 
@@ -166,11 +171,12 @@ async def backup_repositories(username, password, output_directory, repositories
     # loop.run_until_complete(tasks) 
     i = 100/len(repositories)
     for num, repository in enumerate(repositories[::-1]):
-        msg = await per_repository(output_directory, repository, config, since)
+
+        msg = await per_repository(username, output_directory, repository, config, since)
         if not re_backup:
             res = {"message": msg, "percentage": int(i*(num+1))}
-            await send_sse_message(config, "CODEREPOS_GITHUB", res)
 
+            await config["send_sse_message"](config, f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", res)
 
 
 
@@ -178,7 +184,7 @@ async def backup_repositories(username, password, output_directory, repositories
     return 
 
 
-async def per_repository(output_directory, repository, config, since):
+async def per_repository(username, output_directory, repository, config, since):
     await asyncio.sleep(2)
     if repository.get('is_gist'):
             repo_cwd = os.path.join(output_directory, 'gists', repository['id'])
@@ -253,7 +259,7 @@ async def per_repository(output_directory, repository, config, since):
     #     backup_releases(args, repo_cwd, repository, repos_template,
     #                     include_assets=args.include_assets or args.include_everything)
 
-    repository.update({"tbl_object": config.CODE_GITHUB_TBL, "path": repo_dir})
+    repository.update({"tbl_object": config.CODE_GITHUB_TBL, "path": repo_dir, "reposource": GITHUB_DATASOURCE_NAME, "username": username})
     await store(**repository)
 
     if repository.get('is_gist'):
