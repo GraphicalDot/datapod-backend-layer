@@ -64,6 +64,11 @@ async def parse(request):
     
     request.app.config.VALIDATE_FIELDS(["path", "username"], request.json)
 
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
+
+    if res:
+        if res.get("status") == "PROGRESS":
+            raise APIBadRequest("Already processing a twitter for the user")
 
     username = request.json["username"].lower()
     config = request.app.config

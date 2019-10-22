@@ -136,6 +136,15 @@ async def github_parse(request):
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
 
 
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
+
+    if res:
+        if res.get("status") == "PROGRESS":
+            raise APIBadRequest("Already processing a github account for the user")
+
+
+
     try:
         logger.info(f'Github username {request.json["username"]}')
 

@@ -145,6 +145,15 @@ async def parse(request):
     """
     request.app.config.VALIDATE_FIELDS(["path", "username"], request.json)
 
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
+
+    if res:
+        if res.get("status") == "PROGRESS":
+            raise APIBadRequest("Already processing a Takeout account for the user")
+
+
+
+
     # config = request.app.config
     # dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
     # logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
