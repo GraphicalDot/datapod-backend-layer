@@ -62,6 +62,7 @@ from loguru import logger
 from utils.utils import send_sse_message
 from sentry_sdk import init
 init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
+import pkgutil
 
 app = Sanic(__name__)
 
@@ -161,23 +162,52 @@ def finish(app, loop):
 
 
 async def datasource_stats(request):
+    result = {}
+    for datasource in request.app.config.registered_modules:
+        res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
+        result.update({datasource: res})
 
-    # for datasource in rquest.app.config.registered_modules:
-    datasource = "coderepos"
-    res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
+    return response.json({
+            "success": True, 
+            "error": False,
+            "data": result
+    })
+
+
+async def datasource_status(request):
+    result = {}
+    for datasource in request.app.config.registered_modules:
+        res = await request.app.config[datasource.capitalize()]["utils"]["status"](request)
+        result.update({datasource: res})
+
+    return response.json({
+            "success": True, 
+            "error": False,
+            "data": result
+    })
+
+
+async def datasource_archives(request):
+    result = {}
+    # for datasource in request.app.config.registered_modules:
+    #     res = await request.app.config[datasource.capitalize()]["utils"]["status"](request)
+    #     result.update({datasource: res})
+
+    datasource = "twitter"
+    res = await request.app.config[datasource.capitalize()]["utils"]["archives"](request)
 
 
     return response.json({
             "success": True, 
             "error": False,
-            "data": {datasource: res}
+            "data": res
     })
 
 
 
 def add_routes(app):
     import datasources
-    import pkgutil
+
     registered_modules = []
 
     for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
@@ -216,6 +246,8 @@ def add_routes(app):
 
 
     app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
+    app.add_route(datasource_status, '/datasources/status', methods=["GET"])
+    app.add_route(datasource_archives, '/datasources/archives', methods=["GET"])
     app.config["registered_modules"] = registered_modules
 
 

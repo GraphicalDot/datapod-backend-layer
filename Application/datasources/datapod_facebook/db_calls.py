@@ -10,7 +10,7 @@ import aiomisc
 
 
 @aiomisc.threaded
-def update_datasources_status(facebook_status_table, datasource_name, username, status):
+def update_status(facebook_status_table, datasource_name, username, status):
     try:
         facebook_status_table.insert(source=datasource_name,  
                                     username=username,

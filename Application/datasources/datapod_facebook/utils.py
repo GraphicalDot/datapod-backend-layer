@@ -11,7 +11,7 @@ from errors_module.errors import APIBadRequest
 from loguru import logger
 from .variables import DATASOURCE_NAME
 import humanize
-from .db_calls import store_image, update_datasources_status, update_stats
+from .db_calls import store_image, update_status, update_stats
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
@@ -29,11 +29,11 @@ def files_count(dirpath):
     return sum([len(files) for r, d, files in os.walk(dirpath)])
 
 
-async def __parse(config, path, username, checksum, datasource_name):
+async def __parse(config, path, username, checksum):
     ##add this if this has to executed periodically
     ##while True:
     #path = /home/feynman/.datapod/userdata/raw/facebook/
-    await update_datasources_status(config[datasource_name]["tables"]["status"], datasource_name, username, "PROGRESS")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS")
     
     async def change_uri(json_data, prefix_path):
         i = 100/len(json_data["photos"])
@@ -42,14 +42,14 @@ async def __parse(config, path, username, checksum, datasource_name):
             #timestamp = indian_time_stamp(entry["creation_timestamp"])
             timestamp = datetime.datetime.utcfromtimestamp(entry["creation_timestamp"])
             entry.update({"uri": uri, "creation_timestamp": timestamp, 
-                "tbl_object": config[datasource_name]["tables"]["image_table"], 
+                "tbl_object": config[DATASOURCE_NAME]["tables"]["image_table"], 
                 "username": username, "checksum": checksum})
             
             logger.info(entry)
             res = {"message": "Progress", "percentage": int(i*(num+1))}
 
             await store_image(**entry)
-            await config["send_sse_message"](config, datasource_name, res)
+            await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
         return json_data["photos"]
 
@@ -66,12 +66,12 @@ async def __parse(config, path, username, checksum, datasource_name):
             images.extend(await change_uri(data, path))
 
 
-    await update_datasources_status(config[datasource_name]["tables"]["status"], datasource_name, username, "COMPLETED")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
 
     res = {"message": "completed", "percentage": 100}
-    await config["send_sse_message"](config, datasource_name, res)
+    await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
-    await update_stats_table(config, datasource_name, username, "manual")
+
 
     takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
 
@@ -114,20 +114,20 @@ def calc_data_items(dirpath):
 
 
 
-async def update_stats_table(config, datasource_name, username, sync_type):
-    path = os.path.join(config.RAW_DATA_PATH, f"{DATASOURCE_NAME}/{username}")
+# async def update_stats_table(config, datasource_name, username, sync_type):
+#     path = os.path.join(config.RAW_DATA_PATH, f"{DATASOURCE_NAME}/{username}")
 
-    size = await get_dir_size(path)
+#     size = await get_dir_size(path)
 
-    data_items = await calc_data_items(path)
+#     data_items = await calc_data_items(path)
 
-    logger.info(f"Total size for {datasource_name} is {size}") 
-    logger.info(f"Total data items for {datasource_name} is {data_items}") 
-    u = datetime.datetime.utcnow()
-    f  = datetime.timedelta(days=7)
-    next_sync = u +f
-    await update_stats(config[datasource_name]["tables"]["stats"], DATASOURCE_NAME, username, 
-            data_items, size, config.DEFAULT_SYNC_FREQUENCY, sync_type, next_sync)
+#     logger.info(f"Total size for {datasource_name} is {size}") 
+#     logger.info(f"Total data items for {datasource_name} is {data_items}") 
+#     u = datetime.datetime.utcnow()
+#     f  = datetime.timedelta(days=7)
+#     next_sync = u +f
+#     await update_stats(config[datasource_name]["tables"]["stats"], DATASOURCE_NAME, username, 
+#             data_items, size, config.DEFAULT_SYNC_FREQUENCY, sync_type, next_sync)
 
-    return 
+#     return 
 

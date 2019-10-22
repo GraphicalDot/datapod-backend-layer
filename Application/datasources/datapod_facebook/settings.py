@@ -33,7 +33,7 @@ class Routes:
                 "other_posts": other_posts,
                 "content": content,
                 "stats_table": stats_table, 
-                "status": status_table},
+                "status_table": status_table},
             "utils":{
                 "stats": stats, 
                 "status": status

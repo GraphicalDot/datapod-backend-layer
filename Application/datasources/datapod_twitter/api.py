@@ -14,7 +14,8 @@ import base64
 from io import BytesIO
 from PIL import Image
 import datetime
-from .db_calls import update_status, update_stats, filter_tweet, match_text, get_account, store
+from .db_calls import update_status, update_stats, filter_tweet, \
+        match_text, get_account, store, get_stats, get_status, get_archives
 import dateparser
 
 from .variables import DATASOURCE_NAME
@@ -29,13 +30,14 @@ async def stats(request):
     return res
 
 
-    
 
 async def status(request):
-    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
     return res
 
-
+async def archives(request):
+    res = await get_archives(request.app.config[DATASOURCE_NAME]["tables"]["archives_table"])
+    return res
 
 
 
@@ -112,12 +114,14 @@ async def tweets(request):
 
     if matching_string:
         logger.info(f"THis is the matchiing_String {matching_string}")
-        result, count = await match_text(request.app.config.TWITTER_TBL, request.app.config.TWITTER_INDEXED_TBL, \
+        result, count = await match_text(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], 
+            request.app.config[DATASOURCE_NAME]["tables"]["indexed_tweet_table"], \
+                
             matching_string , start_date, end_date,  int(skip), int(limit))
 
     else:
 
-        result, count = await filter_tweet(request.app.config.TWITTER_TBL, start_date, end_date, int(skip), int(limit))
+        result, count = await filter_tweet(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], start_date, end_date, int(skip), int(limit))
     
     # [repo.update({
     #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),
@@ -133,125 +137,3 @@ async def tweets(request):
     
 
 
-
-
-def read_chat(config, chat_type, chat_id, all_messages=False):
-
-    ds_path = os.path.join(config.RAW_DATA_PATH, f"facebook/messages/{chat_type}/{chat_id}")
-
-    result = {}
-
-    chat_files= [os.path.join(ds_path, file) for file in os.listdir(ds_path) if os.path.isfile(os.path.join(ds_path, file))]
-
-
-    if len(chat_files) > 0:
-        #implies that only photos type of folder exists for this chat id and there is no message.json files
-        with open(chat_files[0], "r") as json_file:   
-            data = json.load(json_file)
-
-            #extracting only one message out of all the messages
-            messages = data["messages"][0]
-            timestamp_ms = messages["timestamp_ms"]
-            messages.update({"timestamp_ms": datetime.datetime.utcfromtimestamp(timestamp_ms/1000).strftime("%d %b, %Y")})
-
-            result.update({"title": data["title"], "participants": data["participants"], "thread_type": data["thread_type"], 
-                    "thread_path": data["thread_path"],  "messages": messages})    
-    else:
-        logger.error(f"No messages found for {chat_type} and {chat_id} {chat_files}" )
-        return False
-
-    chats = []
-    if all_messages:
-        for _file in chat_files:
-            with open(_file, "r") as json_file:   
-                data = json.load(json_file)
-                chats.extend(data.get("messages"))
-
-    return result    
-
-
-async def allchats(request):
-    """
-    To get all the chats created by the user
-    """
-    #request.app.config.VALIDATE_FIELDS(["message_type"], request.json)
-    ds_path = os.path.join(request.app.config.RAW_DATA_PATH, "facebook/messages")
-    chat_types = os.listdir(ds_path)
-    result = {}
-
-    for chat_type in ["stickers_used"]:
-        if chat_type in chat_types:
-            chat_types.remove(chat_type)
-
-    for chat_type in chat_types:
-        ##this will be names type like archieved, inbox etc
-        chat_type_path = os.path.join(ds_path, chat_type)
-
-        all_chats = os.listdir(chat_type_path)
-        #chat_ids = [{"name": e.split("_")[0], "chat_id": e} for e in all_chats]
-
-
-        chats = []
-        for chat_id in all_chats:
-            chat_data = read_chat(request.app.config, chat_type, chat_id)
-            if chat_data:
-                chats.append(chat_data)
-
-
-        result.update({chat_type: chats})
-
-
-    # if request.json.get("message_type") not in chat_types:
-    #     raise APIBadRequest("This message type is not available")
-
-
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": "Facebook data parsing has been Started and you will be notified once it is complete", 
-        "data": result
-        })
-
-async def single_chat(request):
-    """
-    To get all the chats created by the user
-    thread_path = 'inbox/KapilDevGarg_lapjbN90Hw'
-    """
-
-
-    thread_path = request.args.get("thread_path")
-    if not thread_path:
-        raise APIBadRequest("thread_path  is required")
-    
-    logger.info(f'This is the chat id {request.args.get("chat_id")}')
-    ds_path = os.path.join(request.app.config.RAW_DATA_PATH, f"facebook/messages/{thread_path}")
-
-    if not os.path.exists(ds_path):
-        raise APIBadRequest("This thread_path doesnt exists")
-
-    logger.info(ds_path)
-    chats = []
-    chat_files= [(os.path.join(ds_path, file)) for file in os.listdir(ds_path)]
-    for _file in chat_files:
-        with open(_file, "r") as json_file:   
-            data = json.load(json_file)
-            logger.info(data)
-            chats.extend(data.get("messages"))
-    # if request.json.get("message_type") not in chat_types:
-    #     raise APIBadRequest("This message type is not available")
-
-
-    # chat_path = os.path.join(ds_path, request.json.get("message_type"))
-
-    # all_chats = os.listdir(chat_path)
-    # result = [{"name": e.split("_")[0], "chat_id": e} for e in all_chats]
-
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        "message": "Facebook data parsing has been Started and you will be notified once it is complete", 
-        "data": chats
-        })

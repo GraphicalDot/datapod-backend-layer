@@ -39,10 +39,12 @@ async def stats(request):
     
 
 async def status(request):
-    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
     return res
 
 
+async def archives(request):
+    return []
 
 
 def dir_size(dirpath):

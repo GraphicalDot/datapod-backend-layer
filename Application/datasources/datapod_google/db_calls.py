@@ -7,7 +7,7 @@ from errors_module.errors import APIBadRequest, DuplicateEntryError
 from loguru import logger
 
 @aiomisc.threaded
-def update_datasources_status(status_table, datasource_name, username, status):
+def update_status(status_table, datasource_name, username, status):
     try:
         status_table.insert(source=datasource_name,  
                                     username=username,

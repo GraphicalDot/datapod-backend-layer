@@ -77,7 +77,9 @@ def get_status(status_table):
 def get_stats(stats_table):
     return stats_table.select().dicts()
 
-
+@aiomisc.threaded
+def get_archives(table):
+    return table.select().dicts()
 
 
 

@@ -26,12 +26,11 @@ import concurrent.futures
 import aiomisc
 #from tenacity import *
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
-# from database_calls.credentials import update_datasources_status
 from utils.utils import async_wrap, send_sse_message
 from email.header import Header, decode_header, make_header
 
 
-from ..db_calls import update_datasources_status, store_email, store_email_attachment, store_email_content
+from ..db_calls import store_email, store_email_attachment, store_email_content
 from ..variables import DATASOURCE_NAME
 
 import chardet
@@ -93,7 +92,6 @@ class EmailParse(object):
         logger.info(f"Total number of emails {sum(total_emails)}")        
         logger.info(f"Mbox objects {self.mbox_objects}")        
         self.email_count = sum(total_emails)
-        await update_datasources_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, self.username, "PROGRESS")
     
 
     @aiomisc.threaded_separate

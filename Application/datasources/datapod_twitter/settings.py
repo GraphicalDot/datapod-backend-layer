@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
 
 from .db_initialize import initialize
-from .api import parse, dashboard, tweets, allchats, stats, status
+from .api import parse, dashboard, tweets, stats, status, archives
 import os
 from .variables import DATASOURCE_NAME
 
@@ -37,12 +37,12 @@ class Routes:
                 "indexed_tweet_table": indexed_tweet_table},
             "utils":{
                 "stats": stats, 
-                "status": status
+                "status": status,
+                "archives": archives
             }
         }
         
-        self.routes = {"GET": [("dashboard", dashboard), ("tweets", tweets), 
-                    ("chats", allchats)], 
+        self.routes = {"GET": [("dashboard", dashboard), ("tweets", tweets)], 
                     "POST": [("parse", parse)] } 
         
         

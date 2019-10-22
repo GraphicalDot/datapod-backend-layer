@@ -5,7 +5,7 @@ import sqlite3
 
 from .db_initialize import initialize
 from .github_api import github_parse, github_re_backup_whole, github_list_repos, github_identity, github_list_starred_repos, github_list_gist, \
-        github_list_repos, github_backup_single_repo, stats, status
+        github_list_repos, github_backup_single_repo, stats, status, archives
 
 from .api import get_suggestions, codesearch
 import os
@@ -34,7 +34,8 @@ class Routes:
                 "repos_table": repos_table},
             "utils":{
                 "stats": stats, 
-                "status": status
+                "status": status,
+                "archives": archives
             }
         }
         

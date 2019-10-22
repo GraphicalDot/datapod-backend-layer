@@ -26,7 +26,7 @@ async def stats(request):
     
 
 async def status(request):
-    res = await get_status(update_datasources_status(config[datasource_name]["tables"]["status"]))
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
     return res
 
 
@@ -50,7 +50,7 @@ async def parse(request):
     
     checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
     
-    request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum,  DATASOURCE_NAME))
+    request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum))
 
     return response.json(
         {
