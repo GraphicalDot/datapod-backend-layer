@@ -92,12 +92,7 @@ class Config:
     RAW_DATA_PATH = RAW_DATA_PATH
 
     DB_PATH = DB_PATH    
-    #db_dir_path = "/home/feynman/Desktop/database"
     BACKUP_PATH = BACKUP_PATH
-
-    URL = None
-
-
 
     HOST = "localhost"
     PORT = 8000
@@ -114,47 +109,33 @@ class Config:
     ACCESS_LOG = True   
     OS_COMMAND_OUTPUT  = os_command_output
 
-    # LOGS_TBL = Logs
-    # BACKUPS_TBL = Backup
-    # CREDENTIALS_TBL = Credentials
-    # CRYPTO_CRED_TBL = CryptCreds 
-    # CRYPTO_EXG_BINANCE = CryptoExgBinance
-
-    # TWITTER_INDEXED_TBL = TWITTER_INDEXED_TBL
-    # TWITTER_ACC_TBL = TweetAccountData
-    # TWITTER_TBL = TWITTER_TBL
-    # DB_OBJECT = DB_Object
+ 
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     DEFAULT_ITEMS_NUMBER = 50 #the default number of items that should be returned in the api
     #TAR_SPLIT_SIZE = 524288 #size of the files in which the backup tar file will be broken
     TAR_SPLIT_SIZE = 512 #size of the files in which the backup tar file will be broken
     LANGUAGE = "english"
-    #DATASOURCES_CODE = {"PURCHASES": 1, "RESERVATIONS": 2, "CRYPTO_BINANCE": 51, "EMAIL": 3, "IMAGES": 4, "REPOSITORY_GITHUB": 61}
     STATES = ["COMPLETED", "PROGRESS", 'STARTED', "NULL", "SETUP_COMPLETED"]
     DEFAULT_SYNC_FREQUENCY = "5 8 * * 0"
 
 
 #openssl rand -out .key 32
 class DevelopmentConfig(Config):   
-    URL = "https://jadrlk2ok9.execute-api.ap-south-1.amazonaws.com/"
-    LOGIN = f"{URL}Production/users/login"
-    DELETE_USER = f"{URL}Production/users/delete_user"
-    SIGNUP = f"{URL}Production/users/signup" 
-    CONFIRM_SIGN_UP = f"{URL}Production/users/confirm-signup"
-    CHANGE_MFA_SETINGS = f"{URL}Production/users/mfa-settings"
-    ASSOCIATE_MFA = f"{URL}Production/users/associate-mfa"
-    VERIFY_MFA = f"{URL}Production/users/verify-mfa"
-    POST_LOGIN_MFA = f"{URL}Production/users/post-login-mfa"
-    AWS_CREDS = f"{URL}Production/users/temp-credentials"
-    FORGOT_PASS = f"{URL}Production/users/forgot-password"
-    CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic" ##required username and mnemonic_sha_256 with auth token
+    URL = "ek14dw5898.execute-api.ap-south-1.amazonaws.com"
+    STAGE = "v1"
+    SIGNUP = f"https://{URL}/{STAGE}/user/signup"     
+    LOGIN = f"https://{URL}/{STAGE}/user/login"     
+    LOGOUT = f"https://{URL}/{STAGE}/user/logout"
+    CONFIRM_SIGN_UP = f"https://{URL}/{STAGE}/user/confirm_sign_up"
+    CHANGE_PASSWORD = f"https://{URL}/{STAGE}/user/change_password"
 
-    RESEND_CODE = f"{URL}Production/users/resend-code"
-    CHANGE_PASSWORD = f"{URL}Production/users/change-password"
-    CONFIRM_FORGOT_PASS = f"{URL}Production/users/confirm-password"
-    PROFILE = f"{URL}Production/users/profile"
-    RENEW_REFRESH_TOKEN = f"{URL}Production/users/renew-refresh-token"
-    LOGOUT = f"{URL}Production/users/log-out"
+    CONFIRM_FORGOT_PASS = f"https://{URL}/{STAGE}/user/confirm_forgot_password"
+    FORGOT_PASS = f"https://{URL}/{STAGE}/user/forgot_password"
+    RENEW_REFRESH_TOKEN = f"https://{URL}/{STAGE}/user/renew_refresh_token"
+    RESEND_CODE = f"https://{URL}/{STAGE}/user/resend_registration_code"
+    TEMPORARY_S3_CREDS = f"https://{URL}/{STAGE}/user/temporary_s3_creds"
+
+
     TIMEZONE  = 'Asia/Kolkata' #TODO: THis should be selected by users to findout Timezone and must be saved in sqlite3
     MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
     CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
