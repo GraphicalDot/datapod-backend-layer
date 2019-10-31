@@ -189,6 +189,26 @@ async def datasource_status(request):
     })
 
 
+async def datasource_status_stats(request):
+    stats = {}
+    status = {}
+    ##need to popout "users" registered module
+    for datasource in request.app.config.registered_modules:
+        if datasource != "users":
+            res = await request.app.config[datasource.capitalize()]["utils"]["status"](request)
+            status.update({datasource: res})
+
+            res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
+            stats.update({datasource: res})
+
+
+    return response.json({
+            "success": True, 
+            "error": False,
+            "data": {"stats": stats, "status": status}
+    })
+
+
 async def datasource_archives(request):
     result = {}
     # for datasource in request.app.config.registered_modules:
@@ -239,17 +259,19 @@ def add_routes(app):
             inst.config.update({"code": hash(inst.datasource_name)%10000})                 
             
             for (http_method, route_list) in inst.routes.items():
+                datasource = inst.datasource_name
                 for (route_name, handler_function) in route_list:
                     logger.info(f"Registering {http_method} for {route_name} for datasource {inst.datasource_name}")
-                    app.add_route(handler_function, f'/datasources/{inst.datasource_name}/{route_name}', methods=[http_method])
+                    app.add_route(handler_function, f'/datasources/{datasource.lower()}/{route_name}', methods=[http_method])
 
             logger.info(f"Updating Appication config with {inst.datasource_name} configurations ")
             app.config.update({inst.datasource_name: inst.config})
 
 
-    app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
-    app.add_route(datasource_status, '/datasources/status', methods=["GET"])
+    # app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
+    # app.add_route(datasource_status, '/datasources/status', methods=["GET"])
     app.add_route(datasource_archives, '/datasources/archives', methods=["GET"])
+    app.add_route(datasource_status_stats, '/datasources/stats_status', methods=["GET"])
     app.config["registered_modules"] = registered_modules
 
 

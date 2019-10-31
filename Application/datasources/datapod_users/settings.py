@@ -5,7 +5,8 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
 
 from .db_initialize import initialize
-from .api import login, signup, confirm_signup, change_password, forgot_password, confirm_forgot_password
+from .api import login, signup, confirm_signup, change_password, forgot_password,\
+             confirm_forgot_password, is_logged_in
 import os
 from .variables import DATASOURCE_NAME
 
@@ -30,8 +31,9 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [], 
-                    "POST": [("login", login), ("signup", signup), 
+        self.routes = {"GET": [("is_logged_in", is_logged_in)], 
+                    "POST": [("login", login), 
+                            ("signup", signup),
                             ("confirm_signup", confirm_signup), 
                             ("forgot_password", forgot_password),
                             ("confirm_forgot_password", confirm_forgot_password),

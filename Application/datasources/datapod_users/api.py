@@ -8,7 +8,7 @@ from sanic import response
 from errors_module.errors import APIBadRequest
 
 from .utils import encrypt_mnemonic, decrypt_mnemonic
-from .db_calls import store_credentials,  update_password_hash
+from .db_calls import store_credentials,  update_password_hash, get_credentials
 
 
 from utils.utils import id_token_validity, username
@@ -48,27 +48,36 @@ async def temp_credentials(request, id_token, username):
        })
 
 
-# async def is_logged_in(request):
-#     """
-#     session is the session which you will get after enabling MFA and calling login api
-#     code is the code generated from the MFA device
-#     username is the username of the user
-#     """
-#     def get_dir_size(dirpath):
-#         # all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
-#         # files_and_sizes = [os.path.getsize(path) for path in all_files]
-#         # return  humanize.naturalsize(sum(files_and_sizes))
-#         return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
-
-#     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
-#     if not creds:
-#         raise APIBadRequest("User is not logged in")
+async def is_logged_in(request):
+    """
+    session is the session which you will get after enabling MFA and calling login api
+    code is the code generated from the MFA device
+    username is the username of the user
+    """
     
+    creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
 
 
-#     if not creds.get("id_token"):
-#         raise APIBadRequest("User is not logged in")
+    if not creds:
+        raise APIBadRequest("User is not logged in")
     
+    creds = list(creds)[0]
+
+    if not creds.get("id_token"):
+        raise APIBadRequest("User is not logged in")
+    
+    return response.json({
+        "error": False,
+        "success": True,
+        "data": {
+            "name": creds["name"],
+            "email": creds["email"],
+            "username": creds["username"],
+            
+        }, 
+        "message": "User is logged in"
+       })
+
 #     datasources_status = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
 #     result = {}
