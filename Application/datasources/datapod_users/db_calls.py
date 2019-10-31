@@ -9,6 +9,12 @@ import aiomisc
 #@retry(stop=stop_after_attempt(2))
 
 
+def convert_type(value):
+    if isinstance(value, bytes):
+        value = value.decode()
+    return value
+
+
 @aiomisc.threaded
 def update_status(facebook_status_table, datasource_name, username, status):
     try:
@@ -105,16 +111,23 @@ def logout(credentials_tbl_obj):
     return 
 
 
+@aiomisc.threaded
 def get_credentials(credential_table):
+    logger.info("Get credentials called")
     return credential_table.select().dicts()
 
 
 
 @aiomisc.threaded
-def store_credentials(credentials_tbl_obj, username, password_hash, id_token, access_token, refresh_token, name, email):
-
+def store_credentials(credential_table, username, password_hash, id_token, access_token, refresh_token, name, email):
+    query = credential_table.select()
+    usernames = [user.username for user in query]
+    print (usernames)
+    if usernames:
+        if username not in usernames:
+            raise Exception("Different usernames arent allowed on the same machine")
     try:
-        credentials_tbl_obj.insert(username=username,  
+        credential_table.insert(username=username,  
                                         password_hash=password_hash,
                                         id_token=id_token, 
                                         access_token= access_token, 
@@ -126,12 +139,11 @@ def store_credentials(credentials_tbl_obj, username, password_hash, id_token, ac
 
     except IntegrityError:
         logger.info(f"Credentials for the user already exists, updating it now")
-        credentials_tbl_obj.update(
+        credential_table.update(
                             id_token=id_token, 
                             access_token= access_token, 
-                            refresh_token=refresh_toke)
-                        ).\
-                    where(credentials_tbl_obj.username==username).\
+                            refresh_token=refresh_token)\
+                      .where(credential_table.username==username).\
                     execute()
 
     except Exception as e:
@@ -154,4 +166,20 @@ def update_id_and_access_tokens(credentials_tbl_obj, username, id_token, access_
         logger.info(f"On update al tokens the credentials userid is {username}")
     except Exception as e:
         logger.error(f"Couldnt save data to credentials_tbl because of {e}")
+    return 
+
+
+
+@aiomisc.threaded
+def update_password_hash(credentials_tbl_obj, username, password_hash):
+    try:
+        credentials_tbl_obj.update(
+            password_hash=convert_type(password_hash)).\
+        where(credentials_tbl_obj.username==username).\
+        execute()
+
+        logger.success(f"Password hash has been updated in the dataabse {username}")
+    except Exception as e:
+        logger.success(f"Password hash cant be updated in the dataabse because of error {e}")
+
     return 

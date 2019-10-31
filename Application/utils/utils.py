@@ -6,7 +6,7 @@ import datetime
 import os
 from functools import wraps, partial
 from errors_module.errors import APIBadRequest
-from database_calls.credentials import get_credentials,update_id_and_access_tokens
+from datasources.datapod_users.db_calls import get_credentials, update_id_and_access_tokens
 import requests
 import json
 from functools import wraps
@@ -53,7 +53,6 @@ async def send_sse_message(config, channel_id, msg):
 
 def convert_type(value):
     if isinstance(value, bytes):
-        logger.info(f"{value} is in bytes")
         value = value.decode()
     return value
 
@@ -144,7 +143,7 @@ def id_token_validity():
             # for the client's authorization status
             #is_authorized = check_request_for_authorization_status(request)
 
-            result = get_credentials(request.app.config.CREDENTIALS_TBL)
+            result = await get_credentials(request.app.config["Users"]["tables"]["creds_table"])
             #logger.info(f"Data from the credential table in id_token_validity decorator {result}")
             if not result:
                 logger.error("Credentials aren't present, Please Login again")
@@ -152,13 +151,17 @@ def id_token_validity():
 
 
 
-
+            result = list(result)[0]
             try:
                 id_token = convert_type(result["id_token"])
                 access_token = convert_type(result["access_token"])
                 refresh_token = convert_type(result["refresh_token"])
                 username = result["username"]
-                request["user_data"] = result
+                
+                ##this is because all the token are byte object, we need to upate user object in request object
+                # with str type of tokens 
+                result.update({"id_token": id_token, "access_token": access_token, "refresh_token": refresh_token})
+                request["user"] = result
             except Exception as e:
                 
                 logger.error(f"User must have signed out, Please Login again with an error {e.__str__()}")

@@ -8,14 +8,11 @@ from sanic import response
 from errors_module.errors import APIBadRequest
 
 from .utils import encrypt_mnemonic, decrypt_mnemonic
-from database_calls.credentials import store_credentials, get_credentials,\
-            update_mnemonic, update_password_hash, get_datasources_status,\
-                update_datasources_status, logout
-
+from .db_calls import store_credentials,  update_password_hash
 
 
 from utils.utils import id_token_validity, username
-from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys
+from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys 
 import hashlib
 from loguru import logger
 import os
@@ -51,69 +48,69 @@ async def temp_credentials(request, id_token, username):
        })
 
 
-async def is_logged_in(request):
-    """
-    session is the session which you will get after enabling MFA and calling login api
-    code is the code generated from the MFA device
-    username is the username of the user
-    """
-    def get_dir_size(dirpath):
-        # all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
-        # files_and_sizes = [os.path.getsize(path) for path in all_files]
-        # return  humanize.naturalsize(sum(files_and_sizes))
-        return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
+# async def is_logged_in(request):
+#     """
+#     session is the session which you will get after enabling MFA and calling login api
+#     code is the code generated from the MFA device
+#     username is the username of the user
+#     """
+#     def get_dir_size(dirpath):
+#         # all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+#         # files_and_sizes = [os.path.getsize(path) for path in all_files]
+#         # return  humanize.naturalsize(sum(files_and_sizes))
+#         return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
 
-    creds = get_credentials(request.app.config.CREDENTIALS_TBL)
-    if not creds:
-        raise APIBadRequest("User is not logged in")
+#     creds = get_credentials(request.app.config.CREDENTIALS_TBL)
+#     if not creds:
+#         raise APIBadRequest("User is not logged in")
     
 
 
-    if not creds.get("id_token"):
-        raise APIBadRequest("User is not logged in")
+#     if not creds.get("id_token"):
+#         raise APIBadRequest("User is not logged in")
     
-    datasources_status = get_datasources_status(request.app.config.DATASOURCES_TBL)
+#     datasources_status = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
-    result = {}
+#     result = {}
 
-    [result.update({e["source"]: e}) for e in datasources_status]
+#     [result.update({e["source"]: e}) for e in datasources_status]
 
-    logger.info(result)
+#     logger.info(result)
 
-    if result.get("TAKEOUT"):
-        size = os.path.join(request.app.config.RAW_DATA_PATH, 'Takeout')        
-        result["TAKEOUT"].update({"size": get_dir_size(size)})
+#     if result.get("TAKEOUT"):
+#         size = os.path.join(request.app.config.RAW_DATA_PATH, 'Takeout')        
+#         result["TAKEOUT"].update({"size": get_dir_size(size)})
 
-    if result.get("CODEREPOS/Github"):
-        size = os.path.join(request.app.config.RAW_DATA_PATH, 'Coderepos/github')        
-        result["CODEREPOS/Github"].update({"size": get_dir_size(size)})
-        #result.pop("CODEREPOS/Github")
+#     if result.get("CODEREPOS/Github"):
+#         size = os.path.join(request.app.config.RAW_DATA_PATH, 'Coderepos/github')        
+#         result["CODEREPOS/Github"].update({"size": get_dir_size(size)})
+#         #result.pop("CODEREPOS/Github")
 
-    if result.get("FACEBOOK"):
-        size = os.path.join(request.app.config.RAW_DATA_PATH, 'facebook')        
-        result["FACEBOOK"].update({"size": get_dir_size(size)})
-        #result.pop("FACEBOOK")
+#     if result.get("FACEBOOK"):
+#         size = os.path.join(request.app.config.RAW_DATA_PATH, 'facebook')        
+#         result["FACEBOOK"].update({"size": get_dir_size(size)})
+#         #result.pop("FACEBOOK")
 
-    if result.get("TWITTER"):
-        size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        
-        result["TWITTER"].update({"size": get_dir_size(size)})
-        #result.pop("TWITTER")
+#     if result.get("TWITTER"):
+#         size = os.path.join(request.app.config.RAW_DATA_PATH, 'twitter')        
+#         result["TWITTER"].update({"size": get_dir_size(size)})
+#         #result.pop("TWITTER")
     
-    if result.get("BACKUP"):
-        result.pop("BACKUP")
+#     if result.get("BACKUP"):
+#         result.pop("BACKUP")
 
-    logger.info(result)
-    return response.json({
-        'error': False,
-        'success': True,
-        "data": {
-            "name": creds["name"],
-            "email": creds["email"],
-            "username": creds["username"],
-            "datasources": result
-        }, 
-        "message": "User is logged in"
-       })
+#     logger.info(result)
+#     return response.json({
+#         'error': False,
+#         'success': True,
+#         "data": {
+#             "name": creds["name"],
+#             "email": creds["email"],
+#             "username": creds["username"],
+#             "datasources": result
+#         }, 
+#         "message": "User is logged in"
+#        })
 
 
 async def login(request):
@@ -130,12 +127,19 @@ async def login(request):
 
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
-    store_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], password_hash, result.json()["data"]["id_token"], 
+    try:
+
+        await store_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], password_hash, result.json()["data"]["id_token"], 
                  result.json()["data"]["access_token"], result.json()["data"]["refresh_token"], result.json()["data"]["name"], result.json()["data"]["email"])
     
-    #update_datasources_status(request.app.config.DATASOURCES_TBL, "Takeout", "PURCHASES", request.app.config.DATASOURCES_CODE["PURCHASES"], "Purchase parse completed")
-    #res = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
+    except Exception as e :
+        return response.json({
+        'error': False,
+        'success': True,
+        "message": str(e),
+        "data": None})
+      
 
     return response.json(
         {
@@ -146,6 +150,7 @@ async def login(request):
             "name": result.json()["data"]["name"], 
             "email": result.json()["data"]["email"],
             "username": request.json["username"],
+            "created_at": result.json()["data"]["created_at"],
             
         }})
       
@@ -220,49 +225,27 @@ async def confirm_signup(request):
 
 
 
-# @USERS_BP.post('/backup_credentials')
-# async def aws_temp_creds(request):
-#     request.app.config.VALIDATE_FIELDS(["token", "email", "password"], request.json)
-
-#     r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({
-#                     "email": request.json["email"], 
-#                     "password": request.json["password"]}), 
-#                     headers={"Authorization": request.json["token"]})
-    
-#     result = r.json()
-#     if result.get("error"):
-#         logger.error(result["message"])
-#         raise APIBadRequest(result["message"])
-    
-#     return response.json(
-#         {
-#         'error': False,
-#         'success': True,
-#         "message": None,
-#         "data": result["data"]
-#         })
-
     
 
 @id_token_validity()
 async def change_password(request):
-    request.app.config.VALIDATE_FIELDS(["previous_password", "proposed_password"], request.json)
+    request.app.config.VALIDATE_FIELDS(["password", "newpassword"], request.json)
     
     ##check if the password matches with the password stored in the database
-    password_hash = hashlib.sha3_256(request.json["previous_password"].encode()).hexdigest()
+    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
     
-    if request.json["previous_password"] == request.json["proposed_password"]:
+    if request.json["password"] == request.json["newpassword"]:
         raise APIBadRequest("Password should be different")
 
 
 
-    if password_hash != request["user_data"]["password_hash"]:
+    if password_hash != request["user"]["password_hash"]:
         raise APIBadRequest("Password you have enetered is incorrect")
 
     r = requests.post(request.app.config.CHANGE_PASSWORD, 
-            data=json.dumps({"previous_password": request.json["previous_password"],
-                "proposed_password": request.json["proposed_password"],
-                "access_token": request["user_data"]["access_token"]
+            data=json.dumps({"password": request.json["password"],
+                "newpassword": request.json["newpassword"],
+                "access_token": request["user"]["access_token"]
             }))
 
     result = r.json()
@@ -276,18 +259,18 @@ async def change_password(request):
 
     ##since the password has been updated on the remote db, 
     ##this password should also be updated in the localdatabase too
-    new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
+    new_password_hash = hashlib.sha3_256(request.json["newpassword"].encode()).hexdigest()
 
-    update_password_hash(request.app.config.CREDENTIALS_TBL, 
-            request["user_data"]["username"], new_password_hash)
+    await update_password_hash(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], 
+            request["user"]["username"], new_password_hash)
     
-    return response.json(
-        {
+    return response.json({
         'error': False,
         'success': True,
         "message": None,
         "data": result["message"]
         }) 
+
 
 async def forgot_password(request):
     logger.info(f"API for forgot password {request.app.config.FORGOT_PASS}")
@@ -327,14 +310,14 @@ async def forgot_password(request):
         }) 
 
 
-async def set_new_password(request):
-    request.app.config.VALIDATE_FIELDS(["proposed_password", "validation_code", "username"], request.json)
+async def confirm_forgot_password(request):
+    request.app.config.VALIDATE_FIELDS(["newpassword", "validation_code", "username"], request.json)
 
     ##check if the password matches with the password stored in the database
 
     r = requests.post(request.app.config.CONFIRM_FORGOT_PASS, data=json.dumps({
                 "username": request.json["username"], 
-                "newpassword": request.json["proposed_password"], 
+                "newpassword": request.json["newpassword"], 
                 "code":  str(request.json["validation_code"])
                 }))
 
@@ -344,15 +327,9 @@ async def set_new_password(request):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
 
-    if result.get("errorMessage"):
-        logger.error(result["errorMessage"])
-        raise APIBadRequest(result["errorMessage"])
+    new_password_hash = hashlib.sha3_256(request.json["newpassword"].encode()).hexdigest()
 
-
-
-    new_password_hash = hashlib.sha3_256(request.json["proposed_password"].encode()).hexdigest()
-
-    update_password_hash(request.app.config.CREDENTIALS_TBL, 
+    await update_password_hash(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], 
     request.json["username"], new_password_hash)
 
 

@@ -163,8 +163,9 @@ def finish(app, loop):
 async def datasource_stats(request):
     result = {}
     for datasource in request.app.config.registered_modules:
-        res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
-        result.update({datasource: res})
+        if datasource != "users":
+            res = await request.app.config[datasource.capitalize()]["utils"]["stats"](request)
+            result.update({datasource: res})
 
     return response.json({
             "success": True, 
@@ -175,9 +176,11 @@ async def datasource_stats(request):
 
 async def datasource_status(request):
     result = {}
+    ##need to popout "users" registered module
     for datasource in request.app.config.registered_modules:
-        res = await request.app.config[datasource.capitalize()]["utils"]["status"](request)
-        result.update({datasource: res})
+        if datasource != "users":
+            res = await request.app.config[datasource.capitalize()]["utils"]["status"](request)
+            result.update({datasource: res})
 
     return response.json({
             "success": True, 
