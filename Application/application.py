@@ -37,7 +37,6 @@ import config
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
-from users_module import USERS_BP
 from backup import BACKUP_BP
 import concurrent.futures
 from sanic.websocket import WebSocketProtocol
@@ -261,7 +260,6 @@ def main():
     #app.blueprint(ASSETS_BP)
     #app.blueprint(DATASOURCES_BP)
     app.blueprint(ERRORS_BP)
-    app.blueprint(USERS_BP)
     app.blueprint(BACKUP_BP)
     app.blueprint(SOCKETS_BP)
 

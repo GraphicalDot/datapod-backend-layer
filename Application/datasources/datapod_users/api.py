@@ -7,7 +7,7 @@ from sanic.request import RequestParameters
 from sanic import response
 from errors_module.errors import APIBadRequest
 
-from .users_helpers import encrypt_mnemonic, decrypt_mnemonic
+from .utils import encrypt_mnemonic, decrypt_mnemonic
 from database_calls.credentials import store_credentials, get_credentials,\
             update_mnemonic, update_password_hash, get_datasources_status,\
                 update_datasources_status, logout
@@ -20,40 +20,14 @@ import hashlib
 from loguru import logger
 import os
 import humanize
-USERS_BP = Blueprint("user", url_prefix="/user")
-
-
-
-
-@USERS_BP.get('/datasources_states')
-@id_token_validity()
-async def datasources_states(request):
-    """
-    This api is the starting point of the application, It will fetch all the states and the user profile 
-    from cognito and localdatabase and give it to the frontend
-    """
-
-    datasources_status  = get_datasources_status(request.app.config.DATASOURCES_TBL)
-    result = {}
-
-    [result.update({e["source"]: e}) for e in datasources_status]
-
-
-
-
-    return response.json({
-        'error': False,
-        'success': True,
-        "data": result
-       })
-    
-   
+from .variables import DATASOURCE_NAME
 
 
 
 
 
-@USERS_BP.post('/temp_credentials')
+
+
 @id_token_validity()
 async def temp_credentials(request, id_token, username):
     """
@@ -77,7 +51,6 @@ async def temp_credentials(request, id_token, username):
        })
 
 
-@USERS_BP.get('/is_logged_in')
 async def is_logged_in(request):
     """
     session is the session which you will get after enabling MFA and calling login api
@@ -143,7 +116,6 @@ async def is_logged_in(request):
        })
 
 
-@USERS_BP.post('/login')
 async def login(request):
 
     request.app.config.VALIDATE_FIELDS(["username", "password"], request.json)
@@ -158,11 +130,11 @@ async def login(request):
 
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
-    store_credentials(request.app.config.CREDENTIALS_TBL, request.json["username"], password_hash, result.json()["data"]["id_token"], 
+    store_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], password_hash, result.json()["data"]["id_token"], 
                  result.json()["data"]["access_token"], result.json()["data"]["refresh_token"], result.json()["data"]["name"], result.json()["data"]["email"])
     
     #update_datasources_status(request.app.config.DATASOURCES_TBL, "Takeout", "PURCHASES", request.app.config.DATASOURCES_CODE["PURCHASES"], "Purchase parse completed")
-    res = get_datasources_status(request.app.config.DATASOURCES_TBL)
+    #res = get_datasources_status(request.app.config.DATASOURCES_TBL)
 
 
     return response.json(
@@ -174,21 +146,14 @@ async def login(request):
             "name": result.json()["data"]["name"], 
             "email": result.json()["data"]["email"],
             "username": request.json["username"],
-            "datasources": list(res)
-        }
-        # {
-        #     "id_token": result["data"]["id_token"],
-        #     "refresh_token": result["data"]["refresh_token"],
-        #     "access_token": result["data"]["access_token"]
-        # }
-        })
+            
+        }})
+      
 
 
 
 
 
-
-@USERS_BP.post('/sign_up')
 async def signup(request):
     request.app.config.VALIDATE_FIELDS(["email", "password", "name", "username"], request.json)
 
@@ -228,7 +193,6 @@ async def signup(request):
 
 
 
-@USERS_BP.post('/confirm_signup')
 async def confirm_signup(request):
     request.app.config.VALIDATE_FIELDS(["username", "code"], request.json)
 
@@ -280,7 +244,6 @@ async def confirm_signup(request):
 
     
 
-@USERS_BP.post('/change_password')
 @id_token_validity()
 async def change_password(request):
     request.app.config.VALIDATE_FIELDS(["previous_password", "proposed_password"], request.json)
@@ -326,7 +289,6 @@ async def change_password(request):
         "data": result["message"]
         }) 
 
-@USERS_BP.post('/forgot_password')
 async def forgot_password(request):
     logger.info(f"API for forgot password {request.app.config.FORGOT_PASS}")
     request.app.config.VALIDATE_FIELDS(["username"], request.json)
@@ -365,7 +327,6 @@ async def forgot_password(request):
         }) 
 
 
-@USERS_BP.post('/confirm_forgot_password')
 async def set_new_password(request):
     request.app.config.VALIDATE_FIELDS(["proposed_password", "validation_code", "username"], request.json)
 
@@ -404,7 +365,6 @@ async def set_new_password(request):
         }) 
 
 
-@USERS_BP.post('/associate_mfa')
 async def associate_mfa(request):
     request.app.config.VALIDATE_FIELDS(["session"], request.json)
 
@@ -425,8 +385,6 @@ async def associate_mfa(request):
        })
 
 
-@USERS_BP.post('/verify_mfa')
-@username()
 async def verify_mfa(request):
     request.app.config.VALIDATE_FIELDS(["session", "code"], request.json)
 
@@ -453,8 +411,6 @@ async def verify_mfa(request):
        })
 
 
-@USERS_BP.post('/post_login_mfa')
-@username()
 async def post_login_mfa(request):
     """
     session is the session which you will get after enabling MFA and calling login api
@@ -486,7 +442,6 @@ async def post_login_mfa(request):
 
 
 
-@USERS_BP.get('/new_mnemonic')
 async def new_mnemonic(request):
 
     mnemonic =  generate_mnemonic(request.app.config.LANGUAGE)
@@ -503,8 +458,6 @@ async def new_mnemonic(request):
 
  
 
-@USERS_BP.post('/delete_user')
-@id_token_validity()
 async def delete_user(request):
     
     r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
@@ -533,8 +486,6 @@ async def delete_user(request):
 
 
 
-@USERS_BP.post('/update_user')
-@id_token_validity()
 async def update_user(request):
     """
     When the user is trying to access the feature of backup, 
@@ -634,7 +585,6 @@ async def update_user(request):
     })
 
 
-@USERS_BP.post('/decrypt_mnemonic')
 async def decrypt_user_mnemonic(request):
     """
     Api to decrypt mnemonic stored in the sqlite table, 
@@ -698,8 +648,6 @@ async def decrypt_user_mnemonic(request):
 #        })
 
 
-@USERS_BP.post('/child_keys')
-@id_token_validity()
 async def mnemonics(request, id_token, username):
     
     """
@@ -728,8 +676,6 @@ async def mnemonics(request, id_token, username):
        })
 
 
-@USERS_BP.get('/profile')
-@id_token_validity()
 async def profile(request):
     
     """
@@ -752,8 +698,6 @@ async def profile(request):
         "data": result["data"]
        })
 
-@USERS_BP.get('/logout')
-@id_token_validity()
 async def user_logout(request):
     
     """

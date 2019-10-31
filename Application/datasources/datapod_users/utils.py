@@ -1,7 +1,5 @@
 
 
-
-
 from EncryptionModule.key_derivation import generate_scrypt_key
 from EncryptionModule.symmetric import aes_decrypt, aes_encrypt
 import binascii
