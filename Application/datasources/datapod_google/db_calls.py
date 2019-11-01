@@ -418,7 +418,7 @@ def store_purchases(**data):
     try:
         products = json.dumps(data["products"])
         table.insert(merchant_name=data["merchant_name"],  
-                                    products=data["products"], 
+                                    products=products, 
                                     username = data["username"],
                                     checksum=data["checksum"],
                                     time=data["time"]).execute()
@@ -429,6 +429,8 @@ def store_purchases(**data):
     except IntegrityError as e:
         logger.error(f"PURCHASES: Duplicate key exists {data['merchant_name']}  because of {e}")
     
+
+
     return 
 
 

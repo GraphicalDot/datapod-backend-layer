@@ -129,13 +129,13 @@ def initialize(db):
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField()
 
-        merchant_name = peewee.CharField(index=True, null=False)
-        products = peewee.BlobField(index=True, null=False)
-        time = peewee.DateTimeField(index=True, null=False)
+        merchant_name = peewee.TextField(null=False)
+        products = peewee.BlobField( null=False)
+        time = peewee.DateTimeField(null=False)
         class Meta:
             indexes = (
             # create a unique on from/to/date
-            (('products', 'time', 'merchant_name'), True),
+            (('time', 'merchant_name'), True),
 
             )
     

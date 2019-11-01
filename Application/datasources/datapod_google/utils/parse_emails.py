@@ -50,7 +50,6 @@ class EmailParse(object):
         ## dest_path : path for the destination like ex /home/feynman/.datapod/userdata/raw/Google/houzier.saurav@gmail.com/16-10-2019-56c3eccc615e71f1e2fcd0d0b07220532947651bc13c0e0fdfa621a2a1783c35/
         self.config = config
         self.dest_path = dest_path
-        self.datasources_tbl = config.DATASOURCES_TBL
         self.checksum = checksum
         self.username = username
 

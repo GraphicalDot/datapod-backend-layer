@@ -37,7 +37,7 @@ def update_stats(stats_table, reposource, username, data_items, size, sync_frequ
     """
     try:
         stats_table.insert(
-                reposource = reposource,
+                source = reposource,
                 username = username,
                 data_items = data_items,
                 disk_space_used = size,
@@ -82,7 +82,7 @@ def store_creds(tbl_object, username, password, reposource):
     try:
         tbl_object.insert(
                     username = username,
-                    reposource = reposource,
+                    source = reposource,
                     password=password).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
@@ -129,7 +129,7 @@ def store(**data):
         table.insert(
                     path = data["path"],
                     username = data["username"],
-                    reposource=data["reposource"],
+                    source=data["reposource"],
                     owner = json.dumps(data["owner"]),
                     id = str(data["id"]),
                     node_id = data["node_id"],
@@ -186,7 +186,7 @@ def store(**data):
         table.update(
                     name = data.get("name"),
                     username = data["username"],
-                    reposource=data["reposource"],
+                    source=data["reposource"],
                     full_name = data.get("full_name"),
                     private = data.get("private"),
                     html_url = data.get("html_url"),
@@ -249,6 +249,7 @@ def filter_repos(tbl_object, page, number):
 
     return tbl_object\
             .select(tbl_object.name, tbl_object.git_url, 
+                    tbl_object.source,
                     tbl_object.downloaded_at, 
                     tbl_object.id, 
                     tbl_object.node_id, 
@@ -271,6 +272,7 @@ def filter_starred_repos(tbl_object, page, number):
 
     return tbl_object\
             .select(tbl_object.name, tbl_object.git_url, 
+                     tbl_object.source,
                     tbl_object.downloaded_at, 
                     tbl_object.id, 
                     tbl_object.node_id, 
@@ -294,7 +296,8 @@ def filter_gists(tbl_object, page, number):
     """
     logger.info("Filter_gists has been caled")
     return tbl_object\
-            .select(tbl_object.name, tbl_object.git_pull_url, 
+            .select(tbl_object.name, tbl_object.git_pull_url,
+             tbl_object.source, 
                     tbl_object.downloaded_at, 
                     tbl_object.id, 
                     tbl_object.node_id, 

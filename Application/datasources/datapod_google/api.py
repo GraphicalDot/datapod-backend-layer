@@ -31,12 +31,13 @@ import dateparser
 import string
 import random
 import time
+import subprocess
 from loguru import logger
 from datasources.shared.extract import extract
 import aiomisc
 
 from .db_calls import update_status, get_emails, match_text, filter_images,\
-         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status
+         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, update_stats
 from .variables import DATASOURCE_NAME
 
 
@@ -75,7 +76,7 @@ async def __parse(config, path, username):
     ##add this if this has to executed periodically
     ##while True:
 
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, self.username, "PROGRESS")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS")
 
 
     logger.info('Periodic task has begun execution')
@@ -117,7 +118,7 @@ async def __parse(config, path, username):
     logger.info("Trying to update data source table with status completed")
 
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
-    update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
     
     takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
 
@@ -128,7 +129,7 @@ async def __parse(config, path, username):
     logger.success(f"username == {takeout_dir} size == {size} dataitems == {data_items}")
 
     await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
-                GITHUB_DATASOURCE_NAME, 
+                DATASOURCE_NAME, 
                 username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
 
@@ -146,10 +147,12 @@ async def parse(request):
     request.app.config.VALIDATE_FIELDS(["path", "username"], request.json)
 
     res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
-
+    res = list(res)
+    logger.info(res)
     if res:
-        if res.get("status") == "PROGRESS":
-            raise APIBadRequest("Already processing a Takeout account for the user")
+        for element in res:
+            if element.get("status") == "PROGRESS":
+                raise APIBadRequest("Already processing a Takeout account for the user")
 
 
 

@@ -18,7 +18,7 @@ def initialize(db):
     class Creds(BaseModel):
         username = peewee.TextField(unique=True, null=False)
         password = peewee.TextField(null=False)
-        reposource = peewee.TextField(index=True)
+        source = peewee.TextField(index=True)
 
 
     class Status(BaseModel):
@@ -29,7 +29,7 @@ def initialize(db):
 
 
     class Stats(BaseModel):
-        reposource = peewee.TextField(index=True, null=False)
+        source = peewee.TextField(index=True, null=False)
         username = peewee.TextField(null=False, unique=True)
         data_items = peewee.IntegerField(null=True)
         disk_space_used = peewee.TextField(null=True)
@@ -48,7 +48,7 @@ def initialize(db):
 
     class Repos(BaseModel):
 
-        reposource = peewee.TextField(index=True, null=False)#We will have diifferent code repo aources, for example github, gitlab, bitbucket etc, this will help us identify this.
+        source = peewee.TextField(index=True, null=False)#We will have diifferent code repo aources, for example github, gitlab, bitbucket etc, this will help us identify this.
         username = peewee.TextField(null=False, index=True)
 
         path = peewee.TextField(index=True, null=False)

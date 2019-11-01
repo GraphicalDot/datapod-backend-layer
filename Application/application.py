@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
+from sanic.response import json_dumps 
 import argparse
 import asyncio
 import os
@@ -33,6 +33,7 @@ from spf import SanicPluginsFramework
 
 import config
 
+from playhouse.shortcuts import model_to_dict, dict_to_model
 
 from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
@@ -47,7 +48,6 @@ from sanic import response
 import random
 import time
   
-from sanic.response import json, json_dumps
 from sanic.exceptions import abort
 from sanic_sse import Sse
 from http import HTTPStatus
@@ -122,11 +122,11 @@ async def send_event(request):
         await request.app.sse_send(json_dumps(request.json), channel_id=channel_id)
     except KeyError:
         logger.error("channel not found, No subscribers found")
-        return json({"error": True, 
+        return response.json({"error": True, 
                     "succes": False,
                     "message": "No subscribers found"})
 
-    return json({"error": False, 
+    return response.json({"error": False, 
                     "succes": True,
                     "message": "subscribers found and message sent"})
     
@@ -205,6 +205,7 @@ async def datasource_status_stats(request):
     return response.json({
             "success": True, 
             "error": False,
+            "message": None, 
             "data": {"stats": stats, "status": status}
     })
 

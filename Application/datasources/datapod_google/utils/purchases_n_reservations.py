@@ -86,6 +86,7 @@ class PurchaseReservations(object):
 
         for purchase in purchases:
             purchase.update({"tbl_object": self.app_config[DATASOURCE_NAME]["tables"]["purchase_table"], "username": self.username, "checksum": self.checksum}) 
+            logger.info(purchase)
             await store_purchases(**purchase)
 
 
