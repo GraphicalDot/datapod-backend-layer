@@ -520,7 +520,7 @@ class Emails(object):
             ##stategy nby making assumption that if a key for email exists so is the indexed content
             data.update({"tbl_object": self.indexed_email_content_tbl})
             try:
-                content = data["content"] + data["subject"]
+                content = data["content"] + data["subject"] + data["to_addr"]
             except Exception as e:
                 logger.error(decode_header(data["subject"]))
                 content = data["content"]

@@ -162,7 +162,7 @@ def store_email_attachment(**data):
 
 
 @aiomisc.threaded
-def filter_attachments(tbl_object, message_type, start_date, end_date, skip, limit):
+def filter_attachments(tbl_object, username, message_type, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
@@ -179,7 +179,10 @@ def filter_attachments(tbl_object, message_type, start_date, end_date, skip, lim
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date) &(tbl_object.date < end_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)&\
+                    (tbl_object.date> start_date) &\
+                    (tbl_object.date < end_date))
                 
         
 
@@ -190,7 +193,9 @@ def filter_attachments(tbl_object, message_type, start_date, end_date, skip, lim
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)&
+                     (tbl_object.date> start_date))
                 
 
     elif end_date and not start_date:
@@ -199,7 +204,9 @@ def filter_attachments(tbl_object, message_type, start_date, end_date, skip, lim
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date < end_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)&\
+                         (tbl_object.date < end_date))
                 
 
 
@@ -208,7 +215,7 @@ def filter_attachments(tbl_object, message_type, start_date, end_date, skip, lim
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where(tbl_object.message_type== message_type)
+                .where((tbl_object.username ==username) &(tbl_object.message_type== message_type))
                 
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
@@ -216,7 +223,7 @@ def filter_attachments(tbl_object, message_type, start_date, end_date, skip, lim
 
 
 @aiomisc.threaded
-def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
+def get_emails(tbl_object, username, message_type, start_date, end_date, skip, limit):
     """
     purchases: a list of purchases dict
     """
@@ -237,7 +244,10 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date) &(tbl_object.date < end_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)& \
+                        (tbl_object.date> start_date) &\
+                            (tbl_object.date < end_date))
                 
         
 
@@ -248,7 +258,9 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date> start_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)&\
+                         (tbl_object.date> start_date))
                 
 
     elif end_date and not start_date:
@@ -257,7 +269,9 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where((tbl_object.message_type== message_type)& (tbl_object.date < end_date))
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.message_type== message_type)&\
+                         (tbl_object.date < end_date))
                 
 
 
@@ -266,13 +280,13 @@ def get_emails(tbl_object, message_type, start_date, end_date, skip, limit):
         query = tbl_object\
                 .select()\
                 .order_by(-tbl_object.date)\
-                .where(tbl_object.message_type== message_type)
+                .where((tbl_object.username ==username) &(tbl_object.message_type== message_type))
                 
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
 @aiomisc.threaded
-def match_text(tbl_object, indexed_obj, matching_string, message_type, start_date, end_date, skip, limit):
+def match_text(tbl_object, username, indexed_obj, matching_string, message_type, start_date, end_date, skip, limit):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -291,7 +305,8 @@ def match_text(tbl_object, indexed_obj, matching_string, message_type, start_dat
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
-                .where(indexed_obj.match(matching_string) & (tbl_object.date> start_date) &(tbl_object.date < end_date) &(tbl_object.message_type== message_type))\
+                .where(indexed_obj.match(matching_string) & (tbl_object.username ==username) &\
+                     (tbl_object.date> start_date) &(tbl_object.date < end_date) &(tbl_object.message_type== message_type))\
                 .order_by(-tbl_object.date)
 
                 
@@ -301,7 +316,8 @@ def match_text(tbl_object, indexed_obj, matching_string, message_type, start_dat
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
-                .where((indexed_obj.match(matching_string)) & (tbl_object.date> start_date) &(tbl_object.message_type== message_type))\
+                .where((indexed_obj.match(matching_string)) & (tbl_object.username ==username) &\
+                     (tbl_object.date> start_date) &(tbl_object.message_type== message_type))\
                 .order_by(-tbl_object.date)
 
         
@@ -311,7 +327,8 @@ def match_text(tbl_object, indexed_obj, matching_string, message_type, start_dat
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
-                .where((indexed_obj.match(matching_string)) &(tbl_object.date < end_date) & (tbl_object.message_type== message_type))\
+                .where((indexed_obj.match(matching_string)) (tbl_object.username ==username) \
+                    &(tbl_object.date < end_date) & (tbl_object.message_type== message_type))\
                 .order_by(-tbl_object.date)
 
 
@@ -319,7 +336,8 @@ def match_text(tbl_object, indexed_obj, matching_string, message_type, start_dat
     else: # not  start_date and  not end_date
         query = tbl_object\
                     .select()\
-                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id) &(tbl_object.message_type== message_type))\
+                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id) & (tbl_object.username ==username) &\
+                        (tbl_object.message_type== message_type))\
                     .where(indexed_obj.match(matching_string))\
 
 
@@ -364,7 +382,7 @@ def store_images(**data):
 
 
 @aiomisc.threaded
-def filter_images(tbl_object, start_date, end_date, skip, limit):
+def filter_images(tbl_object, username, start_date, end_date, skip, limit):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -377,7 +395,9 @@ def filter_images(tbl_object, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
-                .where((tbl_object.creation_time> start_date) &(tbl_object.creation_time < end_date))\
+                .where((tbl_object.username ==username) \
+                    &(tbl_object.creation_time> start_date) \
+                    &(tbl_object.creation_time < end_date))\
                 .order_by(-tbl_object.creation_time)
                 
         
@@ -385,7 +405,7 @@ def filter_images(tbl_object, start_date, end_date, skip, limit):
     elif start_date and not end_date:
         query = tbl_object\
                         .select()\
-                        .where(tbl_object.creation_time> start_date)\
+                        .where((tbl_object.username ==username) &(tbl_object.creation_time> start_date))\
                         .order_by(-tbl_object.creation_time)\
                         
 
@@ -393,7 +413,7 @@ def filter_images(tbl_object, start_date, end_date, skip, limit):
     elif end_date and not start_date:
         query = tbl_object\
                         .select()\
-                        .where(tbl_object.creation_time < end_date)\
+                        .where((tbl_object.username ==username) &(tbl_object.creation_time < end_date))\
                         .order_by(-tbl_object.creation_time)\
         
 
@@ -402,6 +422,7 @@ def filter_images(tbl_object, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
+                .where(tbl_object.username ==username)\
                 .order_by(-tbl_object.creation_time)\
 
 
@@ -462,13 +483,16 @@ def store_reservations(**data):
 
 
 @aiomisc.threaded
-def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_name):
+def filter_purchases(tbl_object, username, start_date, end_date, skip, limit, merchant_name):
     logger.info(f"Merchant name received is {merchant_name}")
     if start_date and end_date:
         if merchant_name:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.merchant_name==merchant_name))\
+                    .where((tbl_object.username ==username)\
+                         &(tbl_object.time> start_date) \
+                            &(tbl_object.time < end_date)\
+                            &(tbl_object.merchant_name==merchant_name))\
                     .order_by(-tbl_object.time)
         else:
             query = tbl_object\
@@ -480,7 +504,9 @@ def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_nam
         if merchant_name:
             query = tbl_object\
                             .select()\
-                            .where((tbl_object.time> start_date)&(tbl_object.merchant_name==merchant_name))\
+                            .where((tbl_object.username ==username) &\
+                                (tbl_object.time> start_date)\
+                                &(tbl_object.merchant_name==merchant_name))\
                             .order_by(-tbl_object.time)
                             
         else:
@@ -494,12 +520,14 @@ def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_nam
         if merchant_name:
             query = tbl_object\
                             .select()\
-                            .where((tbl_object.time < end_date)&(tbl_object.merchant_name==merchant_name))\
+                            .where((tbl_object.username ==username) &\
+                                (tbl_object.time < end_date)&\
+                                    (tbl_object.merchant_name==merchant_name))\
                             .order_by(-tbl_object.time)
         else:
             query = tbl_object\
                             .select()\
-                            .where(tbl_object.time < end_date)\
+                            .where(tbl_object.username ==username) &(tbl_object.time < end_date)\
                             .order_by(-tbl_object.time)\
 
 
@@ -507,11 +535,12 @@ def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_nam
         if merchant_name:
             query = tbl_object\
                     .select()\
-                    .where(tbl_object.merchant_name**f'%{merchant_name}%')\
+                    .where((tbl_object.username ==username) &(tbl_object.merchant_name**f'%{merchant_name}%'))\
                     .order_by(-tbl_object.time)
         else:
             query = tbl_object\
                     .select()\
+                    .where(tbl_object.username ==username)\
                     .order_by(-tbl_object.time)\
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
@@ -519,90 +548,80 @@ def filter_purchases(tbl_object, start_date, end_date, skip, limit, merchant_nam
 
 
 @aiomisc.threaded
-def filter_reservations(tbl_object, start_date, end_date, skip, limit, src, dest):
-    logger.info(f"Merchant name received is {merchant_name}")
+def filter_reservations(tbl_object, username, start_date, end_date, skip, limit, text):
     if start_date and end_date:
-        if src and not dest:
+        if text:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.src**f'%{src}%'))\
-                    .order_by(-tbl_object.time)
-        elif dest and not src:
-            query = tbl_object\
-                    .select()\
-                    .where((tbl_object.time> start_date) &(tbl_object.time < end_date)&(tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.time> start_date) &\
+                        (tbl_object.time < end_date)&\
+                        (tbl_object.src**f'%{text}%') | (tbl_object.dest**f'%{text}%') )\
                     .order_by(-tbl_object.time)
 
         else:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time> start_date)&\
-                                (tbl_object.time < end_date)&\
-                                (tbl_object.src**f'%{src}%')&\
-                                    (tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.time> start_date)&\
+                                (tbl_object.time < end_date))\
                     .order_by(-tbl_object.time)
 
 
 
     elif start_date and not end_date:
-        if src and not dest:
+
+        if text:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time> start_date) &(tbl_object.src**f'%{src}%'))\
-                    .order_by(-tbl_object.time)
-        elif dest and not src:
-            query = tbl_object\
-                    .select()\
-                    .where((tbl_object.time> start_date) &(tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.time> start_date) &\
+                        (tbl_object.src**f'%{text}%') | (tbl_object.dest**f'%{text}%') )\
                     .order_by(-tbl_object.time)
 
         else:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time> start_date)&\
-                                (tbl_object.src**f'%{src}%')&\
-                                    (tbl_object.dest**f'%{dest}%'))\
-                    .order_by(-tbl_object.time)        
+                    .where((tbl_object.username ==username) &(tbl_object.time> start_date))\
+                    .order_by(-tbl_object.time)
+
 
 
     elif end_date and not start_date:
-        if src and not dest:
+
+        if text:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time < end_date)&(tbl_object.src**f'%{src}%'))\
-                    .order_by(-tbl_object.time)
-        elif dest and not src:
-            query = tbl_object\
-                    .select()\
-                    .where((tbl_object.time < end_date)&(tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.time < end_date)&\
+                        (tbl_object.src**f'%{text}%') | (tbl_object.dest**f'%{text}%') )\
                     .order_by(-tbl_object.time)
 
         else:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.time < end_date)&\
-                                (tbl_object.src**f'%{src}%')&\
-                                    (tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username) &\
+                                (tbl_object.time < end_date))\
                     .order_by(-tbl_object.time)
+
+
 
     else: # not  start_date and  not end_date
-        if src and not dest:
+
+        if text:
             query = tbl_object\
                     .select()\
-                    .where(tbl_object.src**f'%{src}%')\
-                    .order_by(-tbl_object.time)
-        elif dest and not src:
-            query = tbl_object\
-                    .select()\
-                    .where(tbl_object.dest**f'%{dest}%')\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.src**f'%{text}%') | (tbl_object.dest**f'%{text}%') )\
                     .order_by(-tbl_object.time)
 
         else:
             query = tbl_object\
                     .select()\
-                    .where((tbl_object.src**f'%{src}%')&\
-                                    (tbl_object.dest**f'%{dest}%'))\
+                    .where((tbl_object.username ==username))\
                     .order_by(-tbl_object.time)
+
+
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
