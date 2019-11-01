@@ -62,17 +62,26 @@ class EmailParse(object):
         ##listing all the .mbox files present in the Takeout/Mail directory
         for mbox_file in os.listdir(self.email_path):
             
+
             path = os.path.join(self.email_path, mbox_file)
 
             #mbox_object = mailbox.mbox(path)
             mbox_object = await self.read_mbox(path)
             email_count = len(mbox_object.keys())
 
-            self.mbox_objects.append({
-                    "mbox_type": mbox_file.replace(".mbox", ""), 
-                    "mbox_object": mbox_object,
-                    "email_count": email_count
-            })
+            if mbox_file == "All mail Including Spam and Trash.mbox":
+                self.mbox_objects.append({
+                        "mbox_type": "Inbox", 
+                        "mbox_object": mbox_object,
+                        "email_count": email_count
+                })
+
+            else:
+                self.mbox_objects.append({
+                        "mbox_type": mbox_file.replace(".mbox", ""), 
+                        "mbox_object": mbox_object,
+                        "email_count": email_count
+                })
 
             total_emails.append(email_count)
 
@@ -81,7 +90,11 @@ class EmailParse(object):
 
         start = 0
         for mbox_object in self.mbox_objects:
-            end = mbox_object["email_count"]//step 
+            try:
+                end = mbox_object["email_count"]//step 
+            except:
+                end = 15
+                step = 1
             mbox_object.update({"start": start*step, "end": (start+end)*step, "step": step}) 
             start = start+end 
 

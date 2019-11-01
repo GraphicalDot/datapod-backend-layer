@@ -91,14 +91,21 @@ async def __parse(config, path, username):
     await email_parsing_instance.download_emails()
     
     
-    ins = ParseGoogleImages(config, dest_path, username, checksum)
-    await ins.parse()
-    
+    try:
+        ins = ParseGoogleImages(config, dest_path, username, checksum)
+        await ins.parse()
+    except Exception as e:
+        logger.error(e)
+
     res = {"message": "PROGRESS", "percentage": 98}
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
-    ins = await PurchaseReservations(config, dest_path, username, checksum)
-    await ins.parse()
+    try:
+        ins = await PurchaseReservations(config, dest_path, username, checksum)
+        await ins.parse()
+    except Exception as e:
+        logger.error(e)
+
 
     # for purchase in purchases:
     #     purchase.update({"tbl_object": config.PURCHASES_TBL}) 
@@ -501,6 +508,8 @@ async def emails_filter(request):
         #data:image/png;base64
         email.update({"date": creation_time.strftime("%d %b, %Y")})
 
+
+    logger.info(list(emails))
     return response.json(
         {
         'error': False,

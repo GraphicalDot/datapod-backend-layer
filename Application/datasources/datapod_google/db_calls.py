@@ -225,10 +225,9 @@ def filter_attachments(tbl_object, username, message_type, start_date, end_date,
 @aiomisc.threaded
 def get_emails(tbl_object, username, message_type, start_date, end_date, skip, limit):
     """
-    purchases: a list of purchases dict
     """
 
-
+    logger.info(f"This is the username {username}")
     # return email_attachment_table\
     #             .select()\
     #             .order_by(-email_attachment_table.date)\
@@ -237,7 +236,6 @@ def get_emails(tbl_object, username, message_type, start_date, end_date, skip, l
     #             .dicts()
 
 
-    logger.info(f"table object is {tbl_object}")
     if start_date and end_date:
         logger.info("Start date and  end date")
 
