@@ -222,31 +222,6 @@ async def github_re_backup_whole(request):
 
 
 
-
-async def github_list_repos(request):
-    """
-    """
-    page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 200][request.args.get("number") == None] 
-
-    result = await filter_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
-    [repo.update({
-            "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
-            "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
-            "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
-            "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
-    }) for repo in result]
-    
-    return response.json(
-        {
-        'error': False,
-        'success': True,
-        'data': result,
-        'message': None
-        })
-
-
-
 async def github_identity(request):
     """
     """
@@ -269,19 +244,57 @@ async def github_identity(request):
         })
 
 
+async def github_list_repos(request):
+    """
+    """
+    skip = [request.args.get("skip"), 1][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    username = request.args.get("username") 
+    search_text = request.args.get("search_text") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    # repos, _ = await filter_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username,  1, 10, None)
+
+
+
+    result, count = await filter_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username, int(skip), int(limit), search_text)
+    [repo.update({
+            "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
+            "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
+            "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y"),
+            "pushed_at": date_parse( repo.get("pushed_at")).strftime("%d, %b %Y")
+    }) for repo in result]
+    
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': {"repos": result, "count": count },
+        'message': None
+        })
+
+
+
+
 
 async def github_list_starred_repos(request):
-    """
-    """
-    res = await counts(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
-    logger.info(res)
+    skip = [request.args.get("skip"), 1][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    search_text = request.args.get("search_text") 
+
+    username = request.args.get("username") 
+    logger.info(request.args)
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
 
 
-    page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 200][request.args.get("number") == None] 
+
 
     logger.info(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
-    result = await filter_starred_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
+
+    result, count = await filter_starred_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username, int(skip), int(limit), search_text)
     for repo in result:
         try:
             repo.update({
@@ -294,30 +307,88 @@ async def github_list_starred_repos(request):
             logger.error(repo)
             pass
 
+    logger.info(list(result))
     return response.json(
         {
         'error': False,
         'success': True,
-        'data': result,
+        'data': {"repos": result, "count": count},
         'message': None
         })
+
 
 async def github_list_gist(request):
     """
     """
-    logger.info("Number is ", request.args.get("number"))
-    page = [request.args.get("page"), 1][request.args.get("page") == None] 
-    number = [request.args.get("number"), 200][request.args.get("number") == None] 
+    skip = [request.args.get("skip"), 1][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    search_text = request.args.get("search_text") 
+
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
 
     logger.info(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"])
-    result = await filter_gists(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], int(page), int(number))
-    logger.info(result)
+    result, count = await filter_gists(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username,  int(skip), int(limit), search_text)
+    
     [repo.update({
             "downloaded_at": repo.get("downloaded_at").strftime("%d, %b %Y"),
             "created_at": date_parse( repo.get("created_at")).strftime("%d, %b %Y"),
             "updated_at": date_parse( repo.get("updated_at")).strftime("%d, %b %Y")
         }) for repo in result]
 
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': {"repos": result, "count": count },
+        'message': None
+        })
+
+def creation_date(filename):
+    time_format = "%Y-%m-%d %H:%M:%S"
+    t = os.path.getctime(filename)
+    return datetime.datetime.fromtimestamp(t).strftime(time_format)
+
+
+
+
+async def dashboard_data(request):
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+    
+    result = await counts(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username)
+
+
+    starred, _ = await filter_starred_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username,  1, 10, None)
+    repos, _ = await filter_repos(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username,  1, 10, None)
+
+    # def get_dir_size(dirpath):
+    #     all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
+    #     _date = creation_date(all_files[0])
+    #     #files_and_sizes = [os.path.getsize(path) for path in all_files]
+    #     return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8'), _date
+
+    # path = os.path.join(request.app.config.RAW_DATA_PATH,  f"{DATASOURCE_NAME}/{GITHUB_DATASOURCE_NAME}", username)
+
+    # size, last_updated = get_dir_size(path)
+
+    stats = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
+    
+    user_stats = {}
+    for data in stats:
+        if username == data["username"]:
+            user_stats = data
+
+    result.update(user_stats)
+
+
+
+    result.update({"starred": starred, "repos": repos})
+    logger.info(result)
     return response.json(
         {
         'error': False,
@@ -335,9 +406,14 @@ async def github_backup_single_repo(request):
     if not request.args.get("name"):
         raise APIBadRequest("Name of the repository is required")
     
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+    
     logger.info(request.app.config.CODE_GITHUB_TBL)
 
-    result = await get_single_repository(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], request.args.get("name"))
+    result = await get_single_repository(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username, request.args.get("name"))
     
     if not result:
         raise APIBadRequest("No repo exists")

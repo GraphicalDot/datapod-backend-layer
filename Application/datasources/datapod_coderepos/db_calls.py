@@ -238,83 +238,168 @@ def store(**data):
     return 
 
 
-@aiomisc.threaded
-def filter_repos(tbl_object, page, number):
-    """
-        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
-         print(tweet.message, tweet.created_date)
 
-    """
-    logger.info("Filter_repos has been caled")
 
-    return tbl_object\
-            .select(tbl_object.name, tbl_object.git_url, 
-                    tbl_object.source,
-                    tbl_object.downloaded_at, 
-                    tbl_object.id, 
-                    tbl_object.node_id, 
-                    tbl_object.created_at, 
-                    tbl_object.updated_at, 
-                    tbl_object.pushed_at,
-                    tbl_object.description)\
-            .where(tbl_object.is_gist != True, tbl_object.is_starred != True)\
-            .order_by(-tbl_object.updated_at)\
-            .paginate(page, number)\
-             .dicts()
 
 @aiomisc.threaded
-def filter_starred_repos(tbl_object, page, number):
+def filter_repos(tbl_object, username, skip, limit, search_text):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
 
-    return tbl_object\
-            .select(tbl_object.name, tbl_object.git_url, 
-                     tbl_object.source,
-                    tbl_object.downloaded_at, 
-                    tbl_object.id, 
-                    tbl_object.node_id, 
-                    tbl_object.created_at, 
-                    tbl_object.updated_at, 
-                    tbl_object.pushed_at,
-                    tbl_object.description)\
-            .where(tbl_object.is_starred==True)\
-            .order_by(-tbl_object.updated_at)\
-            .paginate(page, number)\
-             .dicts()
+    if search_text:
+
+        query=  tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username, tbl_object.is_gist != True, tbl_object.is_starred != True, tbl_object.name**f'%{search_text}%')\
+                .order_by(-tbl_object.updated_at)\
+        
+    else:
+        query= tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username, tbl_object.is_gist != True, tbl_object.is_starred != True)\
+                .order_by(-tbl_object.updated_at)\
+        
+  
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
 
 
 
 @aiomisc.threaded
-def filter_gists(tbl_object, page, number):
+def filter_starred_repos(tbl_object, username, skip, limit, search_text):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
 
     """
-    logger.info("Filter_gists has been caled")
-    return tbl_object\
-            .select(tbl_object.name, tbl_object.git_pull_url,
-             tbl_object.source, 
-                    tbl_object.downloaded_at, 
-                    tbl_object.id, 
-                    tbl_object.node_id, 
-                    tbl_object.created_at, 
-                    tbl_object.updated_at, 
-                    tbl_object.pushed_at,
-                    tbl_object.description)\
-            .where(tbl_object.is_gist==True)\
-            .order_by(-tbl_object.updated_at)\
-            .paginate(page, number)\
-             .dicts()
+
+
+    if search_text:
+
+        query=  tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username,
+                         tbl_object.is_starred==True, 
+                         tbl_object.name**f'%{search_text}%'| tbl_object.description**f'%{search_text}%'
+                         )\
+                .order_by(-tbl_object.updated_at)\
+        
+    else:
+        query= tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username, tbl_object.is_starred==True)\
+                .order_by(-tbl_object.updated_at)\
+        
+  
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
+@aiomisc.threaded
+def filter_gists(tbl_object, username, skip, limit, search_text):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+
+
+    if search_text:
+
+        query=  tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username, tbl_object.is_gist==True, tbl_object.name**f'%{search_text}%')\
+                .order_by(-tbl_object.updated_at)\
+        
+    else:
+        query= tbl_object\
+                .select(tbl_object.name, tbl_object.git_url, 
+                        tbl_object.source,
+                        tbl_object.downloaded_at, 
+                        tbl_object.id, 
+                        tbl_object.node_id, 
+                        tbl_object.created_at, 
+                        tbl_object.updated_at, 
+                        tbl_object.pushed_at,
+                        tbl_object.description)\
+                .where(tbl_object.username ==username, tbl_object.is_gist==True)\
+                .order_by(-tbl_object.updated_at)\
+        
+  
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
+
+# @aiomisc.threaded
+# def filter_gists(tbl_object, username, page, number):
+#     """
+#         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+#          print(tweet.message, tweet.created_date)
+
+#     """
+#     logger.info("Filter_gists has been caled")
+#     return tbl_object\
+#             .select(tbl_object.name, tbl_object.git_pull_url,
+#              tbl_object.source, 
+#                     tbl_object.downloaded_at, 
+#                     tbl_object.id, 
+#                     tbl_object.node_id, 
+#                     tbl_object.created_at, 
+#                     tbl_object.updated_at, 
+#                     tbl_object.pushed_at,
+#                     tbl_object.description)\
+#             .where(tbl_object.username ==username, tbl_object.is_gist==True)\
+#             .order_by(-tbl_object.updated_at)\
+#             .paginate(page, number)\
+#              .dicts()
 
 
 
 
 @aiomisc.threaded
-def get_single_repository(tbl_object, name):
+def get_single_repository(tbl_object, username, name):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -322,13 +407,13 @@ def get_single_repository(tbl_object, name):
     """
     query = (tbl_object\
             .select()\
-            .where(tbl_object.name==name).dicts())
+            .where(tbl_object.username ==username, tbl_object.name==name).dicts())
     return list(query)
 
 
 
 @aiomisc.threaded
-def counts(tbl_object):
+def counts(tbl_object, username):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -336,15 +421,15 @@ def counts(tbl_object):
     """
     gists = tbl_object\
             .select()\
-            .where(tbl_object.is_gist==True).count()
+            .where(tbl_object.username ==username,tbl_object.is_gist==True).count()
     
     repos = tbl_object\
             .select()\
-            .where(tbl_object.is_gist != True, tbl_object.is_starred != True).count()
+            .where(tbl_object.username ==username, tbl_object.is_gist != True, tbl_object.is_starred != True).count()
 
     starred = tbl_object\
             .select()\
-            .where(tbl_object.is_starred==True).count()
+            .where(tbl_object.username ==username, tbl_object.is_starred==True).count()
 
 
 

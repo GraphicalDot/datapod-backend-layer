@@ -11,7 +11,7 @@ from loguru import logger
 import aiomisc
 import mmap
 import humanize
-
+import csv
 
 
 
@@ -59,19 +59,32 @@ async def get_suggestions(request):
 
 
 @aiomisc.threaded_separate
-def search_text(filepath, string): 
-    try: 
-        with open(filepath, 'rb', 0) as file, mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as s: 
-            if s.find(string.encode()) != -1: 
-                return True 
-    except: 
-        return False 
+def search_text(command): 
+    # try: 
+    #     with open(filepath, 'rb', 0) as file, mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as s: 
+    #         if s.find(string.encode()) != -1: 
+    #             return True 
+    # except: 
+    #     return False 
+    # process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    # stdout, _ = process.communicate()
+
+    # reader = csv.DictReader(stdout.decode('ascii').splitlines(),
+    #                     delimiter=' ', skipinitialspace=True,
+    #                     fieldnames=['filename', 'line_number',
+    #                                 'text'])
+
+    result = []
 
 
+
+    result = subprocess.getoutput(command)
+    result = result.split("\n")
+    return result
 
 async def codesearch(request):
 
-    raw_text = request.args.get("text")
+    raw_text = request.args.get("search_text")
 
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 20][request.args.get("limit") == None] 
@@ -82,12 +95,11 @@ async def codesearch(request):
 
     path = os.path.join(request.app.config.RAW_DATA_PATH, "Coderepos/github")
     
-    grep_command = f"grep -nr {raw_text} {path}/*"
-
-    result = []
-    result = subprocess.getoutput(grep_command)
-    result = result.split("\n")
-
+    grep_command = f"grep -InrH {raw_text} {path}/*"
+    # grep_command = ["grep", "-InrH", raw_text, path]
+    logger.info(grep_command)
+    result = await search_text(grep_command)
+    logger.info(result)
     # for out in request.app.config.OS_COMMAND_OUTPUT(grep_command, "Files are in Sync"):
     #     logger.info(out)
     #     result.append(out)
@@ -114,6 +126,6 @@ async def codesearch(request):
         {
         'error': False,
         'success': True,
-        'data': result[skip: skip+limit], 
+        'data': result, 
         'message': None
         })

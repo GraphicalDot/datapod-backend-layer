@@ -5,7 +5,7 @@ import sqlite3
 
 from .db_initialize import initialize
 from .github_api import github_parse, github_re_backup_whole, github_list_repos, github_identity, github_list_starred_repos, github_list_gist, \
-        github_list_repos, github_backup_single_repo, stats, status, archives
+        github_list_repos, github_backup_single_repo, stats, status, archives, dashboard_data
 
 from .api import get_suggestions, codesearch
 import os
@@ -46,6 +46,7 @@ class Routes:
                                     ("github/list_starred_repos", github_list_starred_repos), 
                                     ("github/list_gists", github_list_gist), 
                                     ("get_suggestions", get_suggestions),
-                                    ("codesearch", codesearch)
+                                    ("codesearch", codesearch), 
+                                    ("github/dashboard_data", dashboard_data)
                         ], 
                     "POST": [("github/parse", github_parse)] } 
