@@ -13,7 +13,7 @@ from dateutil.parser import parse as date_parse
 from .utils.github_auth import get_auth
 from errors_module.errors import APIBadRequest, IdentityAlreadyExists,  IdentityExistsNoPath, IdentityDoesntExists
 from .db_calls import filter_repos, get_single_repository, filter_starred_repos, filter_gists, counts,\
-                 store_creds, get_creds, update_status, update_stats, get_stats, get_status
+                 store_creds, get_creds, update_status, update_stats, get_stats, get_status, get_creds
 
 from loguru import logger
 from .utils.common import construct_request, get_response, ensure_directory, \
@@ -197,9 +197,13 @@ async def github_parse(request):
 async def github_re_backup_whole(request):
     """
     """
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
 
     try:
-        username, password = await get_creds(request.app.config.CODE_GITHUB_CREDS_TBL)
+        username, password = await get_creds(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"])
     except:
         raise APIBadRequest("Credentials aren't present")
     
@@ -411,8 +415,7 @@ async def github_backup_single_repo(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
     
-    logger.info(request.app.config.CODE_GITHUB_TBL)
-
+    logger.info(request.args)
     result = await get_single_repository(request.app.config[DATASOURCE_NAME]["tables"]["repos_table"], username, request.args.get("name"))
     
     if not result:
@@ -424,7 +427,7 @@ async def github_backup_single_repo(request):
         owner = json.loads(repository["owner"])
         repository.update({"owner": owner})    
 
-        request.app.add_task(per_repository(repository["path"], repository, request.app.config, None))
+        request.app.add_task(per_repository(username, repository["path"], repository, request.app.config, None))
 
     ##await per_repository(repository["path"], repository, request.app.config, None)
 

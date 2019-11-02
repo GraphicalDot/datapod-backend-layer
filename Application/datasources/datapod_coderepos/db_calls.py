@@ -29,6 +29,10 @@ def update_status(status_table, datasource_name, username, status):
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
     return 
 
+@aiomisc.threaded
+def get_creds(credential_table, username):
+    logger.info("Get credentials called")
+    return credential_table.select().where(credential_table.username == username).dicts()
 
 @aiomisc.threaded
 def update_stats(stats_table, reposource, username, data_items, size, sync_frequency, sync_type, next_sync):
@@ -46,7 +50,7 @@ def update_stats(stats_table, reposource, username, data_items, size, sync_frequ
                 next_sync = next_sync).execute()
                                     
     except IntegrityError as e:
-        logger.error(f"Couldnt insert stats for  {datasource_name} because of {e} so updating it")
+        logger.error(f"Couldnt insert stats for  because of {e} so updating it")
 
         stats_table.update(
                             data_items = data_items,
