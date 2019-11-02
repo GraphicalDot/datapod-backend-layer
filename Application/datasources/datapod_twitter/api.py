@@ -42,7 +42,13 @@ async def archives(request):
 
 
 async def dashboard(request):
-    res = await get_account(request.app.config[DATASOURCE_NAME]["tables"]["account_table"])
+
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    res = await get_account(request.app.config[DATASOURCE_NAME]["tables"]["account_table"], username)
 
     result = res[0]
     result.update({"common_hashtags":  json.loads(result["common_hashtags"]), "common_user_mentions": json.loads(result["common_user_mentions"])})  
@@ -99,6 +105,10 @@ async def tweets(request):
     matching_string = request.args.get("match_string") 
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
 
     logger.info(f"Params are {request.args}")
     if start_date:
@@ -120,13 +130,14 @@ async def tweets(request):
     if matching_string:
         logger.info(f"THis is the matchiing_String {matching_string}")
         result, count = await match_text(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], 
+            username, 
             request.app.config[DATASOURCE_NAME]["tables"]["indexed_tweet_table"], \
                 
             matching_string , start_date, end_date,  int(skip), int(limit))
 
     else:
 
-        result, count = await filter_tweet(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], start_date, end_date, int(skip), int(limit))
+        result, count = await filter_tweet(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], username, start_date, end_date, int(skip), int(limit))
     
     # [repo.update({
     #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),

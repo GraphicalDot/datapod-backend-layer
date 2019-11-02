@@ -276,17 +276,17 @@ def store_account(**account_data):
     
 
 @aiomisc.threaded
-def get_account(tbl_object):
-    logger.info(f"Get account called with tbl_object {tbl_object}")
+def get_account(tbl_object, username):
     res =  tbl_object\
                 .select()\
+                .where(tbl_object.username == username)\
                 .dicts()
     for e in res:
         logger.info(e)
     return res
 
 @aiomisc.threaded #makes function asynchronous
-def filter_tweet(tbl_object, start_date, end_date, skip, limit):
+def filter_tweet(tbl_object, username, start_date, end_date, skip, limit):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -299,7 +299,9 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
-                .where((tbl_object.created_at> start_date) &(tbl_object.created_at < end_date))\
+                .where(tbl_object.username == username, 
+                    tbl_object.created_at> start_date, 
+                        tbl_object.created_at < end_date)\
                 .order_by(-tbl_object.created_at)
                 
         
@@ -307,7 +309,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
     elif start_date and not end_date:
         query = tbl_object\
                         .select()\
-                        .where(tbl_object.created_at> start_date)\
+                        .where(tbl_object.username == username, tbl_object.created_at> start_date)\
                         .order_by(-tbl_object.created_at)\
                         
 
@@ -315,7 +317,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
     elif end_date and not start_date:
         query = tbl_object\
                         .select()\
-                        .where(tbl_object.created_at < end_date)\
+                        .where(tbl_object.username == username, tbl_object.created_at < end_date)\
                         .order_by(-tbl_object.created_at)\
         
 
@@ -324,6 +326,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
+                .where(tbl_object.username == username)\
                 .order_by(-tbl_object.created_at)\
 
 
@@ -333,7 +336,7 @@ def filter_tweet(tbl_object, start_date, end_date, skip, limit):
 
 
 @aiomisc.threaded #makes function asynchronous
-def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, skip, limit,  time=None):
+def match_text(tbl_object, username,  indexed_obj, matching_string, start_date, end_date, skip, limit,  time=None):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -345,7 +348,10 @@ def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, s
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where(indexed_obj.match(matching_string) & (tbl_object.created_at> start_date) &(tbl_object.created_at < end_date) )\
+                .where(tbl_object.username == username, 
+                    indexed_obj.match(matching_string) , 
+                    tbl_object.created_at> start_date, 
+                    tbl_object.created_at < end_date )\
                 .order_by(-tbl_object.created_at)
 
                 
@@ -355,7 +361,9 @@ def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, s
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where((indexed_obj.match(matching_string)) & (tbl_object.created_at> start_date))\
+                .where(tbl_object.username == username, 
+                    indexed_obj.match(matching_string), 
+                    tbl_object.created_at> start_date)\
                 .order_by(-tbl_object.created_at)
 
         
@@ -365,7 +373,9 @@ def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, s
         query = tbl_object\
                 .select()\
                 .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                .where((indexed_obj.match(matching_string)) &(tbl_object.created_at < end_date))\
+                .where(indexed_obj.match(matching_string),
+                    tbl_object.username == username,
+                 tbl_object.created_at < end_date)\
                 .order_by(-tbl_object.created_at)
 
 
@@ -374,14 +384,14 @@ def match_text(tbl_object, indexed_obj, matching_string, start_date, end_date, s
         query = tbl_object\
                     .select()\
                     .join(indexed_obj, on=(tbl_object.tweet_hash == indexed_obj.tweet_hash))\
-                    .where(indexed_obj.match(matching_string))\
+                    .where(tbl_object.username == username, 
+                    indexed_obj.match(matching_string))\
 
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
 
 
-    return list(query)
 
 @aiomisc.threaded #makes function asynchronous
 def count_filtered_tweets(main_tbl_object, indexed_obj, matching_string, time=None):
