@@ -72,9 +72,12 @@ async def parse(request):
 
     res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
 
+    res = list(res)
+    logger.info(res)
     if res:
-        if res.get("status") == "PROGRESS":
-            raise APIBadRequest("Already processing a twitter for the user")
+        for element in res:
+            if element.get("status") == "PROGRESS":
+                raise APIBadRequest("Already processing a twitter for the user")
 
     username = request.json["username"].lower()
     config = request.app.config
@@ -139,6 +142,7 @@ async def tweets(request):
 
         result, count = await filter_tweet(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], username, start_date, end_date, int(skip), int(limit))
     
+    logger.info(list(result)[0])
     # [repo.update({
     #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),
     #     }) for repo in result]
