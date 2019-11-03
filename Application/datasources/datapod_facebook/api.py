@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-from .db_calls import get_stats, get_status, filter_chats, filter_images
+from .db_calls import get_stats, get_status, filter_chats, filter_images, dashboard_data
 from .variables import DATASOURCE_NAME
 import subprocess
 
@@ -33,7 +33,23 @@ async def status(request):
 
 
 
+async def dashboard(request):
 
+    username = request.args.get("username")
+    if not username:
+        raise APIBadRequest("username is required")
+    
+    res = await dashboard_data(username, request.app.config[DATASOURCE_NAME]["tables"]["image_table"], 
+                    request.app.config[DATASOURCE_NAME]["tables"]["chat_table"], 
+                    request.app.config[DATASOURCE_NAME]["tables"]["address_table"])
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": None ,
+        "data": res
+        })
 
 
 
@@ -92,6 +108,9 @@ async def get_chats(request):
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
     username = request.args.get("username")
+    if not username:
+        raise APIBadRequest("username is required")
+
     search_text = request.args.get("search_text")
 
     if search_text:

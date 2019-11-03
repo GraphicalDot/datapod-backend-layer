@@ -27,6 +27,14 @@ EMAIL_SEARCH = re.compile(email_regex)
 PHONE_SEARCH = re.compile(phone_regex)
 
 
+
+
+
+
+
+
+
+
 async def __parse(config, path, username, checksum):
     #add this if this has to executed periodically
     #while True:
@@ -287,9 +295,6 @@ async def chat_photos(config, chat_photo_folder, username, checksum, chat_id):
         await store_image(**entry)
            
     return
-
-
-
 
 
 

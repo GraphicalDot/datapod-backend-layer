@@ -227,6 +227,23 @@ def store_address(**data):
     return 
 
 
+async def dashboard_data(username, image_table, chat_table, address_table):
+
+    image_q = image_table\
+            .select()\
+            .where(image_table.username==username)\
+
+
+    chat_q = chat_table\
+            .select()\
+            .where(chat_table.username==username)\
+
+
+    address_q = address_table\
+            .select()\
+            .where(address_table.username==username)\
+
+    return {"images": image_q.count(), "chats": chat_q.count(), "addresses": address_q.count()}
 
 @aiomisc.threaded
 def filter_images(tbl_object, username, start_date, end_date, skip, limit):
