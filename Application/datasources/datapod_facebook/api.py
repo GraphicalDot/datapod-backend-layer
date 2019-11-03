@@ -37,7 +37,6 @@ async def status(request):
 
 
 
-
 async def parse(request):
     """
     To get all the assets created by the requester

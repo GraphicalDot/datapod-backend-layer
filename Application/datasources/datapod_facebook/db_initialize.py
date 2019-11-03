@@ -92,6 +92,17 @@ def initialize(db):
         chat_id = peewee.TextField(index=True,null=False)
         chat_path = peewee.TextField(null=False)
 
+    class Address(BaseModel):
+        username = peewee.TextField(index=True, null=False)
+        checksum = peewee.TextField(index=True, null=False)
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+
+        name = peewee.TextField(null=True)
+        email = peewee.TextField(null=True)
+        phone_number = peewee.TextField(null=True) 
+        
+        created_timestamp = peewee.DateTimeField()
+        updated_timestamp = peewee.DateTimeField()
 
     class ChatContent(FTSModel):
         username = peewee.TextField()
@@ -125,7 +136,8 @@ def initialize(db):
             Status, 
             Stats,
             Chats, 
-            ChatContent
+            ChatContent, 
+            Address
         ])
 
     db.drop_tables([  
@@ -141,7 +153,5 @@ def initialize(db):
 
 
 
-    return Creds, Archives, Images, \
-            YourPosts, OtherPosts, FContent,\
-            Status, Stats, Chats, ChatContent
+    return Creds, Archives, Images, YourPosts, OtherPosts, FContent, Status, Stats, Chats, ChatContent, Address
 

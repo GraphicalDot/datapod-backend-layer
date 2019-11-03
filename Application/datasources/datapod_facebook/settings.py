@@ -22,7 +22,7 @@ class Routes:
 
         creds_table, archives_table, images_table, \
             yourposts_table,  other_posts, \
-                content, status_table, stats_table, chats, chat_content =  initialize(self.db_object)
+                content, status_table, stats_table, chats, chat_content, address_table =  initialize(self.db_object)
         self.datasource_name = DATASOURCE_NAME
         self.config  = { 
             "tables": { 
@@ -35,6 +35,7 @@ class Routes:
                 "chat_table": chats,
                 "chat_content": chat_content, 
                 "stats_table": stats_table, 
+                "address_table": address_table,
                 "status_table": status_table},
             "utils":{
                 "stats": stats, 

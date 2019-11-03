@@ -187,7 +187,44 @@ def store_chats(**data):
         logger.error(f"facebook image data insertion failed {data.get('chat_id')} with {e}")
     return 
 
+@aiomisc.threaded
+def store_address(**data):
+    """
+    purchases: a list of purchases dict
+    """
+    table = data["table"]
+    try:
+        table.insert(
+                    username = data.get("username"),
+                    checksum=data.get("checksum"),
+                    name=data.get("name"),
+                    email=data.get("email"),
+                    phone_number=data.get("phone_number"),
+                    created_timestamp=data.get("created_timestamp"),
+                    updated_timestamp=data.get("updated_timestamp")
+                    ).execute()
 
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+    except IntegrityError as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f'Duplicate key present --{data.get("chat_id")}-- in table --FBchat-- {e}')
+        table.update(
+                    checksum=data.get("checksum"),
+                    email=data.get("email"),
+                    phone_number=data.get("phone_number"),
+                    created_timestamp=data.get("created_timestamp"),
+                    updated_timestamp=data.get("updated_timestamp")
+                    ).where(table.username==data["username"]).execute()
+        
+        
+        #raise DuplicateEntryError(data['name'], "GithubRepo")
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"facebook image data insertion failed {data.get('chat_id')} with {e}")
+    return 
 
 
 

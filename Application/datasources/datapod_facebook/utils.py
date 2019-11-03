@@ -11,24 +11,29 @@ from errors_module.errors import APIBadRequest
 from loguru import logger
 from .variables import DATASOURCE_NAME
 import humanize
-from .db_calls import store_image, update_status, update_stats, store_chats
+from .db_calls import store_image, update_status, update_stats, store_chats, store_address
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
 sys.path.append(parent_module_path)
 
 import aiomisc
+import re
 
+email_regex = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$" 
+phone_regex =  '(^[+0-9]{1,3})*([0-9]{10,11}$)'
+
+EMAIL_SEARCH = re.compile(email_regex)
+PHONE_SEARCH = re.compile(phone_regex)
 
 
 async def __parse(config, path, username, checksum):
-    ##add this if this has to executed periodically
-    ##while True:
-    #path = /home/feynman/.datapod/userdata/raw/facebook/
+    #add this if this has to executed periodically
+    #while True:
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS")
     
     async def change_uri(json_data, prefix_path):
-        i = 95/len(json_data["photos"])
+        i = 70/len(json_data["photos"])
         for  num, entry in enumerate(json_data["photos"]):
             
             
@@ -75,8 +80,6 @@ async def __parse(config, path, username, checksum):
 
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
 
-    res = {"message": "completed", "percentage": 100}
-    await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
 
 
@@ -87,17 +90,53 @@ async def __parse(config, path, username, checksum):
     size = dir_size(takeout_dir)
     data_items = files_count(takeout_dir) 
     logger.success(f"username == {takeout_dir} size == {size} dataitems == {data_items}")
+    await contacts(config, path, username, checksum)
 
     await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
                 DATASOURCE_NAME, 
                 username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+    res = {"message": "completed", "percentage": 100}
+    await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
+    logger.info("facebook datasource parse completed")
 
     return 
 
 
 
 
+
+async def contacts(config, path, username, checksum):
+
+    path = os.path.join(path, "about_you", "your_address_books.json")
+    with open(path, "r") as json_file:
+            data = json.load(json_file)
+    
+
+    contacts = data.get("address_book").get("address_book")
+    i = 30/len(contacts)
+
+    if contacts:
+        for num, contact in enumerate(contacts):
+            logger.info(contact)
+            detail = {"email": None, "phone_number": None}
+            detail.update({"name": contact["name"], "created_timestamp": contact.get("created_timestamp"), "updated_timestamp": contact.get("updated_timestamp")})
+
+            for _detail in contact.get("details"):
+                if _detail.get("contact_point"):
+                    if EMAIL_SEARCH.match(_detail.get("contact_point")):
+                        detail.update({"email": _detail.get("contact_point") })
+                    if PHONE_SEARCH.match(_detail.get("contact_point")):
+                        detail.update({"phone_number": _detail.get("contact_point") })
+
+            detail.update({"table": config[DATASOURCE_NAME]["tables"]["address_table"], "username": username, "checksum": checksum})
+            logger.info(detail)
+            await store_address(**detail)
+            res = {"message": "Progress", "percentage": int(70+(i*(num+1)))}
+
+            await config["send_sse_message"](config, DATASOURCE_NAME, res)
+    
+    return 
 
 async def handle_chats(config, username, checksum, chats_path):
     """
