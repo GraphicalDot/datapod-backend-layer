@@ -199,7 +199,11 @@ def filter_images(tbl_object, username, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
-                .where((tbl_object.creation_timestamp> start_date) &(tbl_object.creation_timestamp < end_date) & (tbl_object.username==username))\
+                .where((
+                        tbl_object.creation_timestamp> start_date) &\
+                        (tbl_object.creation_timestamp < end_date) &\
+                        (tbl_object.chat_image==False) &\
+                        (tbl_object.username==username))\
                 .order_by(-tbl_object.creation_timestamp)
                 
         
@@ -207,7 +211,9 @@ def filter_images(tbl_object, username, start_date, end_date, skip, limit):
     elif start_date and not end_date:
         query = tbl_object\
                         .select()\
-                        .where((tbl_object.creation_timestamp> start_date)& (tbl_object.username==username))\
+                        .where((tbl_object.creation_timestamp> start_date)&\
+                                (tbl_object.chat_image==False) &\
+                             (tbl_object.username==username))\
                         .order_by(-tbl_object.creation_timestamp)
                         
 
@@ -215,7 +221,9 @@ def filter_images(tbl_object, username, start_date, end_date, skip, limit):
     elif end_date and not start_date:
         query = tbl_object\
                         .select()\
-                        .where((tbl_object.creation_timestamp < end_date)&((tbl_object.username==username)))\
+                        .where((tbl_object.creation_timestamp < end_date)&\
+                            (tbl_object.chat_image==False) &\
+                            (tbl_object.username==username))\
                         .order_by(-tbl_object.creation_timestamp)
         
 
@@ -224,9 +232,79 @@ def filter_images(tbl_object, username, start_date, end_date, skip, limit):
 
         query = tbl_object\
                 .select()\
-                .where(tbl_object.username==username)\
+                .where(tbl_object.username==username, tbl_object.chat_image==False)\
                 .order_by(-tbl_object.creation_timestamp)
 
     
     return query.offset(skip).limit(limit).dicts(), query.count()
     
+
+@aiomisc.threaded
+def filter_chats(tbl_object, username, start_date, end_date, skip, limit, search_text):
+    logger.error(f"Name of the table is {tbl_object} --- {username}")
+
+    if start_date and end_date:
+        if search_text:
+            query = tbl_object\
+                                .select()\
+                                .where((tbl_object.timestamp> start_date) &(tbl_object.timestamp < end_date)\
+                                     & (tbl_object.username==username) &(tbl_object.message_content**f'%{search_text}%'))\
+                                .order_by(-tbl_object.timestamp)
+
+        else:
+            query = tbl_object\
+                    .select()\
+                    .where((tbl_object.timestamp> start_date) &(tbl_object.timestamp < end_date) & (tbl_object.username==username))\
+                    .order_by(-tbl_object.timestamp)
+                
+        
+
+    elif start_date and not end_date:
+        if search_text:
+            query = tbl_object\
+                        .select()\
+                        .where((tbl_object.timestamp> start_date) \
+                            & (tbl_object.username==username)&\
+                                (tbl_object.message_content**f'%{search_text}%'))\
+                        .order_by(-tbl_object.timestamp)
+
+        else:
+            query = tbl_object\
+                            .select()\
+                            .where((tbl_object.timestamp> start_date)& (tbl_object.username==username)&(tbl_object.message_content**f'%{search_text}%'))\
+                            .order_by(-tbl_object.timestamp)
+                        
+
+
+    elif end_date and not start_date:
+        if search_text:
+            query = tbl_object\
+                        .select()\
+                        .where((tbl_object.timestamp < end_date) & (tbl_object.username==username)&(tbl_object.message_content**f'%{search_text}%'))\
+                        .order_by(-tbl_object.timestamp)
+
+        else:
+            query = tbl_object\
+                            .select()\
+                            .where((tbl_object.timestamp < end_date)&((tbl_object.username==username)))\
+                            .order_by(-tbl_object.timestamp)
+        
+
+
+    else: # not  start_date and  not end_date
+        if search_text:
+            query = tbl_object\
+                            .select()\
+                            .where(
+                                tbl_object.message_content**f'%{search_text}%', tbl_object.username==username)\
+                            .order_by(-tbl_object.timestamp)
+
+        else:
+
+            query = tbl_object\
+                    .select()\
+                    .where(tbl_object.username==username)\
+                    .order_by(-tbl_object.timestamp)
+
+    
+    return query.offset(skip).limit(limit).dicts(), query.count()

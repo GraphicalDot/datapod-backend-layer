@@ -155,7 +155,7 @@ async def read_chat(config, username, checksum, chat_path, chat_type, chat_id):
                 data = json.load(json_file)
 
 
-                participants = chat_participants(data.get("participants"))
+                participants = json.dumps(chat_participants(data.get("participants")))
                 messages = json.dumps(data.get("messages"))
                 message_content = _message_content(data.get("messages"))
                 title = data.get("title")
@@ -179,7 +179,7 @@ async def read_chat(config, username, checksum, chat_path, chat_type, chat_id):
                                 "participants": participants, 
                                 "thread_type": thread_type, 
                                 "messages": messages, 
-                                "message_content": message_content,
+                                "message_content": message_content.lower(),
                                 "timestamp": timestamp_ms })
                 await store_chats(**result)
 

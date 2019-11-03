@@ -7,13 +7,12 @@ import os
 from .utils import __parse
 from errors_module.errors import APIBadRequest
 from loguru import logger
-from .db_calls import filter_images
 import json
 import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-from .db_calls import get_stats, get_status
+from .db_calls import get_stats, get_status, filter_chats, filter_images
 from .variables import DATASOURCE_NAME
 import subprocess
 
@@ -47,9 +46,13 @@ async def parse(request):
 
     res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
 
+
+    res = list(res)
+    logger.info(res)
     if res:
-        if res.get("status") == "PROGRESS":
-            raise APIBadRequest("Already processing a facebook account for the user")
+        for element in res:
+            if element.get("status") == "PROGRESS":
+                raise APIBadRequest("Already processing a facebook for the user")
 
 
 
@@ -83,8 +86,66 @@ def image_base64(path):
     return img_str.decode()
 
 
+async def get_chats(request):
+
+    skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
+    limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    username = request.args.get("username")
+    search_text = request.args.get("search_text")
+
+    if search_text:
+        search_text = search_text.lower()
+    logger.info(request.args)
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+
+
+    if start_date:
+        start_date = dateparser.parse(start_date)
+
+
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+
+    _chats, count = await filter_chats(request.app.config[DATASOURCE_NAME]["tables"]["chat_table"], username, start_date, end_date, int(skip), int(limit), search_text)
+
+    for chat in _chats:
+        chat.pop("message_content")
+        chat.pop("chat_path")
+        if chat.get("messages"):
+            messages = json.loads(chat.get("messages"))
+            chat.update({"messages": messages})
+        if chat.get("participants"):
+            participants = json.loads(chat.get("participants"))
+            chat.update({"participants": participants})
+
+
+
+    logger.info(list(_chats))
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": None, 
+        "data": {"chats": _chats, "count": count}
+        })
+
+
+
+
+
 # @FACEBOOK_BP.get('/images')
-async def filter_images(request):
+async def images(request):
 
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 

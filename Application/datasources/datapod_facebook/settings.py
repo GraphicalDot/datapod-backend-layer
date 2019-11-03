@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
 
 from .db_initialize import initialize
-from .api import parse, filter_images, stats, status 
+from .api import parse, images, stats, status, get_chats
 import os
 from .variables import DATASOURCE_NAME
 
@@ -42,7 +42,7 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [("images", filter_images), ("stats", stats), ("status", status)], 
+        self.routes = {"GET": [("images", images), ("chats", get_chats), ("stats", stats), ("status", status)], 
                     "POST": [("parse", parse)] } 
         
         
