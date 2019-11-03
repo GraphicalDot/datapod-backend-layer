@@ -100,6 +100,9 @@ def store_image(**data):
     """
     purchases: a list of purchases dict
     """
+
+    
+    
     table = data["tbl_object"]
     if data.get("comments"):
         comments = json.dumps(data["comments"])
@@ -120,7 +123,9 @@ def store_image(**data):
                     uri = data["uri"],
                     creation_timestamp = data.get("creation_timestamp"),
                     username = data.get("username"),
-                    checksum=data.get("checksum")
+                    checksum=data.get("checksum"),
+                    chat_image = data.get("chat_image"),
+                    file_extension = data.get("file_extension"),
                     ).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
@@ -137,8 +142,57 @@ def store_image(**data):
     return 
 
 
+
 @aiomisc.threaded
-def filter_images(tbl_object, start_date, end_date, skip, limit, username):
+def store_chats(**data):
+    """
+    purchases: a list of purchases dict
+    """
+    table = data["chat_table"]
+    try:
+        table.insert(
+                    username = data.get("username"),
+                    checksum=data.get("checksum"),
+                    title = data["title"],
+                    participants = data["participants"],
+                    messages = data["messages"],
+                    thread_type = data["thread_type"],
+                    timestamp = data["timestamp"],
+                    message_content= data["message_content"],
+                    chat_type = data["chat_type"],
+                    chat_id = data["chat_id"],
+                    chat_path = data["chat_path"]
+                    ).execute()
+
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+    except IntegrityError as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f'Duplicate key present --{data.get("chat_id")}-- in table --FBchat-- {e}')
+        table.update(
+                    checksum=data.get("checksum"),
+                    title = data["title"],
+                    participants = data["participants"],
+                    messages = data["messages"],
+                    message_content= data["message_content"],
+                    chat_id = data["chat_id"],
+                    ).where(table.chat_id==data["chat_id"]).execute()
+        
+        
+        #raise DuplicateEntryError(data['name'], "GithubRepo")
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"facebook image data insertion failed {data.get('chat_id')} with {e}")
+    return 
+
+
+
+
+
+@aiomisc.threaded
+def filter_images(tbl_object, username, start_date, end_date, skip, limit):
     logger.error(f"Name of the tanble is {tbl_object} --- {username}")
 
     if start_date and end_date:

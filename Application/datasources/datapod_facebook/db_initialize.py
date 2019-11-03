@@ -18,20 +18,20 @@ def initialize(db):
 
 
 
-    class FacebookCreds(BaseModel):
+    class Creds(BaseModel):
         username = peewee.TextField(unique=True, null=False)
         password = peewee.TextField(null=False)
         identifier = peewee.TextField(null=False)
 
 
-    class FacebookStatus(BaseModel):
+    class Status(BaseModel):
         source = peewee.TextField(index=True)
         username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
 
 
-    class FacebookStats(BaseModel):
+    class Stats(BaseModel):
         source = peewee.TextField(index=True)
         username = peewee.TextField(null=True, unique=True)
         data_items = peewee.IntegerField(null=True)
@@ -41,23 +41,25 @@ def initialize(db):
         last_sync = peewee.DateTimeField(default=datetime.datetime.now)
         next_sync = peewee.DateTimeField(default=datetime.datetime.now)
 
-    class FacebookArchives(BaseModel):
+    class Archives(BaseModel):
         path = peewee.TextField(null=False)
         username = peewee.TextField(unique=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField(index=True, null=False)
 
-    class FacebookImages(BaseModel):
+    class Images(BaseModel):
         title = peewee.TextField()
         username = peewee.TextField(index=True, null=False)
         uri = peewee.TextField(index=True, unique=True, null=False)
         creation_timestamp = peewee.DateTimeField()
-        media_metadata = peewee.BlobField()
+        media_metadata = peewee.BlobField(null=True)
         comments =  peewee.BlobField(null=True)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField(index=True, null=False)
+        chat_image = peewee.BooleanField(default=False)
+        file_extension = peewee.TextField(null=True)
 
-    class FacebookYourPosts(BaseModel):
+    class YourPosts(BaseModel):
         username = peewee.TextField(index=True, null=False)
         creation_timestamp = peewee.DateTimeField(index=True)
         data = peewee.BlobField(null=True)
@@ -66,7 +68,7 @@ def initialize(db):
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField(index=True, null=False)
 
-    class FacebookOtherPosts(BaseModel):
+    class OtherPosts(BaseModel):
         username = peewee.TextField(index=True, null=False)
         creation_timestamp = peewee.DateTimeField(index=True)
         data = peewee.BlobField(null=True)
@@ -75,7 +77,33 @@ def initialize(db):
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
         checksum = peewee.TextField(index=True, null=False)
 
-    class FacebookContent(FTSModel):
+    class Chats(BaseModel):
+        username = peewee.TextField(index=True, null=False)
+        checksum = peewee.TextField(index=True, null=False)
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+
+        participants = peewee.TextField(null=True)
+        messages = peewee.TextField(null=True)
+        message_content = peewee.TextField(null=True) 
+        title = peewee.TextField( null=True)
+        thread_type = peewee.TextField(null=True)
+        timestamp = peewee.DateTimeField()
+        chat_type = peewee.TextField(null=False)
+        chat_id = peewee.TextField(index=True,null=False)
+        chat_path = peewee.TextField(null=False)
+
+
+    class ChatContent(FTSModel):
+        username = peewee.TextField()
+        checksum = peewee.TextField()
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+
+        content = peewee.TextField()
+        content_hash = peewee.TextField()
+        class Meta:
+            database = db
+
+    class FContent(FTSModel):
         username = peewee.TextField()
         content = peewee.TextField()
         account_id = peewee.TextField()
@@ -88,30 +116,32 @@ def initialize(db):
 
 
     db.create_tables([
-            FacebookCreds,
-            FacebookArchives, 
-            FacebookImages,
-            FacebookYourPosts,
-            FacebookOtherPosts,
-            FacebookContent,
-            FacebookStatus, 
-            FacebookStats
+            Creds,
+            Archives, 
+            Images,
+            YourPosts,
+            OtherPosts,
+            FContent,
+            Status, 
+            Stats,
+            Chats, 
+            ChatContent
         ])
 
     db.drop_tables([  
-            # FacebookCreds,
-            # FacebookArchives, 
-            # FacebookImages,
-            # FacebookYourPosts,
-            # FacebookOtherPosts,
-            # FacebookContent,
-            # FacebookStatus
+            # Creds,
+            # Archives, 
+            # Images,
+            # YourPosts,
+            # OtherPosts,
+            # Content,
+            # Status
 
         ])
 
 
 
-    return FacebookCreds, FacebookArchives, FacebookImages, \
-            FacebookYourPosts, FacebookOtherPosts, FacebookContent,\
-            FacebookStatus, FacebookStats
+    return Creds, Archives, Images, \
+            YourPosts, OtherPosts, FContent,\
+            Status, Stats, Chats, ChatContent
 
