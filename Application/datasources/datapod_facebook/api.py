@@ -125,13 +125,20 @@ async def get_chats(request):
         if chat.get("messages"):
             messages = json.loads(chat.get("messages"))
             chat.update({"messages": messages})
+
+            ##we need to give one message to frontend, We need to loop over messages till the time 
+            ## we get a message which is not None, then break the loop
+            for message in  messages:
+                if message.get("content"):
+                    chat.update({"last_message": message.get("content")})
+                    break
+
         if chat.get("participants"):
             participants = json.loads(chat.get("participants"))
             chat.update({"participants": participants})
 
 
 
-    logger.info(list(_chats))
     return response.json(
         {
         'error': False,
