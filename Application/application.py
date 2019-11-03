@@ -35,7 +35,6 @@ import config
 
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
-from data_sources import DATASOURCES_BP
 from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
 from backup import BACKUP_BP
@@ -62,6 +61,7 @@ from utils.utils import send_sse_message
 from sentry_sdk import init
 init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
 import pkgutil
+from pathlib import Path
 
 app = Sanic(__name__)
 
@@ -132,25 +132,6 @@ async def send_event(request):
     
 
 
-
-@app.listener('before_server_start')
-async def before_start(app, uvloop):
-    #sem = await  asyncio.Semaphore(100, loop=uvloop)
-    logger.info("Closing database connections")
-    #sio.start_background_task(background_task)
-
-    # logger.info("Nacking outstanding messages")
-    # tasks = [t for t in asyncio.all_tasks() if t is not
-    #          asyncio.current_task()]
-
-    # [task.cancel() for task in tasks]
-
-    # logger.info(f"Cancelling {len(tasks)} outstanding tasks")
-    # await asyncio.gather(*tasks, return_exceptions=True)
-    # logger.info(f"Flushing metrics")
-    #app.loop = uvloop
-    #app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-    return
     
 @app.listener('after_server_stop')
 def finish(app, loop):
@@ -229,11 +210,22 @@ async def datasource_archives(request):
 
 
 def add_routes(app):
-    import datasources
 
     registered_modules = []
+    # logger.info(f"Modules to be registered {list(pkgutil.iter_modules(datasources.__path__))}")
 
-    for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
+    directory = os.path.join(Path().absolute(), "datasources")
+
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):
+            continue
+
+        name = os.path.splitext(filename)[0]
+        # module = importlib.import_module('module.{}'.format(modulename))
+        # module.main(*args)
+    
+        # for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
         if name.startswith('datapod_'):
             logger.success(f"Reading module {name}")
             module_name = f"datasources.{name}.settings"
@@ -274,9 +266,32 @@ def add_routes(app):
     app.add_route(datasource_archives, '/datasources/archives', methods=["GET"])
     app.add_route(datasource_status_stats, '/datasources/stats_status', methods=["GET"])
     app.config["registered_modules"] = registered_modules
+    return 
 
 
 
+@app.listener('before_server_start')
+async def before_start(app, uvloop):
+    #sem = await  asyncio.Semaphore(100, loop=uvloop)
+    #logger.info("Closing database connections")
+    #sio.start_background_task(background_task)
+
+    # logger.info("Nacking outstanding messages")
+    # tasks = [t for t in asyncio.all_tasks() if t is not
+    #          asyncio.current_task()]
+
+    # [task.cancel() for task in tasks]
+
+    # logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+    # await asyncio.gather(*tasks, return_exceptions=True)
+    # logger.info(f"Flushing metrics")
+    #app.loop = uvloop
+    #app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+
+    # logger.info("Registering datasources api")
+    # logger.info("Done Registering datasources api")
+
+    return
 
 
 
@@ -304,13 +319,13 @@ def main():
     
     add_routes(app)
 
-    for _, (rule, _) in app.router.routes_names.items():
-        logger.info(rule)    
+    # for _, (rule, _) in app.router.routes_names.items():
+    #     logger.info(rule)    
 
 
     logger.info(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
-    pprint.pprint(app.config)
+    #pprint.pprint(app.config)
     #app.error_handler.add(Exception, server_error_handler)
     app.config.update({"send_sse_message": send_sse_message})
     app.run(host="0.0.0.0", port=app.config.PORT, workers=1, access_log=True)

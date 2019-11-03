@@ -9,7 +9,7 @@ from database_calls.initialize_tables import intialize_db
 from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
-__VERSION__ = "0.15-Beta"
+__VERSION__ = "0.2-Beta"
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")

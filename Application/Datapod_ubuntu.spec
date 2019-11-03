@@ -1,17 +1,18 @@
+
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 from PyInstaller.utils.hooks import collect_data_files, eval_statement, collect_submodules
 
-datas = collect_submodules( 'sentry_sdk')
+import datasources
 
-hidden_imports = ['engineio.async_eventlet',  '_striptime', 'engineio.async_gevent'] + datas
+datas = collect_submodules('sentry_sdk')
 
-a = Analysis(['application.py'],
-             pathex=['/home/feynman/Programs/datapod-backend-layer/Application'],
+a = Analysis( [ 'application.py'],
+             pathex=['', '/home/feynman/Programs/datapod-backend-layer/Application'],
              binaries=[],
              datas=[],
-             hiddenimports=hidden_imports,
+             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent'] + datas ,
              hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],
              excludes=[],
@@ -34,4 +35,6 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
-          console=False )
+          console=False , icon='datapod.ico')
+
+
