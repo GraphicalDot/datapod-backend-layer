@@ -211,20 +211,20 @@ async def datasource_archives(request):
 def add_routes(app):
     registered_modules = []
     # logger.info(f"Modules to be registered {list(pkgutil.iter_modules(datasources.__path__))}")
-
+    import datasources
     #directory = os.path.join(Path().absolute(), "datasources")
-    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasources")
-    logger.info(directory)
+    # directory = os.path.join(os.path.dirname(__file__), "datasources")
+    # logger.info(directory)
 
-    for filename in os.listdir(directory):
-        filepath = os.path.join(directory, filename)
-        if os.path.isfile(filepath):
-            continue
+    for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
+    # for filename in os.listdir(directory):
+    #     filepath = os.path.join(directory, filename)
+    #     if os.path.isfile(filepath):
+    #         continue
 
-        name = os.path.splitext(filename)[0]
-        # module = importlib.import_module('module.{}'.format(modulename))
+    #     name = os.path.splitext(filename)[0]
+    #     # module = importlib.import_module('module.{}'.format(modulename))
         # module.main(*args)
-        # for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
         if name.startswith('datapod_'):
             logger.success(f"Reading module {name}")
             module_name = f"datasources.{name}.settings"
