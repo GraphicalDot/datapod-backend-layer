@@ -37,7 +37,6 @@ from playhouse.shortcuts import model_to_dict, dict_to_model
 
 from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
-from backup import BACKUP_BP
 import concurrent.futures
 from sanic.websocket import WebSocketProtocol
 from websockets.exceptions import ConnectionClosed
@@ -57,12 +56,12 @@ from http import HTTPStatus
 from database_calls.credentials import update_datasources_status
 from loguru import logger
 #from custom_logger import LOGGING
-from utils.utils import send_sse_message
+from dputils.utils import send_sse_message
 from sentry_sdk import init
 init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
 import pkgutil
 from pathlib import Path
-
+import datasources
 app = Sanic(__name__)
 
 # app.config['CORS_AUTOMATIC_OPTIONS'] = True
@@ -210,11 +209,12 @@ async def datasource_archives(request):
 
 
 def add_routes(app):
-
     registered_modules = []
     # logger.info(f"Modules to be registered {list(pkgutil.iter_modules(datasources.__path__))}")
 
-    directory = os.path.join(Path().absolute(), "datasources")
+    #directory = os.path.join(Path().absolute(), "datasources")
+    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasources")
+    logger.info(directory)
 
     for filename in os.listdir(directory):
         filepath = os.path.join(directory, filename)
@@ -224,7 +224,6 @@ def add_routes(app):
         name = os.path.splitext(filename)[0]
         # module = importlib.import_module('module.{}'.format(modulename))
         # module.main(*args)
-    
         # for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
         if name.startswith('datapod_'):
             logger.success(f"Reading module {name}")
@@ -296,12 +295,12 @@ async def before_start(app, uvloop):
 
 
 def main():
+    
     #app.blueprint(ACCOUNTS_BP)
     #app.blueprint(ERRORS_BP)
     #app.blueprint(ASSETS_BP)
     #app.blueprint(DATASOURCES_BP)
     app.blueprint(ERRORS_BP)
-    app.blueprint(BACKUP_BP)
     app.blueprint(SOCKETS_BP)
 
     #app.blueprint(UPLOAD_BP)
@@ -375,6 +374,5 @@ def main():
 #     return text("Oops, server error", status=500)
 
 if __name__ == "__main__":
-
     main()
 

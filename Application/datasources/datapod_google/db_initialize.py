@@ -122,7 +122,6 @@ def initialize(db):
                 (('username', 'creation_time', 'title'), True),
             )
 
-    
 
     class Purchases(BaseModel):
         username = peewee.TextField(index=True, null=False)

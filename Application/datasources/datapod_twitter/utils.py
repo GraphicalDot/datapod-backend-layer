@@ -4,7 +4,7 @@ import asyncio
 import functools
 from .db_calls import update_status, get_stats, get_stats, update_stats, store, store_account
 from loguru import logger
-from utils.utils import async_wrap, send_sse_message
+from dputils.utils import async_wrap, send_sse_message
 from collections import Counter
 from .variables import DATASOURCE_NAME
 from glob import glob

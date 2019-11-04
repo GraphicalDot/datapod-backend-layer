@@ -4,7 +4,7 @@ from lxml.html.clean import Cleaner
 import sys
 import requests
 import os
-from utils.utils import timezone_timestamp, month_aware_time_stamp
+from dputils.utils import timezone_timestamp, month_aware_time_stamp
 from errors_module.errors import APIBadRequest, DuplicateEntryError
 import pytz
 from asyncinit import asyncinit
@@ -26,7 +26,6 @@ import concurrent.futures
 import aiomisc
 #from tenacity import *
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
-from utils.utils import async_wrap, send_sse_message
 from email.header import Header, decode_header, make_header
 
 

@@ -11,7 +11,7 @@ from .utils import encrypt_mnemonic, decrypt_mnemonic
 from .db_calls import store_credentials,  update_password_hash, get_credentials
 
 
-from utils.utils import id_token_validity, username
+from dputils.utils import id_token_validity, username
 from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys 
 import hashlib
 from loguru import logger

@@ -32,7 +32,7 @@ import concurrent
 
 from geopy.geocoders import Nominatim
 from loguru import logger
-from utils.utils import timezone_timestamp
+from dputils.utils import timezone_timestamp
 
 from ..variables import DATASOURCE_NAME
 from ..db_calls import store_purchases, store_reservations
