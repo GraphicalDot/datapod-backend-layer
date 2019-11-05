@@ -307,9 +307,9 @@ async def attachment_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    logger.info(f"Skip type is {skip}")
-    logger.info(f"limit type is {limit}")
-    logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+    # logger.info(f"Skip type is {skip}")
+    # logger.info(f"limit type is {limit}")
+    # logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
 
     if start_date:
         start_date = dateparser.parse(start_date)
@@ -333,7 +333,6 @@ async def attachment_filter(request):
     #     #data:image/png;base64
     #     image.update({"creation_time": creation_time.strftime("%Y-%m-%d")})
 
-    logger.success(attachments)
     return response.json(
         {
         'error': False,
@@ -381,8 +380,8 @@ async def purchases_filter(request):
         if end_date < start_date:
             raise APIBadRequest("Start date should be less than End date")
 
-    logger.info(f"This is the start_date {start_date}")
-    logger.info(f"This is the end_date {end_date}")
+    # logger.info(f"This is the start_date {start_date}")
+    # logger.info(f"This is the end_date {end_date}")
 
 
 
@@ -509,7 +508,6 @@ async def emails_filter(request):
         email.update({"date": creation_time.strftime("%d %b, %Y")})
 
 
-    logger.info(list(emails))
     return response.json(
         {
         'error': False,
