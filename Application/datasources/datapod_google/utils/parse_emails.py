@@ -253,8 +253,8 @@ class Emails(object):
 
                     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
             
-            if i == 1000:
-                break
+            # if i == 1000:
+            #     break
 
 
                     #yield f"Parse email progress is  {i}"
