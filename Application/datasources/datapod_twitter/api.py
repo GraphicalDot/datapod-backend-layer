@@ -15,7 +15,7 @@ from io import BytesIO
 from PIL import Image
 import datetime
 from .db_calls import update_status, update_stats, filter_tweet, \
-        match_text, get_account, store, get_stats, get_status, get_archives
+        match_text, get_account, store, get_stats, get_status, get_archives, delete_status
 import dateparser
 
 from .variables import DATASOURCE_NAME
@@ -84,8 +84,11 @@ async def parse(request):
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
     logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
     
-    checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, username)
-    
+    try:
+        checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, username)
+    except Exception as e:
+        logger.error(e)
+        await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
 
     request.app.add_task(_parse(request.app.config, dest_path, username, checksum))
 
@@ -142,7 +145,6 @@ async def tweets(request):
 
         result, count = await filter_tweet(request.app.config[DATASOURCE_NAME]["tables"]["tweet_table"], username, start_date, end_date, int(skip), int(limit))
     
-    logger.info(list(result)[0])
     # [repo.update({
     #         "created_at":repo.get("created_at").strftime("%d, %b %Y"),
     #     }) for repo in result]

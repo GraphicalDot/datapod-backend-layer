@@ -318,8 +318,8 @@ def main():
     
     add_routes(app)
 
-    # for _, (rule, _) in app.router.routes_names.items():
-    #     logger.info(rule)    
+    for _, (rule, _) in app.router.routes_names.items():
+        logger.info(rule)    
 
 
     logger.info(f"This is Version number {config.config_object.VERSION}")

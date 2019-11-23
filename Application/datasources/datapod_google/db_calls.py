@@ -29,6 +29,16 @@ def update_status(status_table, datasource_name, username, status):
 
 
 @aiomisc.threaded
+def delete_status(status_table, datasource_name, username):
+    try:
+        status_table.delete().where(status_table.username==username).execute()
+                                    
+
+    except Exception as e:
+        logger.error(f"Couldnt delete {datasource_name} updated because of {e}")
+    return 
+
+@aiomisc.threaded
 def update_stats(stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):
     """
 
@@ -127,6 +137,147 @@ def store_email_content(**data):
         #use with tenacity
         logger.error(f"Email content insertion failed {data['email_id']} with {e}")
     return
+
+
+
+
+#@retry(stop=stop_after_attempt(2))
+@aiomisc.threaded
+def store_bulk_locations(locations_table, locations_data_list):
+    """
+    purchases: a list of purchases dict
+    """
+
+    for __object in locations_data_list:
+        activity = __object.get("activity")
+        if activity:
+            activity = json.dumps(activity)
+        __object.update({"activity": activity })
+
+    try:
+        locations_table.insert_many(locations_data_list).execute()
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Location data insertion failed  with {e}")
+    return 
+
+
+@aiomisc.threaded
+def store_bulk_locations_approximate(location_approximate_table, locations_data_list):
+    """
+    purchases: a list of purchases dict
+    """
+
+    for __object in locations_data_list:
+        activity = __object.get("activity")
+        if activity:
+            activity = json.dumps(activity)
+            latitude = "{0:.4f}".format(__object["latitude"])
+            longitude = "{0:.4f}".format(__object["longitude"])
+        __object.update({"activity": activity, "longitude": longitude, "latitude": latitude })
+
+    try:
+        location_approximate_table.insert_many(locations_data_list).execute()
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Location data insertion failed  with {e}")
+    return 
+
+
+
+#@retry(stop=stop_after_attempt(2))
+@aiomisc.threaded
+def store_locations_approximate(**data):
+    """
+    purchases: a list of purchases dict
+    """
+    table = data["tbl_object"]
+    activity = data.get("activity")
+    if activity:
+        activity = json.dumps(activity)
+
+
+
+    try:
+        table.insert(
+              username = data["username"],
+            checksum = data["checksum"],
+            lattitude = data["latitude"],
+            longitude = data["longitude"],
+
+            _lattitude = data["_latitude"],
+            _longitude = data["_longitude"],
+
+            time = data["time"],
+            accuracy = data["time"],
+            velocity = data["time"],
+            altitude = data["altitude"],
+            activity = data["activity"],
+            heading = data["heading"],
+            vertical_accuracy = data["vertical_accuracy"],
+            count = 1
+                        ).execute()
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+    except IntegrityError:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        table.update(count= table.count+1).where(table.latitude==data["latitude"], table.longitude==data["longitude"] ).execute()
+        logger.warning(f'Found duplicate for {data["latitude"]} {data["longitude"]} so updating the counter')
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"Location data insertion failed {data} with {e}")
+ 
+    return 
+
+@aiomisc.threaded
+def store_locations(**data):
+    """
+    """
+    table = data["tbl_object"]
+    latitude = "{0:.4f}".format(data["latitude"])
+    longitude = "{0:.4f}".format(data["longitude"])
+    activity = data.get("activity")
+    if activity:
+        activity = json.dumps(activity)
+    try:
+        table.insert(
+              username = data["username"],
+            checksum = data["checksum"],
+            lattitude = latitude,
+            longitude = longitude,
+            time = data["time"],
+            accuracy = data["time"],
+            velocity = data["time"],
+            altitude = data["altitude"],
+            activity = activity,
+            heading = data["heading"],
+            vertical_accuracy = data["vertical_accuracy"],
+            count = 1
+                        ).execute()
+
+        #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")
+    except IntegrityError:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        table.update(count= table.count+1).where(table.latitude==latitude, table.longitude==longitude ).execute()
+        logger.warning(f'Found duplicate for {data["latitude"]} {data["longitude"]} so updating the counter')
+
+    except Exception as e:
+        #raise DuplicateEntryError(data['email_id'], "Email")
+        #use with tenacity
+        logger.error(f"locate approximate data insertion failed {data} with {e}")
+ 
+    return 
+
+
+
+
 
 
 
@@ -425,6 +576,61 @@ def filter_images(tbl_object, username, start_date, end_date, skip, limit):
 
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
+
+
+
+
+
+@aiomisc.threaded
+def filter_locations(tbl_object, username, start_date, end_date):
+    """
+        for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
+         print(tweet.message, tweet.created_date)
+
+    """
+    ##startDate must be greater then Enddate
+
+
+    if start_date and end_date:
+
+        query = tbl_object\
+                .select(tbl_object.lattitude, tbl_object.longitude, tbl_object.time)\
+                .where((tbl_object.username ==username) \
+                    &(tbl_object.time> start_date) \
+                    &(tbl_object.time < end_date))\
+                .order_by(-tbl_object.time)
+                
+        
+
+    elif start_date and not end_date:
+        query = tbl_object\
+                            .select(tbl_object.lattitude, tbl_object.longitude, tbl_object.time)\
+                        .where((tbl_object.username ==username) &(tbl_object.time> start_date))\
+                        .order_by(-tbl_object.time)\
+                        
+
+
+    elif end_date and not start_date:
+        query = tbl_object\
+                            .select(tbl_object.lattitude, tbl_object.longitude, tbl_object.time)\
+                        .where((tbl_object.username ==username) &(tbl_object.time < end_date))\
+                        .order_by(-tbl_object.time)\
+        
+
+
+    else: # not  start_date and  not end_date
+
+        query = tbl_object\
+                            .select(tbl_object.lattitude, tbl_object.longitude, tbl_object.time)\
+                .where(tbl_object.username ==username)\
+                .order_by(-tbl_object.time)\
+
+
+    return  query.dicts(), query.count()
+
+
+
+
 
 
 @aiomisc.threaded

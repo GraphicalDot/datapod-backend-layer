@@ -155,6 +155,47 @@ def initialize(db):
             )
     
 
+    class Locations(BaseModel):
+        username = peewee.TextField(index=True, null=False)
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+        checksum = peewee.TextField()
+
+        lattitude = peewee.DecimalField(max_digits=15, decimal_places=8)
+        longitude = peewee.DecimalField(max_digits=15, decimal_places=8)
+
+        time = peewee.DateTimeField(index=True, null=False)
+        
+        accuracy = peewee.IntegerField(null=True)
+        velocity = peewee.IntegerField(null=True)
+        altitude = peewee.IntegerField(null=True)
+        vertical_accuracy = peewee.IntegerField(null=True)
+        heading = peewee.IntegerField(null=True)
+        activity = peewee.TextField(null=True)
+        count = peewee.IntegerField(null=True)
+
+
+
+    class LocationApproximate(BaseModel):
+        username = peewee.TextField(index=True, null=False)
+        datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+        checksum = peewee.TextField()
+
+        lattitude = peewee.DecimalField(max_digits=15, decimal_places=4)
+        longitude = peewee.DecimalField(max_digits=15, decimal_places=4)
+        _lattitude = peewee.DecimalField(max_digits=15, decimal_places=8)
+        _longitude = peewee.DecimalField(max_digits=15, decimal_places=8)
+
+        time = peewee.DateTimeField(index=True, null=False)
+        
+        accuracy = peewee.IntegerField(null=True)
+        velocity = peewee.IntegerField(null=True)
+        altitude = peewee.IntegerField(null=True)
+        vertical_accuracy = peewee.IntegerField(null=True)
+        heading = peewee.IntegerField(null=True)
+        activity = peewee.TextField(null=True)
+        count = peewee.IntegerField(null=True)
+
+
 
 
 
@@ -168,7 +209,9 @@ def initialize(db):
         Images,
         Purchases,
         Reservations, 
-        Archives
+        Archives, 
+        Locations,
+        LocationApproximate
         ])
 
     return Creds, \
@@ -180,6 +223,8 @@ def initialize(db):
         Images,\
         Purchases,\
         Reservations, \
-        Archives 
+        Archives, \
+        Locations,\
+        LocationApproximate
 
 

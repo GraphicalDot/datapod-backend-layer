@@ -8,7 +8,7 @@ from sanic import response
 from errors_module.errors import APIBadRequest
 
 from .utils import encrypt_mnemonic, decrypt_mnemonic
-from .db_calls import store_credentials,  update_password_hash, get_credentials
+from .db_calls import store_credentials,  update_password_hash, get_credentials, logout
 
 
 from dputils.utils import id_token_validity, username
@@ -228,7 +228,7 @@ async def confirm_signup(request):
         'error': False,
         'success': True,
         "message": result["message"],
-        "data": result["data"]
+        "data": None,
         })
 
 
@@ -287,7 +287,7 @@ async def forgot_password(request):
 
     ##if the username entered is different from the username stored in the 
     ##database 
-    result = get_credentials(request.app.config.CREDENTIALS_TBL)
+    result = await get_credentials(request.app.config.CREDENTIALS_TBL)
     if result:
         logger.info("Credentials are present in the database")
         if result["username"] != request.json["username"]:
@@ -578,7 +578,7 @@ async def decrypt_user_mnemonic(request):
 
     """
     request.app.config.VALIDATE_FIELDS(["password"], request.json)
-    credentials = get_credentials(request.app.config.CREDENTIALS_TBL)
+    credentials = await get_credentials(request.app.config.CREDENTIALS_TBL)
 
     password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
@@ -684,6 +684,7 @@ async def profile(request):
         "data": result["data"]
        })
 
+
 async def user_logout(request):
     
     """
@@ -692,8 +693,14 @@ async def user_logout(request):
     username is the username of the user
     """
     logger.info("The logout function has been clicked")
-    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": request["user_data"]["username"]}), 
-        headers={"Authorization": request["user_data"]["id_token"]})
+    credentials = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
+    creds = list(credentials)[0]
+
+    logger.info(creds)
+
+
+    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": creds["username"]}), 
+        headers={"Authorization": creds["id_token"]})
     
     result = r.json()
     logger.info(f"The result of the logout function {result}")
@@ -701,7 +708,7 @@ async def user_logout(request):
         logger.error(f'Logout api raised request cognito result["message"]')
 
     try:
-        logout(request.app.config.CREDENTIALS_TBL)
+        await logout(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
     except:
         raise APIBadRequest("Couldnt logout user")
 

@@ -197,6 +197,7 @@ def get_response(request, auth, template):
         should_continue = False
         try:
             r = urlopen(request)
+            logger.info(f"Trying r {r}")
         except HTTPError as exc:
             errors, should_continue = request_http_error(exc, auth, errors)  # noqa
             r = exc

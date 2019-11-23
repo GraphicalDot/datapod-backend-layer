@@ -35,9 +35,9 @@ import subprocess
 from loguru import logger
 from datasources.shared.extract import extract
 import aiomisc
-
-from .db_calls import update_status, get_emails, match_text, filter_images,\
-         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, update_stats
+from .utils.location import LocationHistory
+from .db_calls import update_status, get_emails, match_text, filter_images, filter_locations,\
+         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, update_stats, delete_status
 from .variables import DATASOURCE_NAME
 
 
@@ -83,7 +83,15 @@ async def __parse(config, path, username):
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
 
     ##the dest_path is the path with the archieve appended to the last
-    checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
+    try:
+        checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
+    except Exception as e:
+        logger.error(e)
+        await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
+
+
+    ins = LocationHistory(config, dest_path, username, checksum)
+    await ins.parse()
 
 
     # path = os.path.join(config.RAW_DATA_PATH, "Takeout")
@@ -141,7 +149,6 @@ async def __parse(config, path, username):
 
 
     return 
-
 
 
 
@@ -442,8 +449,47 @@ async def reservations_filter(request):
 
 
 
+    
+
+async def locations_filter(request):
+    logger.info(f"Args are {request.args.items()}")
+
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date") 
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    logger.info(f"Params are {request.args}")
+    if start_date:
+        start_date = dateparser.parse(start_date)
 
 
+    if end_date:
+        end_date = dateparser.parse(end_date)
+
+
+    if start_date and end_date:
+        if end_date < start_date:
+            raise APIBadRequest("Start date should be less than End date")
+
+
+
+
+    locations, count = await filter_locations(request.app.config[DATASOURCE_NAME]["tables"]["location_approximate_table"], username,  start_date, end_date)
+    logger.info(locations)
+    #result = [format_purchase(request.app.config, purchase) for purchase in purchases] 
+
+    result = list(locations)
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        'data': {"locations": result, "count": count},
+        'message': None
+        })
 
 
 

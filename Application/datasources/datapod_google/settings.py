@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
 import sqlite3
 
 from .db_initialize import initialize
-from .api import parse, emails_filter,  reservations_filter,  image_filter,  attachment_filter, stats, status, purchases_filter
+from .api import parse, emails_filter,  reservations_filter,  image_filter,  attachment_filter, stats, status, purchases_filter, locations_filter 
 import os
 from .variables import DATASOURCE_NAME
 
@@ -23,7 +23,8 @@ class Routes:
 
         creds_table, status_table, stats_table, email_table,\
              email_attachment_table, email_content_table,\
-             image_table, purchase_table, reservation_table, archives_table = initialize(self.db_object)                  
+             image_table, purchase_table, reservation_table, \
+                 archives_table, location_table, location_approximate_table = initialize(self.db_object)                  
         self.datasource_name = DATASOURCE_NAME
 
         self.config  = { 
@@ -36,6 +37,8 @@ class Routes:
                 "purchase_table": purchase_table,
                 "archives_table": archives_table,
                 "reservation_table": reservation_table,
+                "location_table": location_table,
+                "location_approximate_table": location_approximate_table,
                 "stats_table": stats_table, 
                 "status_table": status_table},
             "utils":{
@@ -44,7 +47,7 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [("emails/filter", emails_filter), ("images/filter", image_filter), 
+        self.routes = {"GET": [("emails/filter", emails_filter), ("images/filter", image_filter), ("locations/filter", locations_filter), 
                     ("purchases/filter", purchases_filter), ("reservations/filter", reservations_filter), ("attachments/filter", attachment_filter)], 
                     "POST": [("parse", parse)] } 
         

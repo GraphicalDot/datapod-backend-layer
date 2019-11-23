@@ -35,6 +35,16 @@ def update_status(status_table, datasource_name, username, status):
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
     return 
 
+@aiomisc.threaded
+def delete_status(status_table, datasource_name, username):
+    try:
+        status_table.delete().where(status_table.username==username).execute()
+                                    
+
+    except Exception as e:
+        logger.error(f"Couldnt delete {datasource_name} updated because of {e}")
+    return 
+
 
 @aiomisc.threaded
 def update_stats(stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):

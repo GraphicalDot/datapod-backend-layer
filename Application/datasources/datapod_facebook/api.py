@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-from .db_calls import get_stats, get_status, filter_chats, filter_images, dashboard_data
+from .db_calls import get_stats, get_status, filter_chats, filter_images, dashboard_data, delete_status
 from .variables import DATASOURCE_NAME
 import subprocess
 
@@ -76,8 +76,14 @@ async def parse(request):
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH,DATASOURCE_NAME) 
     logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
     
-    checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
     
+    try:
+        checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
+    except Exception as e:
+        logger.error(e)
+        await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json["username"])
+
+
     request.app.add_task(__parse(request.app.config, dest_path, request.json["username"], checksum))
 
     return response.json(

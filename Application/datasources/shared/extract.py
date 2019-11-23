@@ -35,7 +35,7 @@ def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasou
     ret = the_zip_file.testzip()
 
     if ret is not None:
-        raise APIBadRequest("Invalid zip takeout file")
+        raise APIBadRequest(f"Invalid zip datasource_name file")
 
 
     _checksum = checksum(src_path)
@@ -57,9 +57,12 @@ def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasou
 
     try:
         shutil.unpack_archive(src_path, extract_dir=dst_path, format=None)
+    except MemoryError:
+        logger.error(f"We ran out of memory while processing {datasource_name}, Please try again")
+        raise Exception(f"We ran out of memory while processing {datasource_name}, Please try again")
     except:
-        raise APIBadRequest("Invalid zip facebook file")
 
+        raise APIBadRequest(f"Invalid zip {datasource_name} file")
 
     logger.info(f"Setting new archival for {datasource_name} ")
     set_archives(config[datasource_name]["tables"]["archives_table"], dst_path, username, _checksum)
