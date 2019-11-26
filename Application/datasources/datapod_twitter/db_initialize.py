@@ -102,7 +102,7 @@ def initialize(db):
         hashtags=peewee.TextField(null=True)
         user_mentions = peewee.TextField(null=True)
     
-        created_at=peewee.DateTimeField(null=True)
+        created_at=peewee.DateTimeField(index=True, null=True)
         favorited=peewee.BooleanField(null=True)
         full_text=peewee.TextField(null=False)
         lang=peewee.TextField(null=True)

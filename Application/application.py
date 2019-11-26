@@ -53,7 +53,6 @@ from http import HTTPStatus
 #from loguru import logger
 #from custom_logger import logger
 #from secrets.aws_secret_manager import get_secrets
-from database_calls.credentials import update_datasources_status
 from loguru import logger
 #from custom_logger import LOGGING
 from dputils.utils import send_sse_message

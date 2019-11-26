@@ -38,7 +38,7 @@ import aiomisc
 from .utils.location import LocationHistory
 from .db_calls import update_status, get_emails, match_text, filter_images, filter_locations,\
          filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, update_stats, delete_status
-from .variables import DATASOURCE_NAME
+from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 
 
@@ -85,14 +85,11 @@ async def __parse(config, path, username):
     ##the dest_path is the path with the archieve appended to the last
     try:
         checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", dest_path, path)
+
     except Exception as e:
         logger.error(e)
         await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
-
-
-    ins = LocationHistory(config, dest_path, username, checksum)
-    await ins.parse()
-
 
     # path = os.path.join(config.RAW_DATA_PATH, "Takeout")
     email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
@@ -113,6 +110,11 @@ async def __parse(config, path, username):
         await ins.parse()
     except Exception as e:
         logger.error(e)
+
+
+
+    ins = LocationHistory(config, dest_path, username, checksum)
+    await ins.parse()
 
 
     # for purchase in purchases:
@@ -145,12 +147,55 @@ async def __parse(config, path, username):
 
     await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
                 DATASOURCE_NAME, 
-                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+                username, data_items, size, DEFAULT_SYNC_FREQUENCY, DEFAULT_SYNC_TYPE, datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
 
     return 
 
 
+async def delete_original_path(request):
+    """
+    After the processing of the whole data source, this api can be used to delete the original zip 
+    correspoding to a particular username
+    """
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], username)
+
+    result = list(res)
+    logger.info(result[0].get("username"))
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {username}")
+
+
+    result = result[0]
+    logger.info(result)
+    path_to_be_deleted = result.get("original_path")
+    logger.warning(f"Path to be deleted is {path_to_be_deleted}")
+
+    try:    
+        os.remove(path_to_be_deleted)
+        logger.success(f"{path_to_be_deleted} is deleted now")
+    except Exception as e:
+        return response.json(
+            {
+            'error': False,
+            'success': True,
+            "message": f"Original path at {path_to_be_deleted} couldnt be delete because of {e.__str__()}", 
+            "data": None
+            })
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": f"Original path at {path_to_be_deleted} is deleted", 
+        "data": None
+        })
 
 
 
@@ -510,6 +555,11 @@ async def emails_filter(request):
     end_date = request.args.get("end_date") 
     message_type = request.args.get("message_type")
     username = request.args.get("username") 
+    attachments = request.args.get("attachments")
+    
+    logger.info(f"Value of attachments arg in get request <<{attachments}>> and {bool(attachments)}")
+    if attachments:
+        attachments = bool(attachments)
 
     if not username:
         raise APIBadRequest("Username for this datasource is required")
@@ -538,13 +588,15 @@ async def emails_filter(request):
     # logger.info(f"This is the start_date {start_date}")
     # logger.info(f"This is the end_date {end_date}")
 
-
+    logger.info(f"This is the matching string {matching_string}")
+    
     if matching_string:
+
         emails, count = await match_text(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], username,  request.app.config[DATASOURCE_NAME]["tables"]["email_content_table"], \
-                matching_string, message_type, start_date, end_date, int(skip), int(limit))
+                matching_string, message_type, start_date, end_date, int(skip), int(limit), attachments)
     else:
         logger.info("Without matching string")
-        emails, count = await get_emails(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], username,  message_type, start_date, end_date, int(skip), int(limit))
+        emails, count = await get_emails(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], username,  message_type, start_date, end_date, int(skip), int(limit), attachments)
 
 
     # emails = await get_emails(request.app.config.EMAILS_TBL, page, number, message_type)

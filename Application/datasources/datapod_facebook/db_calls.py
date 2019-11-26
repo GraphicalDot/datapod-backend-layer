@@ -10,21 +10,47 @@ import aiomisc
 
 
 @aiomisc.threaded
-def update_status(facebook_status_table, datasource_name, username, status):
+def update_status(facebook_status_table, datasource_name, username, status, path=None, original_path=None):
     try:
         facebook_status_table.insert(source=datasource_name,  
                                     username=username,
                                     status=status,
+                                    path = path,
+                                    original_path=original_path
                                     ).execute()
                                     
 
     except IntegrityError as e:
         logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
 
-        facebook_status_table.update(
-            status=status).\
-        where(facebook_status_table.username==username).\
-        execute()
+        logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
+
+        if path and original_path:
+            facebook_status_table.update(
+                status=status, 
+                path = path,
+                original_path=original_path).\
+            where(facebook_status_table.username==username).\
+            execute()
+        elif original_path:
+            facebook_status_table.update(
+                            status=status, 
+                            original_path=original_path).\
+                        where(facebook_status_table.username==username).\
+                        execute()
+
+        elif path:
+            facebook_status_table.update(
+                            status=status, 
+                            path=path).\
+                        where(facebook_status_table.username==username).\
+                        execute()
+        else:
+            facebook_status_table.update(
+                            status=status).\
+                        where(facebook_status_table.username==username).\
+                        execute()
+
 
     except Exception as e:
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
@@ -72,11 +98,14 @@ def update_stats(facebook_stats_table, datasource_name, username, data_items, si
 
 
 
-@aiomisc.threaded
-def get_status(facebook_status_table):
-    return facebook_status_table.select().dicts()
-                                    
 
+@aiomisc.threaded
+def get_status(facebook_status_table, username=None):
+    logger.info(f"This is the username {username}")
+    if not username:
+        return facebook_status_table.select().dicts()
+    return facebook_status_table.select().where(facebook_status_table.username==username).dicts()
+                                
 
 @aiomisc.threaded
 def get_stats(facebook_stats_table):

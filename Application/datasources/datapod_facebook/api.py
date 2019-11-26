@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datasources.shared.extract import extract
-from .db_calls import get_stats, get_status, filter_chats, filter_images, dashboard_data, delete_status
+from .db_calls import get_stats, get_status, filter_chats, filter_images, dashboard_data, delete_status, update_status
 from .variables import DATASOURCE_NAME
 import subprocess
 
@@ -52,6 +52,52 @@ async def dashboard(request):
         })
 
 
+async def delete_original_path(request):
+    """
+    After the processing of the whole data source, this api can be used to delete the original zip 
+    correspoding to a particular username
+    """
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], username)
+
+    result = list(res)
+    logger.info(result[0].get("username"))
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {username}")
+
+
+    result = result[0]
+    logger.info(result)
+    path_to_be_deleted = result.get("original_path")
+    logger.warning(f"Path to be deleted is {path_to_be_deleted}")
+
+    try:    
+        os.remove(path_to_be_deleted)
+        logger.success(f"{path_to_be_deleted} is deleted now")
+    except Exception as e:
+        return response.json(
+            {
+            'error': False,
+            'success': True,
+            "message": f"Original path at {path_to_be_deleted} couldnt be delete because of {e.__str__()}", 
+            "data": None
+            })
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": f"Original path at {path_to_be_deleted} is deleted", 
+        "data": None
+        })
+
+
+
 
 async def parse(request):
     """
@@ -79,6 +125,8 @@ async def parse(request):
     
     try:
         checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json["username"], "PROGRESS", dest_path, request.json["path"])
+
     except Exception as e:
         logger.error(e)
         await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json["username"])

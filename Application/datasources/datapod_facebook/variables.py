@@ -2,3 +2,5 @@
 
 
 DATASOURCE_NAME = "Facebook"
+DEFAULT_SYNC_TYPE = "manual"
+DEFAULT_SYNC_FREQUENCY = "weekly"

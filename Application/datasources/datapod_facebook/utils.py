@@ -9,9 +9,9 @@ import sys
 import subprocess
 from errors_module.errors import APIBadRequest
 from loguru import logger
-from .variables import DATASOURCE_NAME
 import humanize
 from .db_calls import store_image, update_status, update_stats, store_chats, store_address
+from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
 
@@ -102,7 +102,7 @@ async def __parse(config, path, username, checksum):
 
     await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
                 DATASOURCE_NAME, 
-                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+                username, data_items, size, DEFAULT_SYNC_FREQUENCY, DEFAULT_SYNC_TYPE,  datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
     res = {"message": "completed", "percentage": 100}
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
 

@@ -1,3 +1,5 @@
 
 
 DATASOURCE_NAME = "Google"
+DEFAULT_SYNC_TYPE = "manual"
+DEFAULT_SYNC_FREQUENCY = "weekly"

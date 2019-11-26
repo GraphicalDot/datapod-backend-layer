@@ -29,7 +29,8 @@ def initialize(db):
         username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
-
+        path = peewee.TextField(null=True)
+        original_path = peewee.TextField(null=True)
 
     class Stats(BaseModel):
         source = peewee.TextField(index=True)
@@ -51,7 +52,7 @@ def initialize(db):
         title = peewee.TextField()
         username = peewee.TextField(index=True, null=False)
         uri = peewee.TextField(index=True, unique=True, null=False)
-        creation_timestamp = peewee.DateTimeField()
+        creation_timestamp = peewee.DateTimeField(index=True)
         media_metadata = peewee.BlobField(null=True)
         comments =  peewee.BlobField(null=True)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
@@ -87,7 +88,7 @@ def initialize(db):
         message_content = peewee.TextField(null=True) 
         title = peewee.TextField( null=True)
         thread_type = peewee.TextField(null=True)
-        timestamp = peewee.DateTimeField()
+        timestamp = peewee.DateTimeField(index=True)
         chat_type = peewee.TextField(null=False)
         chat_id = peewee.TextField(index=True,null=False)
         chat_path = peewee.TextField(null=False)

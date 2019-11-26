@@ -29,7 +29,8 @@ def initialize(db):
         username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
-
+        path = peewee.TextField(null=True)
+        original_path = peewee.TextField(null=True)
 
     class Stats(BaseModel):
         source = peewee.TextField(index=True)
@@ -46,7 +47,7 @@ def initialize(db):
         path = peewee.TextField(null=False)
         username = peewee.TextField(unique=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-        checksum = peewee.TextField(index=True, null=False)    
+        checksum = peewee.TextField(index=True, null=False)
 
 
 
@@ -57,12 +58,12 @@ def initialize(db):
 
         email_id = peewee.TextField(unique=True)
         email_id_raw = peewee.TextField(unique=True)
-        from_addr = peewee.CharField()
-        to_addr = peewee.CharField()
+        from_addr = peewee.CharField(index=True)
+        to_addr = peewee.CharField(index=True)
         subject = peewee.TextField()
         message_type = peewee.CharField()
         content = peewee.TextField()
-        date = peewee.DateTimeField()
+        date = peewee.DateTimeField(index=True)
         path = peewee.TextField()
         attachments = peewee.BooleanField()
         
@@ -84,6 +85,8 @@ def initialize(db):
         content = peewee.TextField()
         email_id = peewee.TextField()
         content_hash = peewee.TextField()
+        attachments = peewee.BooleanField()
+
         class Meta:
             database = db
 
@@ -99,7 +102,7 @@ def initialize(db):
         email_id = peewee.TextField(unique=False, index=True)
         path = peewee.TextField()
         attachment_name = peewee.TextField()
-        date = peewee.DateTimeField()
+        date = peewee.DateTimeField(index=True)
         message_type = peewee.CharField()
 
 
@@ -130,7 +133,7 @@ def initialize(db):
 
         merchant_name = peewee.TextField(null=False)
         products = peewee.BlobField( null=False)
-        time = peewee.DateTimeField(null=False)
+        time = peewee.DateTimeField(index=True,null=False)
         class Meta:
             indexes = (
             # create a unique on from/to/date

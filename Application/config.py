@@ -4,9 +4,6 @@ import pathlib
 import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
-from database_calls.initialize_tables import intialize_db
-#from database_calls.facebook.initialize import facebook_initialize
-from database_calls.credentials import update_datasources_status 
 from loguru import logger
 
 __VERSION__ = "0.3-Beta"

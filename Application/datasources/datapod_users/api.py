@@ -699,8 +699,7 @@ async def user_logout(request):
     logger.info(creds)
 
 
-    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": creds["username"]}), 
-        headers={"Authorization": creds["id_token"]})
+    r = requests.post(request.app.config.LOGOUT, data=json.dumps({"username": creds["username"]}))
     
     result = r.json()
     logger.info(f"The result of the logout function {result}")

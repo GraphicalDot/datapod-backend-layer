@@ -7,21 +7,45 @@ from errors_module.errors import APIBadRequest, DuplicateEntryError
 from loguru import logger
 
 @aiomisc.threaded
-def update_status(status_table, datasource_name, username, status):
+def update_status(status_table, datasource_name, username, status, path=None, original_path=None):
     try:
         status_table.insert(source=datasource_name,  
                                     username=username,
                                     status=status,
+                                    path = path,
+                                    original_path=original_path
                                     ).execute()
                                     
 
     except IntegrityError as e:
         logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
 
-        status_table.update(
-            status=status).\
-        where(status_table.username==username).\
-        execute()
+        if path and original_path:
+            status_table.update(
+                status=status, 
+                path = path,
+                original_path=original_path).\
+            where(status_table.username==username).\
+            execute()
+        elif original_path:
+            status_table.update(
+                            status=status, 
+                            original_path=original_path).\
+                        where(status_table.username==username).\
+                        execute()
+
+        elif path:
+            status_table.update(
+                            status=status, 
+                            path=path).\
+                        where(status_table.username==username).\
+                        execute()
+        else:
+            status_table.update(
+                            status=status).\
+                        where(status_table.username==username).\
+                        execute()
+
 
     except Exception as e:
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
@@ -70,9 +94,12 @@ def update_stats(stats_table, datasource_name, username, data_items, size, sync_
 
 
 @aiomisc.threaded
-def get_status(status_table):
-    return status_table.select().dicts()
-                                    
+def get_status(status_table, username=None):
+    logger.info(f"This is the username {username}")
+    if not username:
+        return status_table.select().dicts()
+    return status_table.select().where(status_table.username==username).dicts()
+                                
 
 
 @aiomisc.threaded
@@ -125,7 +152,8 @@ def store_email_content(**data):
                         content=data["content"],
                            username = data["username"],
                         checksum=data["checksum"],
-                        content_hash=data["content_hash"]).execute()
+                        content_hash=data["content_hash"],
+                        attachments = data["attachments"]).execute()
 
         #logger.success(f"Success on insert indexed content for  email_id --{data['email_id']}-- ")
 
@@ -374,17 +402,70 @@ def filter_attachments(tbl_object, username, message_type, start_date, end_date,
 
 
 @aiomisc.threaded
-def get_emails(tbl_object, username, message_type, start_date, end_date, skip, limit):
+def get_emails(tbl_object, username, message_type, start_date, end_date, skip, limit, attachments):
     """
     """
 
-    logger.info(f"This is the username {username}")
+    logger.info(f"This is the username {username} and attahmdents {attachments}")
     # return email_attachment_table\
     #             .select()\
     #             .order_by(-email_attachment_table.date)\
     #             .where(email_attachment_table.message_type== message_type)\
     #             .paginate(page, number)\
     #             .dicts()
+
+    if attachments:
+        if start_date and end_date:
+            logger.info("Start date and  end date")
+
+            query = tbl_object\
+                    .select()\
+                    .order_by(-tbl_object.date)\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.attachments) &\
+                        (tbl_object.message_type== message_type)& \
+                            (tbl_object.date> start_date) &\
+                                (tbl_object.date < end_date))
+                    
+            
+
+        elif start_date and not end_date:
+                            
+            logger.info("Start date and but not end date")
+
+            query = tbl_object\
+                    .select()\
+                    .order_by(-tbl_object.date)\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.attachments) &\
+                        (tbl_object.message_type== message_type)&\
+                            (tbl_object.date> start_date))
+                    
+
+        elif end_date and not start_date:
+            logger.info("not Start date and but end date")
+            
+            query = tbl_object\
+                    .select()\
+                    .order_by(-tbl_object.date)\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.attachments) &\
+                        (tbl_object.message_type== message_type)&\
+                            (tbl_object.date < end_date))
+                    
+
+
+        else: # not  start_date and  not end_date
+            logger.info("Start date and end date is not present")
+            query = tbl_object\
+                    .select()\
+                    .order_by(-tbl_object.date)\
+                    .where((tbl_object.username ==username) &\
+                        (tbl_object.attachments) &\
+                        (tbl_object.message_type== message_type))
+         
+        return  query.offset(skip).limit(limit).dicts(), query.count()
+
 
 
     if start_date and end_date:
@@ -409,7 +490,7 @@ def get_emails(tbl_object, username, message_type, start_date, end_date, skip, l
                 .order_by(-tbl_object.date)\
                 .where((tbl_object.username ==username) &\
                     (tbl_object.message_type== message_type)&\
-                         (tbl_object.date> start_date))
+                        (tbl_object.date> start_date))
                 
 
     elif end_date and not start_date:
@@ -420,7 +501,7 @@ def get_emails(tbl_object, username, message_type, start_date, end_date, skip, l
                 .order_by(-tbl_object.date)\
                 .where((tbl_object.username ==username) &\
                     (tbl_object.message_type== message_type)&\
-                         (tbl_object.date < end_date))
+                        (tbl_object.date < end_date))
                 
 
 
@@ -430,12 +511,12 @@ def get_emails(tbl_object, username, message_type, start_date, end_date, skip, l
                 .select()\
                 .order_by(-tbl_object.date)\
                 .where((tbl_object.username ==username) &(tbl_object.message_type== message_type))
-                
+
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
 @aiomisc.threaded
-def match_text(tbl_object, username, indexed_obj, matching_string, message_type, start_date, end_date, skip, limit):
+def match_text(tbl_object, username, indexed_obj, matching_string, message_type, start_date, end_date, skip, limit, attachments):
     """
         for tweet in Tweet.select().where(Tweet.created_date < datetime.datetime(2011, 1, 1)):
          print(tweet.message, tweet.created_date)
@@ -448,7 +529,48 @@ def match_text(tbl_object, username, indexed_obj, matching_string, message_type,
     #             .dicts())
     # return list(query)
 
-    
+    if attachments:
+        if start_date and end_date:
+                query = tbl_object\
+                    .select()\
+                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                    .where(indexed_obj.match(matching_string) & (tbl_object.username ==username) &\
+                        (tbl_object.date> start_date) &(tbl_object.date < end_date) &(tbl_object.message_type== message_type))\
+                    .order_by(-tbl_object.date)
+
+                    
+            
+
+        elif start_date and not end_date:
+            query = tbl_object\
+                    .select()\
+                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                    .where((indexed_obj.match(matching_string)) & (tbl_object.username ==username) &\
+                        (tbl_object.date> start_date) &(tbl_object.message_type== message_type))\
+                    .order_by(-tbl_object.date)
+
+            
+
+
+        elif end_date and not start_date:
+            query = tbl_object\
+                    .select()\
+                    .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id))\
+                    .where((indexed_obj.match(matching_string)) (tbl_object.username ==username) \
+                        &(tbl_object.date < end_date) & (tbl_object.message_type== message_type))\
+                    .order_by(-tbl_object.date)
+
+
+
+        else: # not  start_date and  not end_date
+            query = tbl_object\
+                        .select()\
+                        .join(indexed_obj, on=(tbl_object.email_id == indexed_obj.email_id) & (tbl_object.username ==username) &\
+                            (tbl_object.message_type== message_type))\
+                        .where(indexed_obj.match(matching_string))\
+
+
+        return  query.offset(skip).limit(limit).dicts(), query.count()
 
     if start_date and end_date:
         query = tbl_object\
