@@ -1,1 +1,6 @@
+
+
 DATASOURCE_NAME = "Twitter"
+
+DEFAULT_SYNC_TYPE = "manual"
+DEFAULT_SYNC_FREQUENCY = "weekly"

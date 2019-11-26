@@ -18,7 +18,7 @@ from .db_calls import update_status, update_stats, filter_tweet, \
         match_text, get_account, store, get_stats, get_status, get_archives, delete_status
 import dateparser
 
-from .variables import DATASOURCE_NAME
+from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 from datasources.shared.extract import extract
 
@@ -86,6 +86,8 @@ async def parse(request):
     
     try:
         checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, username)
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", dest_path, request.json["path"])
+
     except Exception as e:
         logger.error(e)
         await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
@@ -97,6 +99,52 @@ async def parse(request):
         'error': False,
         'success': True,
         "message": "Twitter parsing has been Started and you will be notified once it is complete", 
+        "data": None
+        })
+
+
+
+async def delete_original_path(request):
+    """
+    After the processing of the whole data source, this api can be used to delete the original zip 
+    correspoding to a particular username
+    """
+    username = request.args.get("username") 
+
+    if not username:
+        raise APIBadRequest("Username for this datasource is required")
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], username)
+
+    result = list(res)
+    logger.info(result[0].get("username"))
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {username}")
+
+
+    result = result[0]
+    logger.info(result)
+    path_to_be_deleted = result.get("original_path")
+    logger.warning(f"Path to be deleted is {path_to_be_deleted}")
+
+    try:    
+        os.remove(path_to_be_deleted)
+        logger.success(f"{path_to_be_deleted} is deleted now")
+    except Exception as e:
+        return response.json(
+            {
+            'error': False,
+            'success': True,
+            "message": f"Original path at {path_to_be_deleted} couldnt be delete because of {e.__str__()}", 
+            "data": None
+            })
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": f"Original path at {path_to_be_deleted} is deleted", 
         "data": None
         })
 

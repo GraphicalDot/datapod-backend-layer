@@ -15,21 +15,44 @@ import aiomisc
 
 
 @aiomisc.threaded
-def update_status(status_table, datasource_name, username, status):
+def update_status(status_table, datasource_name, username, status, path=None, original_path=None):
     try:
         status_table.insert(source=datasource_name,  
                                     username=username,
                                     status=status,
+                                    path = path,
+                                    original_path=original_path
                                     ).execute()
                                     
 
     except IntegrityError as e:
         logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
 
-        status_table.update(
-            status=status).\
-        where(status_table.username==username).\
-        execute()
+        if path and original_path:
+            status_table.update(
+                status=status, 
+                path = path,
+                original_path=original_path).\
+            where(status_table.username==username).\
+            execute()
+        elif original_path:
+            status_table.update(
+                            status=status, 
+                            original_path=original_path).\
+                        where(status_table.username==username).\
+                        execute()
+
+        elif path:
+            status_table.update(
+                            status=status, 
+                            path=path).\
+                        where(status_table.username==username).\
+                        execute()
+        else:
+            status_table.update(
+                            status=status).\
+                        where(status_table.username==username).\
+                        execute()
 
     except Exception as e:
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
@@ -77,11 +100,14 @@ def update_stats(stats_table, datasource_name, username, data_items, size, sync_
 
 
 
+
+
 @aiomisc.threaded
-def get_status(status_table):
-    return status_table.select().dicts()
-
-
+def get_status(status_table, username=None):
+    logger.info(f"This is the username {username}")
+    if not username:
+        return status_table.select().dicts()
+    return status_table.select().where(status_table.username==username).dicts()
 
 @aiomisc.threaded
 def get_stats(stats_table):

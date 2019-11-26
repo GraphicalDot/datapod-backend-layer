@@ -38,7 +38,8 @@ def initialize(db):
         username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
-
+        path = peewee.TextField(null=True)
+        original_path = peewee.TextField(null=True)
 
     class Stats(BaseModel):
         source = peewee.TextField(index=True)

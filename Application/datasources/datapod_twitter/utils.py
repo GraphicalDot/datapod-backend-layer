@@ -6,10 +6,10 @@ from .db_calls import update_status, get_stats, get_stats, update_stats, store, 
 from loguru import logger
 from dputils.utils import async_wrap, send_sse_message
 from collections import Counter
-from .variables import DATASOURCE_NAME
 from glob import glob
 import subprocess
 import datetime
+from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 def dir_size(dirpath):
     return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
@@ -48,7 +48,7 @@ async def _parse(config, path, username, checksum):
 
     await update_stats(config[DATASOURCE_NAME]["tables"]["stats_table"], 
             DATASOURCE_NAME, 
-                username, data_items, size, "weekly", "auto", datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
+                username, data_items, size,  DEFAULT_SYNC_FREQUENCY, DEFAULT_SYNC_TYPE, datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
 
 
