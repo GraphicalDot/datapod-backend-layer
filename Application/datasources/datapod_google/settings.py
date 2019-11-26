@@ -6,7 +6,8 @@ import sqlite3
 
 from .db_initialize import initialize
 from .api import parse, emails_filter,  reservations_filter,  image_filter,  attachment_filter,\
-            stats, status, purchases_filter, locations_filter, delete_original_path 
+            stats, status, purchases_filter, locations_filter, delete_original_path, \
+                cancel_parse, restart_parse
 import os
 from .variables import DATASOURCE_NAME
 
@@ -51,6 +52,6 @@ class Routes:
         self.routes = {"GET": [("emails/filter", emails_filter), ("images/filter", image_filter), ("locations/filter", locations_filter), 
                     ("delete_zip", delete_original_path),
                     ("purchases/filter", purchases_filter), ("reservations/filter", reservations_filter), ("attachments/filter", attachment_filter)], 
-                    "POST": [("parse", parse)] } 
+                    "POST": [("parse", parse), ("cancel_parse", cancel_parse), ("restart_parse", restart_parse)] } 
         
         

@@ -6,7 +6,7 @@ from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from loguru import logger
 
-__VERSION__ = "0.3-Beta"
+__VERSION__ = "0.3.1"
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")

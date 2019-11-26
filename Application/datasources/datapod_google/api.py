@@ -16,7 +16,7 @@ import base64
 # from database_calls.takeout.db_emails  import  get_email_attachment, get_emails, match_text
 
 
-
+import shutil
 from .utils.images import ParseGoogleImages
 import datetime
 import json
@@ -67,7 +67,77 @@ def files_count(dirpath):
 
 
 
-async def __parse(config, path, username):
+
+async def restart_parse(request):
+    request.app.config.VALIDATE_FIELDS(["username"], request.json)
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], request.json["username"])
+
+    result = list(res)
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {request.json['username']}")
+
+
+    result = result[0]
+    original_path = result.get("original_path")
+
+    if not original_path:
+        raise APIBadRequest(f"No Path is present for {DATASOURCE_NAME} for username {request.json['username']}, Please cancel this processing")
+
+    if not os.path.exists(original_path):
+        raise APIBadRequest(f"This path {original_path} doesnts exists anymore, Please cancel this processing")
+
+    request.app.add_task(start_parse(request.app.config, original_path, request.json["username"]))
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": "Takeout data parsing for {request.json['username']} has been restarted and you will be notified once it is complete", 
+        "data": None
+        })
+
+
+
+async def cancel_parse(request):
+    request.app.config.VALIDATE_FIELDS(["username"], request.json)
+
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], request.json['username'])
+
+    result = list(res)
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {request.json['username']}")
+
+
+    result = result[0]
+    datapod_path = result.get("datapod_path")
+
+    ##deleting entry from the status table corresponding to this username
+    await delete_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json['username'])
+    try:    
+        shutil.rmtree(datapod_path)
+        logger.success(f"{datapod_path} is deleted now")
+    except Exception as e:
+        return response.json(
+            {
+            'error': False,
+            'success': True,
+            "message": f"Path at {datapod_path} couldnt be delete because of {e.__str__()}", 
+            "data": None
+            })
+
+
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": f"Processing for {request.json['username']} has been cancelled and all resources have been freed", 
+        "data": None
+        })
+    
+
+async def start_parse(config, path, username):
     """
 
     datasource_name: This will be Google in this case, always
@@ -226,7 +296,7 @@ async def parse(request):
     # request.app.add_task(extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"]))
 
 
-    request.app.add_task(__parse(request.app.config, request.json["path"], request.json["username"]))
+    request.app.add_task(start_parse(request.app.config, request.json["path"], request.json["username"]))
 
 
     # request.app.add_task(parse_takeout(request.app.config))
@@ -235,7 +305,7 @@ async def parse(request):
         {
         'error': False,
         'success': True,
-        "message": "Takeout data parsing has been Started and you will be notified once it is complete", 
+        "message": "Takeout data parsing has been Started for {request.json['username']} and you will be notified once it is complete", 
         "data": None
         })
 

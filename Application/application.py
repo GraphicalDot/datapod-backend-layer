@@ -13,24 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 from sanic.response import json_dumps 
-import argparse
 import asyncio
 import os
 from signal import signal, SIGINT
 import sys
 import json
-from asyncinit import asyncinit
 import importlib
 from sanic import Sanic
 from sanic_cors import CORS
 from zmq.asyncio import ZMQEventLoop
-
-import pprint 
-
-
-from spf import SanicPluginsFramework
-
-
 import config
 
 from playhouse.shortcuts import model_to_dict, dict_to_model
@@ -38,21 +29,13 @@ from playhouse.shortcuts import model_to_dict, dict_to_model
 from errors_module import ERRORS_BP
 #from database_calls import DATABASE_BP
 import concurrent.futures
-from sanic.websocket import WebSocketProtocol
-from websockets.exceptions import ConnectionClosed
-import string
 from sanic import Blueprint
 from sanic import response
 import random
 import time
   
-from sanic.exceptions import abort
 from sanic_sse import Sse
 from http import HTTPStatus
-#from sockets.sockets import sio
-#from loguru import logger
-#from custom_logger import logger
-#from secrets.aws_secret_manager import get_secrets
 from loguru import logger
 #from custom_logger import LOGGING
 from dputils.utils import send_sse_message
@@ -61,6 +44,7 @@ init("https://252ce7f1254743cda2f8c46edda42044@sentry.io/1763079")
 import pkgutil
 from pathlib import Path
 import datasources
+
 app = Sanic(__name__)
 
 # app.config['CORS_AUTOMATIC_OPTIONS'] = True
@@ -291,6 +275,11 @@ async def before_start(app, uvloop):
 
     return
 
+async def periodic_background():
+    while True:
+        await asyncio.sleep(60)
+        tasks = asyncio.Task.all_tasks()
+        logger.info(f"Total running tasks are {len(tasks)}")
 
 
 def main():
@@ -308,8 +297,6 @@ def main():
     #zmq = ZMQEventLoop()
     #asyncio.set_event_loop(zmq)
 
-
-
     # app.config.user_data_path = config.user_data_path
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
@@ -320,11 +307,11 @@ def main():
     for _, (rule, _) in app.router.routes_names.items():
         logger.info(rule)    
 
+    app.add_task(periodic_background())
 
     logger.info(f"This is Version number {config.config_object.VERSION}")
     #app.config["SIO"] = sio
-    #pprint.pprint(app.config)
-    #app.error_handler.add(Exception, server_error_handler)
+    #pprint.pprint(Tndler.add(Exception, server_error_handler)
     app.config.update({"send_sse_message": send_sse_message})
     app.run(host="0.0.0.0", port=app.config.PORT, workers=1, access_log=True)
 
