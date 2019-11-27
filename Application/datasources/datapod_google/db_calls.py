@@ -78,6 +78,18 @@ def delete_status(status_table, datasource_name, username):
         logger.error(f"Couldnt delete {datasource_name} updated because of {e}")
     return 
 
+
+@aiomisc.threaded
+def delete_archive(archives_table, checksum):
+    try:
+        archives_table.delete().where(archives_table.checksum==checksum).execute()
+                                    
+
+    except Exception as e:
+        logger.error(f"Couldnt delete {checksum} from archives table because of {e}")
+    return 
+
+
 @aiomisc.threaded
 def update_stats(stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):
     """

@@ -44,7 +44,7 @@ def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasou
     
     if archives_present:
         raise APIBadRequest("Zip file already have been uploaded")
-
+        
 
 
     utc_timestamp = datetime.datetime.utcnow().strftime("%d-%m-%Y")

@@ -38,7 +38,7 @@ import aiomisc
 from .utils.location import LocationHistory
 from .db_calls import update_status, get_emails, match_text, filter_images, filter_locations,\
          filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, \
-             update_stats, delete_status, update_percentage, filter_attachments_on_text
+             update_stats, delete_status, update_percentage, filter_attachments_on_text, delete_archive
 from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 
@@ -112,10 +112,10 @@ async def cancel_parse(request):
 
 
     result = result[0]
-    datapod_path = result.get("datapod_path")
-
+    datapod_path = result.get("path")
+    checksum = result.get("checksum")
+    logger.warning(f"{datapod_path} will be deleted with {checksum}")
     ##deleting entry from the status table corresponding to this username
-    await delete_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json['username'])
     try:    
         shutil.rmtree(datapod_path)
         logger.success(f"{datapod_path} is deleted now")
@@ -128,7 +128,9 @@ async def cancel_parse(request):
             "data": None
             })
 
-
+    await delete_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json['username'])
+    await delete_archive(request.app.config[DATASOURCE_NAME]["tables"]["archives_table"], checksum)
+    
     return response.json(
         {
         'error': False,
@@ -161,6 +163,7 @@ async def start_parse(config, path, username):
     except Exception as e:
         logger.error(e)
         await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
+        raise Exception(e)
 
     # path = os.path.join(config.RAW_DATA_PATH, "Takeout")
     email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
