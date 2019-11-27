@@ -31,6 +31,8 @@ def initialize(db):
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
         path = peewee.TextField(null=True)
         original_path = peewee.TextField(null=True)
+        checksum = peewee.TextField(index=True, null=True)
+        percentage = peewee.IntegerField(null=True)
 
     class Stats(BaseModel):
         source = peewee.TextField(index=True)
@@ -45,9 +47,9 @@ def initialize(db):
 
     class Archives(BaseModel):
         path = peewee.TextField(null=False)
-        username = peewee.TextField(unique=True, null=False)
+        username = peewee.TextField(unique=False, index=True, null=False)
         datapod_timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-        checksum = peewee.TextField(index=True, null=False)
+        checksum = peewee.TextField(unique=True, index=True, null=False)
 
 
 

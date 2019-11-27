@@ -8,7 +8,7 @@ from .utils.parse_emails import EmailParse
 from  .utils.location import  LocationHistory
 from .utils.purchases_n_reservations import PurchaseReservations
 import base64
-
+import calendar
 # import  database_calls.db_purchases as q_purchase_db
 # import  database_calls.db_reservations as q_reservation_db
 # import  database_calls.db_images as q_images_db
@@ -37,7 +37,8 @@ from datasources.shared.extract import extract
 import aiomisc
 from .utils.location import LocationHistory
 from .db_calls import update_status, get_emails, match_text, filter_images, filter_locations,\
-         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, update_stats, delete_status
+         filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, \
+             update_stats, delete_status, update_percentage
 from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 
@@ -155,7 +156,7 @@ async def start_parse(config, path, username):
     ##the dest_path is the path with the archieve appended to the last
     try:
         checksum, dest_path = await extract(path, dst_path_prefix, config, DATASOURCE_NAME, username)
-        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", dest_path, path)
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", checksum, dest_path, path)
 
     except Exception as e:
         logger.error(e)
@@ -173,6 +174,8 @@ async def start_parse(config, path, username):
         logger.error(e)
 
     res = {"message": "PROGRESS", "percentage": 98}
+    await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, 98)
+
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
 
     try:
@@ -200,12 +203,13 @@ async def start_parse(config, path, username):
 
     res = {"message": "PROGRESS", "percentage": 100}
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
+    await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
 
     # ##updating datasources table with the status that parsing of the takeout is completed
     logger.info("Trying to update data source table with status completed")
 
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED", checksum)
     
     takeout_dir = os.path.join(config["RAW_DATA_PATH"], DATASOURCE_NAME, username)
 
@@ -305,7 +309,7 @@ async def parse(request):
         {
         'error': False,
         'success': True,
-        "message": "Takeout data parsing has been Started for {request.json['username']} and you will be notified once it is complete", 
+        "message": f"Takeout data parsing has been Started for {request.json['username']} and you will be notified once it is complete", 
         "data": None
         })
 
@@ -579,11 +583,11 @@ async def locations_filter(request):
     logger.info(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
-
+        start_date = calendar.timegm(start_date.timetuple())
 
     if end_date:
         end_date = dateparser.parse(end_date)
-
+        end_date  = calendar.timegm(end_date.timetuple())
 
     if start_date and end_date:
         if end_date < start_date:

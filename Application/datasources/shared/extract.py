@@ -25,17 +25,17 @@ def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasou
     if not os.path.exists(src_path):
         raise APIBadRequest("This path doesnt exists")
 
-    try:
-        the_zip_file = zipfile.ZipFile(src_path)
-    except:
-        raise APIBadRequest("Invalid zip file")
+    # try:
+    #     the_zip_file = zipfile.ZipFile(src_path)
+    # except:
+    #     raise APIBadRequest("Invalid zip file")
 
 
-    logger.info(f"Testing zip {src_path} file")
-    ret = the_zip_file.testzip()
+    # logger.info(f"Testing zip {src_path} file")
+    # ret = the_zip_file.testzip()
 
-    if ret is not None:
-        raise APIBadRequest(f"Invalid zip datasource_name file")
+    # if ret is not None:
+    #     raise APIBadRequest(f"Invalid zip datasource_name file")
 
 
     _checksum = checksum(src_path)

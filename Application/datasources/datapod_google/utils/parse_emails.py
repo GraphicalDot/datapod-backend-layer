@@ -29,7 +29,7 @@ import aiomisc
 from email.header import Header, decode_header, make_header
 
 
-from ..db_calls import store_email, store_email_attachment, store_email_content
+from ..db_calls import store_email, store_email_attachment, store_email_content, update_percentage
 from ..variables import DATASOURCE_NAME
 
 import chardet
@@ -166,6 +166,7 @@ class Emails(object):
         self.indexed_email_content_tbl = config[DATASOURCE_NAME]["tables"]["email_content_table"]
 
         self.email_attachements_tbl = config[DATASOURCE_NAME]["tables"]["email_attachment_table"]
+        self.status_table = config[DATASOURCE_NAME]["tables"]["status_table"]
 
         if not os.path.exists(self.email_dir_html):
             logger.warning(f"Path doesnt exists creating {self.email_dir_html}")
@@ -252,6 +253,8 @@ class Emails(object):
                     res = {"message": "PROGRESS", "percentage": int(percentage)}
 
                     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+                    await update_percentage(self.status_table, DATASOURCE_NAME, self.username, int(percentage))
+    
             
             if i == 1000:
                 break

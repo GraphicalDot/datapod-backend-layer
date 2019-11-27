@@ -7,13 +7,14 @@ from errors_module.errors import APIBadRequest, DuplicateEntryError
 from loguru import logger
 
 @aiomisc.threaded
-def update_status(status_table, datasource_name, username, status, path=None, original_path=None):
+def update_status(status_table, datasource_name, username, status, checksum=None, path=None, original_path=None):
     try:
         status_table.insert(source=datasource_name,  
                                     username=username,
                                     status=status,
                                     path = path,
-                                    original_path=original_path
+                                    original_path=original_path,
+                                    checksum=checksum
                                     ).execute()
                                     
 
@@ -24,12 +25,15 @@ def update_status(status_table, datasource_name, username, status, path=None, or
             status_table.update(
                 status=status, 
                 path = path,
+                checksum=checksum,
                 original_path=original_path).\
             where(status_table.username==username).\
             execute()
         elif original_path:
             status_table.update(
                             status=status, 
+                            checksum=checksum,
+                            
                             original_path=original_path).\
                         where(status_table.username==username).\
                         execute()
@@ -37,11 +41,13 @@ def update_status(status_table, datasource_name, username, status, path=None, or
         elif path:
             status_table.update(
                             status=status, 
-                            path=path).\
+                            checksum=checksum,
+                path=path).\
                         where(status_table.username==username).\
                         execute()
         else:
             status_table.update(
+                        checksum=checksum,
                             status=status).\
                         where(status_table.username==username).\
                         execute()
@@ -51,6 +57,16 @@ def update_status(status_table, datasource_name, username, status, path=None, or
         logger.error(f"Couldnt {datasource_name} updated because of {e}")
     return 
 
+
+
+@aiomisc.threaded
+def update_percentage(status_table, datasource_name, username, percentage):
+    status_table.update(
+                percentage=percentage, 
+                last_updated=datetime.datetime.now()).\
+            where(status_table.username==username).\
+            execute()
+    return 
 
 @aiomisc.threaded
 def delete_status(status_table, datasource_name, username):
