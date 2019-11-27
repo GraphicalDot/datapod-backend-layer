@@ -38,7 +38,7 @@ import aiomisc
 from .utils.location import LocationHistory
 from .db_calls import update_status, get_emails, match_text, filter_images, filter_locations,\
          filter_attachments, filter_purchases, filter_reservations, get_stats, get_status, \
-             update_stats, delete_status, update_percentage
+             update_stats, delete_status, update_percentage, filter_attachments_on_text
 from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 
@@ -451,9 +451,11 @@ async def attachment_filter(request):
 
 
     if not matching_string:
-        attachments, count = await filter_attachments(request.app.config[DATASOURCE_NAME]["tables"]["email_attachment_table"], username,  message_type, start_date, end_date, int(skip), int(limit))
+        attachments, count = await filter_attachments(request.app.config[DATASOURCE_NAME]["tables"]["email_attachment_table"], 
+                                    username,  message_type, start_date, end_date, int(skip), int(limit))
     else:
-        raise APIBadRequest("Not been implemented Yet")
+        attachments, count = await filter_attachments_on_text(request.app.config[DATASOURCE_NAME]["tables"]["email_attachment_table"], 
+                            username,  message_type, start_date, end_date, int(skip), int(limit), matching_string)
     # for iage in images:
     #     creation_time = image.pop("creation_time")
     #     #data:image/png;base64

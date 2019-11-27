@@ -355,7 +355,6 @@ def store_email_attachment(**data):
     return 
 
 
-
 @aiomisc.threaded
 def filter_attachments(tbl_object, username, message_type, start_date, end_date, skip, limit):
     """
@@ -415,6 +414,70 @@ def filter_attachments(tbl_object, username, message_type, start_date, end_date,
 
     return  query.offset(skip).limit(limit).dicts(), query.count()
 
+
+@aiomisc.threaded
+def filter_attachments_on_text(tbl_object, username, message_type, start_date, end_date, skip, limit, search_text):
+    """
+    purchases: a list of purchases dict
+    """
+    # email_attachment_table = tbl_object
+    # return email_attachment_table\
+    #             .select()\
+    #             .order_by(-email_attachment_table.date)\
+    #             .paginate(page, number)\
+    #             .dicts()
+
+    if start_date and end_date:
+        logger.info("Start date and  end date")
+
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.attachment_name**f'%{search_text}%') &\
+                    (tbl_object.message_type== message_type)&\
+                    (tbl_object.date> start_date) &\
+                    (tbl_object.date < end_date))
+                
+        
+
+    elif start_date and not end_date:
+                        
+        logger.info("Start date and but not end date")
+
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.attachment_name**f'%{search_text}%') &\
+                    (tbl_object.message_type== message_type)&
+                     (tbl_object.date> start_date))
+                
+
+    elif end_date and not start_date:
+        logger.info("not Start date and but end date")
+        
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.attachment_name**f'%{search_text}%') &\
+                    (tbl_object.message_type== message_type)&\
+                         (tbl_object.date < end_date))
+                
+
+
+    else: # not  start_date and  not end_date
+        logger.info("Start date and end date is not present")
+        query = tbl_object\
+                .select()\
+                .order_by(-tbl_object.date)\
+                .where((tbl_object.username ==username) &\
+                    (tbl_object.attachment_name**f'%{search_text}%') &\
+                    (tbl_object.message_type== message_type))
+                
+
+    return  query.offset(skip).limit(limit).dicts(), query.count()
 
 
 @aiomisc.threaded
