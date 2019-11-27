@@ -2,7 +2,7 @@ import json
 import os
 import asyncio
 import functools
-from .db_calls import update_status, get_stats, get_stats, update_stats, store, store_account
+from .db_calls import update_status, get_stats, get_stats, update_stats, store, store_account, update_percentage
 from loguru import logger
 from dputils.utils import async_wrap, send_sse_message
 from collections import Counter
@@ -26,14 +26,13 @@ async def _parse(config, path, username, checksum):
 
     logger.success(f"The twitter username is {username}")
     
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"] , DATASOURCE_NAME, username, "PROGRESS")
 
     number_of_tweets, common_hashtags, common_user_mentions  = await read_tweet(config, path, username, checksum)
 
     account_display_name = await account(config, path, number_of_tweets, common_hashtags, common_user_mentions, username, checksum)
 
 
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED", checksum)
 
 
 
@@ -94,6 +93,7 @@ async def read_tweet(config, path, username, checksum):
         res = {"message": "Processing tweet", "percentage": int(i*(num+1))}
         #await send_sse_message(config, config.TWITTER_SSE_TOPIC, res)
         await config["send_sse_message"](config, DATASOURCE_NAME, res)
+        await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
 
     # loop = asyncio.get_event_loop()
     # tasks = [store(**args)  for args in jsonObj]

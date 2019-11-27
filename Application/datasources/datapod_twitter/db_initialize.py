@@ -40,6 +40,9 @@ def initialize(db):
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
         path = peewee.TextField(null=True)
         original_path = peewee.TextField(null=True)
+        checksum = peewee.TextField(index=True, null=True)
+        percentage = peewee.IntegerField(null=True)
+
 
     class Stats(BaseModel):
         source = peewee.TextField(index=True)

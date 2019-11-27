@@ -15,7 +15,7 @@ from io import BytesIO
 from PIL import Image
 import datetime
 from .db_calls import update_status, update_stats, filter_tweet, \
-        match_text, get_account, store, get_stats, get_status, get_archives, delete_status
+        match_text, get_account, store, get_stats, get_status, get_archives, delete_status, delete_archive
 import dateparser
 
 from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
@@ -86,11 +86,12 @@ async def parse(request):
     
     try:
         checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, username)
-        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", dest_path, request.json["path"])
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS", checksum, dest_path, request.json["path"])
 
     except Exception as e:
         logger.error(e)
         await delete_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username)
+        raise APIBadRequest(e)
 
     request.app.add_task(_parse(request.app.config, dest_path, username, checksum))
 
@@ -148,7 +149,44 @@ async def delete_original_path(request):
         "data": None
         })
 
+async def cancel_parse(request):
+    request.app.config.VALIDATE_FIELDS(["username"], request.json)
 
+
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], request.json['username'])
+
+    result = list(res)
+    if not result:
+        raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {request.json['username']}")
+
+
+    result = result[0]
+    datapod_path = result.get("path")
+    checksum = result.get("checksum")
+    logger.warning(f"{datapod_path} will be deleted with {checksum}")
+    ##deleting entry from the status table corresponding to this username
+    try:    
+        shutil.rmtree(datapod_path)
+        logger.success(f"{datapod_path} is deleted now")
+    except Exception as e:
+        return response.json(
+            {
+            'error': False,
+            'success': True,
+            "message": f"Path at {datapod_path} couldnt be delete because of {e.__str__()}", 
+            "data": None
+            })
+
+    await delete_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, request.json['username'])
+    await delete_archive(request.app.config[DATASOURCE_NAME]["tables"]["archives_table"], checksum)
+    
+    return response.json(
+        {
+        'error': False,
+        'success': True,
+        "message": f"Processing for {request.json['username']} has been cancelled and all resources have been freed", 
+        "data": None
+        })
 
 
 async def tweets(request):
