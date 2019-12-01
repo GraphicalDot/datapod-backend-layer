@@ -10,7 +10,7 @@ import subprocess
 from errors_module.errors import APIBadRequest
 from loguru import logger
 import humanize
-from .db_calls import store_image, update_status, update_stats, store_chats, store_address
+from .db_calls import store_image, update_status, update_stats, store_chats, store_address, update_percentage
 from .variables import DATASOURCE_NAME, DEFAULT_SYNC_TYPE, DEFAULT_SYNC_FREQUENCY
 
 parent_module_path= os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd())))
@@ -38,8 +38,9 @@ PHONE_SEARCH = re.compile(phone_regex)
 async def __parse(config, path, username, checksum):
     #add this if this has to executed periodically
     #while True:
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS")
     
+
+
     async def change_uri(json_data, prefix_path):
         i = 70/len(json_data["photos"])
         for  num, entry in enumerate(json_data["photos"]):
@@ -63,6 +64,7 @@ async def __parse(config, path, username, checksum):
 
             await store_image(**entry)
             await config["send_sse_message"](config, DATASOURCE_NAME, res)
+            await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
 
         return json_data["photos"]
 
@@ -86,7 +88,7 @@ async def __parse(config, path, username, checksum):
     ##handle chats
     await handle_chats(config, username, checksum, facebook_chats_path)
 
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED")
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED", checksum)
 
 
 
@@ -105,6 +107,7 @@ async def __parse(config, path, username, checksum):
                 username, data_items, size, DEFAULT_SYNC_FREQUENCY, DEFAULT_SYNC_TYPE,  datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
     res = {"message": "completed", "percentage": 100}
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
+    await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
 
     logger.info("facebook datasource parse completed")
 
@@ -140,10 +143,12 @@ async def contacts(config, path, username, checksum):
             detail.update({"table": config[DATASOURCE_NAME]["tables"]["address_table"], "username": username, "checksum": checksum})
             logger.info(detail)
             await store_address(**detail)
-            res = {"message": "Progress", "percentage": int(70+(i*(num+1)))}
 
+
+            res = {"message": "Progress", "percentage": int(70+(i*(num+1)))}
             await config["send_sse_message"](config, DATASOURCE_NAME, res)
-    
+            await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
+
     return 
 
 async def handle_chats(config, username, checksum, chats_path):
