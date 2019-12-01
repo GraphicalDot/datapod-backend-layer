@@ -256,8 +256,8 @@ class Emails(object):
                     await update_percentage(self.status_table, DATASOURCE_NAME, self.username, int(percentage))
     
             
-            if i == 1000:
-                break
+            # if i == 1000:
+            #     break
 
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         

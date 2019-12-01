@@ -188,9 +188,11 @@ async def start_parse(config, path, username):
         logger.error(e)
 
 
-
-    ins = LocationHistory(config, dest_path, username, checksum)
-    await ins.parse()
+    try:
+        ins = LocationHistory(config, dest_path, username, checksum)
+        await ins.parse()
+    except Exception as e:
+        logger.error(e)
 
 
     # for purchase in purchases:

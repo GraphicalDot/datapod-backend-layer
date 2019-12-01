@@ -125,6 +125,7 @@ class LocationHistory(object):
         self.location_signature = {} ##which will have details of what year has what all months
         if not os.path.exists(self.path):
             logger.error("Location data doesnt exists")
+            raise Exception("Location data doesnt exists")
 
 
     def reverse_geo_code(self, lat, lon):
