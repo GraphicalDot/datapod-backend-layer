@@ -199,6 +199,7 @@ def add_routes(app):
     # directory = os.path.join(os.path.dirname(__file__), "datasources")
     # logger.info(directory)
 
+    app.config["tables"] = {}
     for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
     # for filename in os.listdir(directory):
     #     filepath = os.path.join(directory, filename)
@@ -231,7 +232,8 @@ def add_routes(app):
             m = importlib.import_module(module_name)
 
             inst = m.Routes(app.config["RAW_DATA_PATH"])
-            inst.config.update({"code": hash(inst.datasource_name)%10000})                 
+            inst.config.update({"code": hash(inst.datasource_name)%10000})
+                 
             
             for (http_method, route_list) in inst.routes.items():
                 datasource = inst.datasource_name
@@ -241,13 +243,22 @@ def add_routes(app):
 
             logger.info(f"Updating Appication config with {inst.datasource_name} configurations ")
             app.config.update({inst.datasource_name: inst.config})
+            
+            ##adding table names to app.config
 
+            if inst.datasource_name != "Users":
+                datasource_tables = inst.config['tables']
+                [datasource_tables.pop(table_name) for table_name in ["creds_table", "archives_table", "status_table", "stats_table"]]
+                app.config["tables"].update({inst.datasource_name.lower(): list(datasource_tables.keys())})
+            
 
     # app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
     # app.add_route(datasource_status, '/datasources/status', methods=["GET"])
     app.add_route(datasource_archives, '/datasources/archives', methods=["GET"])
     app.add_route(datasource_status_stats, '/datasources/stats_status', methods=["GET"])
     app.config["registered_modules"] = registered_modules
+
+    logger.info(app.config['tables'])
     return 
 
 
