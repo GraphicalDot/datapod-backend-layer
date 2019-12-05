@@ -3,6 +3,7 @@ from loguru import logger
 from lxml.html.clean import Cleaner
 import sys
 import requests
+import time
 import os
 from dputils.utils import timezone_timestamp, month_aware_time_stamp
 from errors_module.errors import APIBadRequest, DuplicateEntryError
@@ -31,10 +32,36 @@ from email.header import Header, decode_header, make_header
 
 from ..db_calls import store_email, store_email_attachment, store_email_content, update_percentage
 from ..variables import DATASOURCE_NAME
-
+import os 
 import chardet
-
+import subprocess
 # from database_calls.database_calls import create_db_instance, close_db_instance, get_key, insert_key, StoreInChunks
+
+
+
+
+
+
+
+
+
+def folder_size(path='.'): 
+    total = 0 
+    for entry in os.scandir(path): 
+        if entry.is_file(): 
+            total += entry.stat().st_size 
+        elif entry.is_dir(): 
+            total += folder_size(entry.path) 
+    return total 
+
+
+
+
+
+
+
+
+
 
 
 @asyncinit
@@ -58,51 +85,71 @@ class EmailParse(object):
         total_emails = []
 
 
+
+        self.email_dir_size = folder_size(self.email_path)
+
+        ##calculate approximate number of emails 
+        self.approximate_email_count = int(self.email_dir_size//(1024*128*1.4))
+
+        self.mbox_file_names = os.listdir(self.email_path)
+        logger.info(self.mbox_file_names)
+
         ##listing all the .mbox files present in the Takeout/Mail directory
-        for mbox_file in os.listdir(self.email_path):
+        # for mbox_file in os.listdir(self.email_path):
             
 
-            path = os.path.join(self.email_path, mbox_file)
+        #     path = os.path.join(self.email_path, mbox_file)
 
-            #mbox_object = mailbox.mbox(path)
-            mbox_object = await self.read_mbox(path)
-            email_count = len(mbox_object.keys())
+        #     #mbox_object = mailbox.mbox(path)
+        #     mbox_object = await self.read_mbox(path)
+        #     email_count = len(mbox_object.keys())
 
-            if mbox_file == "All mail Including Spam and Trash.mbox":
-                self.mbox_objects.append({
-                        "mbox_type": "Inbox", 
-                        "mbox_object": mbox_object,
-                        "email_count": email_count
-                })
+        #     if mbox_file == "All mail Including Spam and Trash.mbox":
+        #         self.mbox_objects.append({
+        #                 "mbox_type": "Inbox", 
+        #                 "mbox_object": mbox_object,
+        #                 "email_count": email_count
+        #         })
 
-            else:
-                self.mbox_objects.append({
-                        "mbox_type": mbox_file.replace(".mbox", ""), 
-                        "mbox_object": mbox_object,
-                        "email_count": email_count
-                })
+        #     else:
+        #         self.mbox_objects.append({
+        #                 "mbox_type": mbox_file.replace(".mbox", ""), 
+        #                 "mbox_object": mbox_object,
+        #                 "email_count": email_count
+        #         })
 
-            total_emails.append(email_count)
+        #     total_emails.append(email_count)
 
-        step = sum(total_emails)//97
-
-
-        start = 0
-        for mbox_object in self.mbox_objects:
-            try:
-                end = mbox_object["email_count"]//step 
-            except:
-                end = 15
-                step = 1
-            mbox_object.update({"start": start*step, "end": (start+end)*step, "step": step}) 
-            start = start+end 
+        # step = sum(total_emails)//97
 
 
+        # start = 0
+        # for mbox_object in self.mbox_objects:
+        #     try:
+        #         end = mbox_object["email_count"]//step 
+        #     except:
+        #         end = 15
+        #         step = 1
+        #     mbox_object.update({"start": start*step, "end": (start+end)*step, "step": step}) 
+        #     start = start+end 
 
 
-        logger.info(f"Total number of emails {sum(total_emails)}")        
-        logger.info(f"Mbox objects {self.mbox_objects}")        
-        self.email_count = sum(total_emails)
+        # start = 0
+        # for mbox_object in self.mbox_objects:
+        #     try:
+        #         end = mbox_object["email_count"]//step 
+        #     except:
+        #         end = 15
+        #         step = 1
+        #     mbox_object.update({"start": start*step, "end": (start+end)*step, "step": step}) 
+        #     start = start+end 
+
+
+
+
+        # logger.info(f"Total number of emails {sum(total_emails)}")        
+        # logger.info(f"Mbox objects {self.mbox_objects}")        
+        # self.email_count = sum(total_emails)
     
 
     @aiomisc.threaded_separate
@@ -115,16 +162,53 @@ class EmailParse(object):
 
     async def download_emails(self):
 
-        for mbox_object in self.mbox_objects:
-        
-            instance = Emails(self.config,  self.dest_path, self.username, self.checksum, mbox_object["mbox_object"], mbox_object["mbox_type"], 
-                                mbox_object["email_count"], mbox_object["step"], 
-                                mbox_object["start"], mbox_object["end"])
-             
-            await instance.download_emails()
-            if mbox_object["mbox_type"] == "Inbox":
-                            self.email_id = max(instance._to_addr_dict, key=instance._to_addr_dict.get)
+        ##if emails are less than 100, then step will be 0
 
+        logger.info(f"Aproximate number of emails are {self.approximate_email_count}")
+        step = self.approximate_email_count//95
+        logger.info(f"Step is  {step}")
+        
+        
+
+        res = {"message": "PROGRESS", "percentage": 1}
+
+        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, self.username, 1)
+
+
+        start = 0
+
+        logger.info("What the fuck one")
+        for mbox_file_name in self.mbox_file_names:
+            logger.info("What the fuck Two")
+            mbox_type = mbox_file_name.replace(".mbox", "")
+
+            if mbox_file_name == "All mail Including Spam and Trash.mbox":
+                mbox_type = "Inbox"
+
+            mbox_path = os.path.join(self.email_path, mbox_file_name)
+            mbox_object = await self.read_mbox(mbox_path)
+            email_count = len(mbox_object.keys())
+            # try:
+            #     end = email_count//step 
+            # except:
+            #     end = 100
+            #     step = 1
+            
+            end = start+email_count
+
+            
+            logger.warning(f"Start is {start} END is {end} Step is {step} Email count is {email_count}, MBOX type is {mbox_type}")
+
+            instance = Emails(self.config,  self.dest_path, self.username, self.checksum, mbox_object, mbox_type, 
+                                email_count, step, 
+                                start, end)
+            start = end
+            await instance.download_emails()
+            if mbox_type == "Inbox":
+                self.email_id = max(instance._to_addr_dict, key=instance._to_addr_dict.get)
+
+            del mbox_object
         
 
 
@@ -219,6 +303,7 @@ class Emails(object):
 
 
     #async def download_emails(self, loop, executor):
+    @logger.catch
     async def download_emails(self):
         """
         Downloding list of emails from the gmail server
@@ -237,13 +322,21 @@ class Emails(object):
         self._email_count = 0
 
         completion_percentage = list(range(self.start, self.end, self.step)) 
+        logger.info(f"Completion percentage is {completion_percentage}")
         i = 0
         for message in self.email_mbox:
             #email_uid = self.emails[0].split()[x]
             self.start += 1
             i += 1
-            await self.save_email(message)
+            
+            try:
+                await self.save_email(message)
+            except Exception as e:
+                logger.error(e)
+                pass
+            
             if completion_percentage:
+                logger.info(f"Email number is {i}")
                 if self.start in completion_percentage:
                     #logger.info(f"I found {i}")
                     # percentage = f"{completion_percentage.index(i) +1 }"
@@ -256,8 +349,9 @@ class Emails(object):
                     await update_percentage(self.status_table, DATASOURCE_NAME, self.username, int(percentage))
     
             
-            # if i == 1000:
-            #     break
+
+            if i == 500:
+                break
 
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
@@ -396,19 +490,29 @@ class Emails(object):
         if email_message.is_multipart():
             for part in email_message.walk():
                 ctype = part.get_content_type()
+
+                charset = part.get_content_charset()
+
                 cdispo = str(part.get('Content-Disposition'))
 
                 # skip any text/plain (txt) attachments
                 if ctype == 'text/plain' and 'attachment' not in cdispo:
-                    nbody = part.get_payload(decode=True)  # decode
-                    body = body + self.handle_encoding(nbody)
+                    # nbody = part.get_payload(decode=True)  # decode
+                    # body = body + self.handle_encoding(nbody)
+                    text = str(part.get_payload(decode=True), str(charset), "ignore").encode('utf8', 'replace').decode()
+                    body = body + text
+                
 
                 elif ctype == 'text/html' and 'attachment' not in cdispo:
                     # this is generally the same as text/plain but has
                     # html embedded into it. save it another file with
                     # html extension
-                    hbody = part.get_payload(decode=True)  # decode
-                    html_body = html_body + self.handle_encoding(hbody)
+                    # hbody = part.get_payload(decode=True)  # decode
+                    # html_body = html_body + self.handle_encoding(hbody)
+
+                    hbody = str(part.get_payload(decode=True), str(charset), "ignore").encode('utf8', 'replace').decode()
+                    html_body = html_body + hbody
+
 
                 elif ctype in ["multipart/alternative", "multipart/related", "multipart/mixed"] and "attachment" not in cdispo:
                     # this is generally the same as text/plain but has
@@ -465,8 +569,10 @@ class Emails(object):
 
         else:
             # when the email is just plain text
-            body = email_message.get_payload(decode=True)
+            #body = email_message.get_payload(decode=True)
             #logger.error(f"email with Plaintext found, Which is rare {email_message.is_multipart()} email from {email_from}")
+            text = str(email_message.get_payload(decode=True), email_message.get_content_charset(), 'ignore').encode('utf8', 'replace').decode()
+            body = text.strip()
 
         nl = "\r\n"
 
@@ -474,21 +580,25 @@ class Emails(object):
         # if isinstance(body, str):
         #     html_body = html_body.encode()
 
-        if not html_body:
-            try:
-                if isinstance(body, str):
-                    html_body = body.replace("\r", "").replace("\n", "")
-                else:
-                    html_body = body.decode().replace("\r", "").replace("\n", "")
-            except Exception as e:
-                logger.error(e)
-                logger.error(body)
-                return
+        # if not html_body:
+        #     try:
+        #         if isinstance(body, str):
+        #             html_body = body.replace("\r", "").replace("\n", "")
+        #         else:
+        #             html_body = body.decode().replace("\r", "").replace("\n", "")
+        #     except Exception as e:
+        #         logger.error(e)
+        #         logger.error(body)
+        #         return
 
-        email_text = self.get_clean_html(html_body)
+        email_text = body
+        if not email_text:
+            email_text = self.get_clean_html(html_body)
+
+        
         with open(file_path_html, "wb") as f:
-            data = f"From: {email_from}{nl}To: {email_to}{nl} Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
-            f.write(data.encode())
+            #data = f"From: {email_from}{nl}To: {email_to}{nl} Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
+            f.write(html_body.encode())
 
         raw_id, message_id = self.__message_id(email_message)
 

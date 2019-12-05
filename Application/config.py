@@ -11,7 +11,7 @@ __VERSION__ = "0.3.1"
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")
 LOGFILE = os.path.join(MAIN_DIR, "applogs.log")
-logger.add(LOGFILE, retention="2 days")  # Cleanup after some time
+logger.add(LOGFILE, retention="2 days", level="ERROR",  enqueue=True, backtrace=True, diagnose=True)  # Cleanup after some time
 
 
 

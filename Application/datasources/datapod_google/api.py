@@ -152,7 +152,7 @@ async def start_parse(config, path, username):
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "PROGRESS")
 
 
-    logger.info('Periodic task has begun execution')
+    logger.debug('Periodic task has begun execution')
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
 
     ##the dest_path is the path with the archieve appended to the last
@@ -204,14 +204,14 @@ async def start_parse(config, path, username):
     #     reservation.update({"tbl_object": config.RESERVATIONS_TBL}) 
     #     await q_reservation_db.store(**reservation)
         
-    # logger.info('Periodic task has finished execution')
+    # logger.debug('Periodic task has finished execution')
 
     res = {"message": "PROGRESS", "percentage": 100}
     await config["send_sse_message"](config, DATASOURCE_NAME, res)
     await update_percentage(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, res["percentage"])
 
     # ##updating datasources table with the status that parsing of the takeout is completed
-    logger.info("Trying to update data source table with status completed")
+    logger.debug("Trying to update data source table with status completed")
 
     # email_parsing_instance.update_datasource_table("COMPLETED", email_parsing_instance.email_count)
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME, username, "COMPLETED", checksum)
@@ -228,6 +228,7 @@ async def start_parse(config, path, username):
                 DATASOURCE_NAME, 
                 username, data_items, size, DEFAULT_SYNC_FREQUENCY, DEFAULT_SYNC_TYPE, datetime.datetime.utcnow() + datetime.timedelta(days=7) ) 
 
+    logger.success(f"Parsing for Takeout {username} is completed")
 
     return 
 
@@ -245,13 +246,13 @@ async def delete_original_path(request):
     res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], username)
 
     result = list(res)
-    logger.info(result[0].get("username"))
+    logger.debug(result[0].get("username"))
     if not result:
         raise APIBadRequest(f"No status present for {DATASOURCE_NAME} for username {username}")
 
 
     result = result[0]
-    logger.info(result)
+    logger.debug(result)
     path_to_be_deleted = result.get("original_path")
     logger.warning(f"Path to be deleted is {path_to_be_deleted}")
 
@@ -286,7 +287,7 @@ async def parse(request):
 
     res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
     res = list(res)
-    logger.info(res)
+    logger.debug(res)
     if res:
         for element in res:
             if element.get("status") == "PROGRESS":
@@ -297,7 +298,7 @@ async def parse(request):
 
     # config = request.app.config
     # dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
-    # logger.info(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
+    # logger.debug(f"The dst_path_prefix fo rthis datasource is {dst_path_prefix}")
     
     # checksum, dest_path = await extract(request.json["path"], dst_path_prefix, config, DATASOURCE_NAME, request.json["username"])
 
@@ -373,7 +374,7 @@ def image_base64(path):
 
 async def image_filter(request):
 
-    logger.info("Number is ", request.args.get("limit"))
+    logger.debug("Number is ", request.args.get("limit"))
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 10][request.args.get("limit") == None] 
     start_date = request.args.get("start_date") 
@@ -383,7 +384,7 @@ async def image_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    logger.info(f"Params are {request.args}")
+    logger.debug(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
 
@@ -400,7 +401,7 @@ async def image_filter(request):
 
 
     images, count = await filter_images(request.app.config[DATASOURCE_NAME]["tables"]["image_table"], username, start_date, end_date, int(skip), int(limit))
-    logger.info(images)
+    logger.debug(images)
     for image in images:
         b64_data = await image_base64(image['image_path'])
         creation_time = image.pop("creation_time")
@@ -426,7 +427,7 @@ async def attachment_filter(request):
     """
     To get all the assets created by the requester
     """
-    logger.info(f"Args are {request.args.items()}")
+    logger.debug(f"Args are {request.args.items()}")
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 50][request.args.get("limit") == None] 
     start_date = request.args.get("start_date") 
@@ -438,9 +439,9 @@ async def attachment_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    # logger.info(f"Skip type is {skip}")
-    # logger.info(f"limit type is {limit}")
-    # logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+    # logger.debug(f"Skip type is {skip}")
+    # logger.debug(f"limit type is {limit}")
+    # logger.debug(f"start date type is {start_date}, and type is {type(start_date)}")
 
     if start_date:
         start_date = dateparser.parse(start_date)
@@ -500,7 +501,7 @@ async def purchases_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    logger.info(f"Params are {request.args}")
+    logger.debug(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
 
@@ -513,8 +514,8 @@ async def purchases_filter(request):
         if end_date < start_date:
             raise APIBadRequest("Start date should be less than End date")
 
-    # logger.info(f"This is the start_date {start_date}")
-    # logger.info(f"This is the end_date {end_date}")
+    # logger.debug(f"This is the start_date {start_date}")
+    # logger.debug(f"This is the end_date {end_date}")
 
 
 
@@ -543,7 +544,7 @@ async def reservations_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    logger.info(f"Params are {request.args}")
+    logger.debug(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
 
@@ -578,7 +579,7 @@ async def reservations_filter(request):
     
 
 async def locations_filter(request):
-    logger.info(f"Args are {request.args.items()}")
+    logger.debug(f"Args are {request.args.items()}")
 
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date") 
@@ -587,7 +588,7 @@ async def locations_filter(request):
     if not username:
         raise APIBadRequest("Username for this datasource is required")
 
-    logger.info(f"Params are {request.args}")
+    logger.debug(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
         start_date = calendar.timegm(start_date.timetuple())
@@ -604,7 +605,7 @@ async def locations_filter(request):
 
 
     locations, count = await filter_locations(request.app.config[DATASOURCE_NAME]["tables"]["location_approximate_table"], username,  start_date, end_date)
-    logger.info(locations)
+    logger.debug(locations)
     #result = [format_purchase(request.app.config, purchase) for purchase in purchases] 
 
     result = list(locations)
@@ -628,7 +629,7 @@ async def emails_filter(request):
     To get all the assets created by the requester
     """
 
-    logger.info(f"Args are {request.args.items()}")
+    logger.debug(f"Args are {request.args.items()}")
     skip = [request.args.get("skip"), 0][request.args.get("skip") == None] 
     limit = [request.args.get("limit"), 50][request.args.get("limit") == None] 
     matching_string = request.args.get("match_string") 
@@ -638,7 +639,7 @@ async def emails_filter(request):
     username = request.args.get("username") 
     attachments = request.args.get("attachments")
     
-    logger.info(f"Value of attachments arg in get request <<{attachments}>> and {bool(attachments)}")
+    logger.debug(f"Value of attachments arg in get request <<{attachments}>> and {bool(attachments)}")
     if attachments:
         attachments = bool(attachments)
 
@@ -648,12 +649,12 @@ async def emails_filter(request):
     if not message_type:
         raise APIBadRequest("message type is required")
 
-    # logger.info(f"Message type is {message_type}")
-    # logger.info(f"Skip type is {skip}")
-    # logger.info(f"limit type is {limit}")
-    # logger.info(f"start date type is {start_date}, and type is {type(start_date)}")
+    # logger.debug(f"Message type is {message_type}")
+    # logger.debug(f"Skip type is {skip}")
+    # logger.debug(f"limit type is {limit}")
+    # logger.debug(f"start date type is {start_date}, and type is {type(start_date)}")
 
-    logger.info(f"Params are {request.args}")
+    logger.debug(f"Params are {request.args}")
     if start_date:
         start_date = dateparser.parse(start_date)
 
@@ -666,17 +667,17 @@ async def emails_filter(request):
         if end_date < start_date:
             raise APIBadRequest("Start date should be less than End date")
 
-    # logger.info(f"This is the start_date {start_date}")
-    # logger.info(f"This is the end_date {end_date}")
+    # logger.debug(f"This is the start_date {start_date}")
+    # logger.debug(f"This is the end_date {end_date}")
 
-    logger.info(f"This is the matching string {matching_string}")
+    logger.debug(f"This is the matching string {matching_string}")
     
     if matching_string:
 
         emails, count = await match_text(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], username,  request.app.config[DATASOURCE_NAME]["tables"]["email_content_table"], \
                 matching_string, message_type, start_date, end_date, int(skip), int(limit), attachments)
     else:
-        logger.info("Without matching string")
+        logger.debug("Without matching string")
         emails, count = await get_emails(request.app.config[DATASOURCE_NAME]["tables"]["email_table"], username,  message_type, start_date, end_date, int(skip), int(limit), attachments)
 
 

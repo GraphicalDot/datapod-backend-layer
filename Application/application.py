@@ -246,10 +246,10 @@ def add_routes(app):
             
             ##adding table names to app.config
 
-            if inst.datasource_name != "Users":
-                datasource_tables = inst.config['tables']
-                [datasource_tables.pop(table_name) for table_name in ["creds_table", "archives_table", "status_table", "stats_table"]]
-                app.config["tables"].update({inst.datasource_name.lower(): list(datasource_tables.keys())})
+            # if inst.datasource_name != "Users":
+            #     datasource_tables = inst.config['tables']
+            #     [datasource_tables.pop(table_name) for table_name in ["creds_table", "archives_table", "status_table", "stats_table"]]
+            #     app.config["tables"].update({inst.datasource_name.lower(): list(datasource_tables.keys())})
             
 
     # app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
@@ -259,6 +259,8 @@ def add_routes(app):
     app.config["registered_modules"] = registered_modules
 
     logger.info(app.config['tables'])
+    logger.info(app.config['Google'])
+    
     return 
 
 
