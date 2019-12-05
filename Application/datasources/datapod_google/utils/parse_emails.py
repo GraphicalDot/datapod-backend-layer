@@ -29,7 +29,7 @@ import aiomisc
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
 from email.header import Header, decode_header, make_header
 
-
+import re
 from ..db_calls import store_email, store_email_attachment, store_email_content, update_percentage
 from ..variables import DATASOURCE_NAME
 import os 
@@ -39,6 +39,17 @@ import subprocess
 
 
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
 
 
 
@@ -59,7 +70,21 @@ def folder_size(path='.'):
 
 
 
+@logger.catch
+def split_inbox_mbox(mbox_dir):
+    logger.debug("Trying to Split large inbox file")
+    with cd(mbox_dir):
 
+        for mbox_file_name in os.listdir(mbox_dir):
+            file_name = mbox_file_name.replace(".mbox", '')
+            logger.debug(f"Mbox file name is {file_name}")
+            command = '''awk 'BEGIN{%(key)s=0} /^From /{msgs++;if(msgs==2500){msgs=0;%(key)s++}}{print > "%(key)s_" %(key)s ".mbox"}' %(key)s.mbox'''%{'key': file_name}
+            subprocess.call(command, shell=True)
+            os.remove(mbox_file_name)
+        subprocess.call("ls")
+    logger.debug("Splitting large inbox file into chunks completed")
+
+    return 
 
 
 
@@ -85,6 +110,11 @@ class EmailParse(object):
         total_emails = []
 
 
+        try:
+            split_inbox_mbox(self.email_path)
+        except Exception as e:
+            logger.error(e)
+            pass
 
         self.email_dir_size = folder_size(self.email_path)
 
@@ -166,6 +196,10 @@ class EmailParse(object):
 
         logger.info(f"Aproximate number of emails are {self.approximate_email_count}")
         step = self.approximate_email_count//95
+        
+        ##handle cases where emails are less than 100
+        if step == 0:
+            step = 1
         logger.info(f"Step is  {step}")
         
         
@@ -178,10 +212,10 @@ class EmailParse(object):
 
         start = 0
 
-        logger.info("What the fuck one")
         for mbox_file_name in self.mbox_file_names:
-            logger.info("What the fuck Two")
-            mbox_type = mbox_file_name.replace(".mbox", "")
+            timestart = time.time()
+            # mbox_type = mbox_file_name.replace(".mbox", "")
+            mbox_type = re.sub("_\d+.mbox", "", mbox_file_name)
 
             if mbox_file_name == "All mail Including Spam and Trash.mbox":
                 mbox_type = "Inbox"
@@ -209,7 +243,7 @@ class EmailParse(object):
                 self.email_id = max(instance._to_addr_dict, key=instance._to_addr_dict.get)
 
             del mbox_object
-        
+            logger.error(f"Time taken to process 2500 emails in {mbox_type} is {time.time()-timestart}")
 
 
 
@@ -329,6 +363,7 @@ class Emails(object):
             self.start += 1
             i += 1
             
+            
             try:
                 await self.save_email(message)
             except Exception as e:
@@ -336,7 +371,6 @@ class Emails(object):
                 pass
             
             if completion_percentage:
-                logger.info(f"Email number is {i}")
                 if self.start in completion_percentage:
                     #logger.info(f"I found {i}")
                     # percentage = f"{completion_percentage.index(i) +1 }"
@@ -350,8 +384,7 @@ class Emails(object):
     
             
 
-            if i == 500:
-                break
+
 
         logger.info(f"\n\nTotal number of emails {self.email_count}\n\n")
         
@@ -492,6 +525,8 @@ class Emails(object):
                 ctype = part.get_content_type()
 
                 charset = part.get_content_charset()
+                if not charset:
+                    charset = "utf-8"
 
                 cdispo = str(part.get('Content-Disposition'))
 
@@ -571,7 +606,11 @@ class Emails(object):
             # when the email is just plain text
             #body = email_message.get_payload(decode=True)
             #logger.error(f"email with Plaintext found, Which is rare {email_message.is_multipart()} email from {email_from}")
-            text = str(email_message.get_payload(decode=True), email_message.get_content_charset(), 'ignore').encode('utf8', 'replace').decode()
+
+            charset = email_message.get_content_charset()
+            if not charset:
+                charset = "utf-8"
+            text = str(email_message.get_payload(decode=True), str(charset), 'ignore').encode('utf8', 'replace').decode()
             body = text.strip()
 
         nl = "\r\n"
