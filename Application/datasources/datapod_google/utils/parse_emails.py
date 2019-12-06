@@ -28,6 +28,8 @@ import aiomisc
 #from tenacity import *
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
 from email.header import Header, decode_header, make_header
+from memory_profiler import profile
+from email.header import decode_header
 
 import re
 from ..db_calls import store_email, store_email_attachment, store_email_content, update_percentage
@@ -78,6 +80,10 @@ def split_inbox_mbox(mbox_dir):
         for mbox_file_name in os.listdir(mbox_dir):
             file_name = mbox_file_name.replace(".mbox", '')
             logger.debug(f"Mbox file name is {file_name}")
+            if file_name ==  "All mail Including Spam and Trash":
+                os.rename("All mail Including Spam and Trash.mbox", "Inbox.mbox")
+                file_name = "Inbox"
+
             command = '''awk 'BEGIN{%(key)s=0} /^From /{msgs++;if(msgs==2500){msgs=0;%(key)s++}}{print > "%(key)s_" %(key)s ".mbox"}' %(key)s.mbox'''%{'key': file_name}
             subprocess.call(command, shell=True)
             os.remove(mbox_file_name)
@@ -181,7 +187,7 @@ class EmailParse(object):
         # logger.info(f"Mbox objects {self.mbox_objects}")        
         # self.email_count = sum(total_emails)
     
-
+    @profile
     @aiomisc.threaded_separate
     def read_mbox(self, path):
         logger.info(f"Reading {path}")
@@ -243,6 +249,7 @@ class EmailParse(object):
                 self.email_id = max(instance._to_addr_dict, key=instance._to_addr_dict.get)
 
             del mbox_object
+            del instance
             logger.error(f"Time taken to process 2500 emails in {mbox_type} is {time.time()-timestart}")
 
 
@@ -382,7 +389,8 @@ class Emails(object):
                     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
                     await update_percentage(self.status_table, DATASOURCE_NAME, self.username, int(percentage))
     
-            
+            if i == 100:
+                break
 
 
 
@@ -637,7 +645,10 @@ class Emails(object):
         
         with open(file_path_html, "wb") as f:
             #data = f"From: {email_from}{nl}To: {email_to}{nl} Date: {local_message_date}{nl}Attachments:{attachments}{nl}Subject: {subject}{nl}\nBody: {nl}{html_body}"
-            f.write(html_body.encode())
+            if html_body:
+                f.write(html_body.encode())
+            else:
+                f.write(email_text.encode())
 
         raw_id, message_id = self.__message_id(email_message)
 
@@ -681,9 +692,15 @@ class Emails(object):
             ##stategy nby making assumption that if a key for email exists so is the indexed content
             data.update({"tbl_object": self.indexed_email_content_tbl})
             try:
-                content = data["content"] + data["subject"] + data["to_addr"]
+                s, encoding = decode_header(data['subject'])[0]
+                if isinstance(s, str):
+                    subject = s.encode('utf-8').decode()
+                else:
+                    subject = s.decode()
+                content = data["content"]  + subject + data["to_addr"]
             except Exception as e:
-                logger.error(decode_header(data["subject"]))
+                logger.error(e)
+                logger.error(data['subject'])
                 content = data["content"]
 
             content_hash = hashlib.sha256(content.encode()).hexdigest()

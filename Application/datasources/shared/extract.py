@@ -9,9 +9,10 @@ import shutil
 import hashlib as hash
 from typing import Any, Dict, Tuple, Callable
 import datetime
+from memory_profiler import profile
 
 
-
+@profile
 @aiomisc.threaded_separate
 def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasource_name: str, username: str) -> Tuple[str, str]:
     """
@@ -56,7 +57,9 @@ def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasou
 
 
     try:
-        shutil.unpack_archive(src_path, extract_dir=dst_path, format=None)
+        with zipfile.ZipFile(src_path) as zf:
+            zf.extractall(dst_path)
+        #shutil.unpack_archive(src_path, extract_dir=dst_path, format=None)
     except MemoryError:
         logger.error(f"We ran out of memory while processing {datasource_name}, Please try again")
         raise Exception(f"We ran out of memory while processing {datasource_name}, Please try again")
