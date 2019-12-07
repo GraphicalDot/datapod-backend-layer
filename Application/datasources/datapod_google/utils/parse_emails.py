@@ -28,7 +28,7 @@ import aiomisc
 #from tenacity import *
 # from database_calls.takeout.db_emails import store_email, store_email_attachment, store_email_content
 from email.header import Header, decode_header, make_header
-from memory_profiler import profile
+# from memory_profiler import profile
 from email.header import decode_header
 
 import re
@@ -83,6 +83,8 @@ def split_inbox_mbox(mbox_dir):
             if file_name ==  "All mail Including Spam and Trash":
                 os.rename("All mail Including Spam and Trash.mbox", "Inbox.mbox")
                 file_name = "Inbox"
+                mbox_file_name = "Inbox.mbox"
+                
 
             command = '''awk 'BEGIN{%(key)s=0} /^From /{msgs++;if(msgs==2500){msgs=0;%(key)s++}}{print > "%(key)s_" %(key)s ".mbox"}' %(key)s.mbox'''%{'key': file_name}
             subprocess.call(command, shell=True)
@@ -111,6 +113,11 @@ class EmailParse(object):
         self.username = username
 
         self.email_path = os.path.join(dest_path,  "Takeout/Mail")
+
+        if not os.path.exists(self.email_path):
+            self.mbox_file_names = []    
+            logger.error("Yakeout path doesnt exists")
+            return False
 
         self.mbox_objects = []
         total_emails = []
@@ -187,7 +194,7 @@ class EmailParse(object):
         # logger.info(f"Mbox objects {self.mbox_objects}")        
         # self.email_count = sum(total_emails)
     
-    @profile
+    # @profile
     @aiomisc.threaded_separate
     def read_mbox(self, path):
         logger.info(f"Reading {path}")
@@ -199,6 +206,10 @@ class EmailParse(object):
     async def download_emails(self):
 
         ##if emails are less than 100, then step will be 0
+
+        ##to handle the case when there is n absence of .mbox file in the 
+        ##takeout 
+
 
         logger.info(f"Aproximate number of emails are {self.approximate_email_count}")
         step = self.approximate_email_count//95

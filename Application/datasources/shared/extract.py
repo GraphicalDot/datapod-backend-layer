@@ -9,10 +9,10 @@ import shutil
 import hashlib as hash
 from typing import Any, Dict, Tuple, Callable
 import datetime
-from memory_profiler import profile
+# from memory_profiler import profile
 
 
-@profile
+# @profile
 @aiomisc.threaded_separate
 def extract(src_path: str, dst_path_prefix: str, config: Dict[str, Any], datasource_name: str, username: str) -> Tuple[str, str]:
     """

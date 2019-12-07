@@ -167,8 +167,13 @@ async def start_parse(config, path, username):
 
     # path = os.path.join(config.RAW_DATA_PATH, "Takeout")
     email_parsing_instance = await EmailParse(config, dest_path, username, checksum)
-    await email_parsing_instance.download_emails()
-    
+    if not email_parsing_instance:
+        logger.error("Takeout path doesnt exists")
+
+    if len(email_parsing_instance.mbox_file_names) != 0:
+        await email_parsing_instance.download_emails()
+    else:
+        logger.error("There is no mbox file present in the datasource ")
     
     try:
         ins = ParseGoogleImages(config, dest_path, username, checksum)
