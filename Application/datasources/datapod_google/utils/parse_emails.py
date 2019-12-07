@@ -116,7 +116,7 @@ class EmailParse(object):
 
         if not os.path.exists(self.email_path):
             self.mbox_file_names = []    
-            logger.error("Yakeout path doesnt exists")
+            logger.error("Takeout path doesnt exists")
             return False
 
         self.mbox_objects = []

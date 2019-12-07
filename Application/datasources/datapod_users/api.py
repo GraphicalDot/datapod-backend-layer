@@ -22,20 +22,31 @@ from .variables import DATASOURCE_NAME
 
 
 
-
-
-
-@id_token_validity()
-async def temp_credentials(request, id_token, username):
+async def temp_credentials(request):
     """
     session is the session which you will get after enabling MFA and calling login api
     code is the code generated from the MFA device
     username is the username of the user
     """
+    creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
 
+
+    if not creds:
+        raise APIBadRequest("User is not logged in")
     
-    r = requests.post(request.app.config.AWS_CREDS, data=json.dumps({"id_token": id_token}))
+    creds = list(creds)[0]
+    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
     result = r.json()
+    if result.get("error"):
+        logger.error(result["message"])
+        raise APIBadRequest(result["message"])
+    
+    logger.debug(result)
+    r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
+
+    result = r.json()
+    logger.debug(result)
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
@@ -138,7 +149,7 @@ async def login(request):
 
     try:
 
-        await store_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], password_hash, result.json()["data"]["id_token"], 
+        await store_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], request.json["username"], request.json["password"], password_hash, result.json()["data"]["id_token"], 
                  result.json()["data"]["access_token"], result.json()["data"]["refresh_token"], result.json()["data"]["name"], result.json()["data"]["email"])
     
 
@@ -287,12 +298,12 @@ async def forgot_password(request):
 
     ##if the username entered is different from the username stored in the 
     ##database 
-    result = await get_credentials(request.app.config.CREDENTIALS_TBL)
-    if result:
-        logger.info("Credentials are present in the database")
-        if result["username"] != request.json["username"]:
-            logger.error("Regenerating password for a different username\
-                                     is not allowed and not recommended")
+    # result = await get_credentials(request.app.config.CREDENTIALS_TBL)
+    # if result:
+    #     logger.info("Credentials are present in the database")
+    #     if result["username"] != request.json["username"]:
+    #         logger.error("Regenerating password for a different username\
+    #                                  is not allowed and not recommended")
 
 
 
@@ -320,14 +331,14 @@ async def forgot_password(request):
 
 
 async def confirm_forgot_password(request):
-    request.app.config.VALIDATE_FIELDS(["newpassword", "validation_code", "username"], request.json)
+    request.app.config.VALIDATE_FIELDS(["password", "code", "username"], request.json)
 
     ##check if the password matches with the password stored in the database
 
     r = requests.post(request.app.config.CONFIRM_FORGOT_PASS, data=json.dumps({
                 "username": request.json["username"], 
-                "newpassword": request.json["newpassword"], 
-                "code":  str(request.json["validation_code"])
+                "newpassword": request.json["password"], 
+                "code":  str(request.json["code"])
                 }))
 
     result = r.json()
@@ -336,10 +347,13 @@ async def confirm_forgot_password(request):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
 
-    new_password_hash = hashlib.sha3_256(request.json["newpassword"].encode()).hexdigest()
+    new_password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
 
     await update_password_hash(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"], 
     request.json["username"], new_password_hash)
+
+
+
 
 
     return response.json(

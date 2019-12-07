@@ -119,7 +119,7 @@ def get_credentials(credential_table):
 
 
 @aiomisc.threaded
-def store_credentials(credential_table, username, password_hash, id_token, access_token, refresh_token, name, email):
+def store_credentials(credential_table, username, password, password_hash, id_token, access_token, refresh_token, name, email):
     query = credential_table.select()
     usernames = [user.username for user in query]
     print (usernames)
@@ -129,6 +129,7 @@ def store_credentials(credential_table, username, password_hash, id_token, acces
     try:
         credential_table.insert(username=username,  
                                         password_hash=password_hash,
+                                        password=password,
                                         id_token=id_token, 
                                         access_token= access_token, 
                                         refresh_token=refresh_token,

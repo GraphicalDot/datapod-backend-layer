@@ -24,6 +24,7 @@ def initialize(db):
         id_token = peewee.BlobField(null= True)
         access_token = peewee.BlobField(null= True)
         password_hash = peewee.TextField(null=False)
+        password = peewee.TextField(null=False)
         refresh_token = peewee.BlobField(null= True)
         salt = peewee.TextField(null= True)
         address = peewee.TextField(null=True)

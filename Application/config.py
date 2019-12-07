@@ -125,6 +125,8 @@ class DevelopmentConfig(Config):
     LOGOUT = f"https://{URL}/{STAGE}/user/logout"
     CONFIRM_SIGN_UP = f"https://{URL}/{STAGE}/user/confirm_sign_up"
     CHANGE_PASSWORD = f"https://{URL}/{STAGE}/user/change_password"
+    FORGOT_PASSWORD = f" https://{URL}{STAGE}/user/forgot_password"
+
 
     CONFIRM_FORGOT_PASS = f"https://{URL}/{STAGE}/user/confirm_forgot_password"
     FORGOT_PASS = f"https://{URL}/{STAGE}/user/forgot_password"
