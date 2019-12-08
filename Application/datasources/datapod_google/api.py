@@ -140,6 +140,11 @@ async def cancel_parse(request):
         })
     
 
+
+
+
+
+
 async def start_parse(config, path, username):
     """
 
@@ -154,6 +159,8 @@ async def start_parse(config, path, username):
 
     logger.debug('Periodic task has begun execution')
     dst_path_prefix = os.path.join(config.RAW_DATA_PATH, DATASOURCE_NAME) 
+
+
 
     ##the dest_path is the path with the archieve appended to the last
     try:

@@ -5,36 +5,43 @@ import os
 from errors_module.errors import APIBadRequest
 import datetime
 import humanize
-from utils.utils import revoke_time_stamp, update_tokens, id_token_validity, creation_date, modification_date
-from .back import Backup, S3Backup
+from .utils import Backup, S3Backup
 from loguru import logger
-from database_calls.credentials import  get_credentials,update_mnemonic 
-BACKUP_BP = Blueprint("backup", url_prefix="/backup")
+from .db_calls import get_stats, get_status,  delete_status, update_status
 
-from database_calls.credentials import store_credentials, get_credentials, update_id_and_access_tokens,\
-            update_mnemonic,   update_datasources_status
-    
-import config
-from functools import wraps
-from jose import jwt, JWTError 
-import pytz
+
+from ..shared.utils import  creation_date, modification_date
+
 import datetime
 import dateutil
 import hashlib
 import requests
 import json
-from utils.utils import async_wrap
+import aiomisc
+from .variables import DATASOURCE_NAME
 
-@BACKUP_BP.get('/settings')
-#async def make_backup(request, ws):
 async def backup_settings(request):
     request.app.config.VALIDATE_FIELDS(["time", "backup_frequency", "number_of_backups", "upload_speed", "download_speed"], request.json)
 
 
 
-@BACKUP_BP.get('/backups_list')
+
+async def stats(request):
+    res = await get_stats(request.app.config[DATASOURCE_NAME]["tables"]["stats_table"])
+    return res
+
+
+    
+
+async def status(request):
+    res = await get_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"])
+    return res
+
+
+
+
 #async def make_backup(request, ws):
-async def backups_list(request):
+async def backup_list(request):
 
     result = await backup_list_info(request.app.config)
 
@@ -46,7 +53,7 @@ async def backups_list(request):
         })
 
 
-@async_wrap
+@aiomisc.threaded_separate
 def backup_list_info(config):
     result = []
     def get_dir_size(dirpath):
@@ -74,26 +81,25 @@ def backup_list_info(config):
 
 
 
-@BACKUP_BP.post('/directory_info')
-#async def make_backup(request, ws):
-async def backups_list(request):
-    request.app.config.VALIDATE_FIELDS(["dirpath"], request.json)
+# #async def make_backup(request, ws):
+# async def backups_list(request):
+#     request.app.config.VALIDATE_FIELDS(["dirpath"], request.json)
 
-    if not os.path.isdir(request.json["dirpath"]):
-        raise APIBadRequest("Not a valid directory path")
+#     if not os.path.isdir(request.json["dirpath"]):
+#         raise APIBadRequest("Not a valid directory path")
 
 
-    all_files = ( os.path.join(basedir, filename) for basedir, dirs, files in os.walk(request.json["dirpath"]) for filename in files)
-    files_and_sizes = [{"path": path, "size":  humanize.naturalsize(os.path.getsize(path)), "modified": modification_date(path), "created": creation_date(path)} for path in all_files]
-    return response.json(
-        {
-            "error": False,
-            "success": True, 
-            "data": files_and_sizes,
-            "message": None
-        }
+#     all_files = ( os.path.join(basedir, filename) for basedir, dirs, files in os.walk(request.json["dirpath"]) for filename in files)
+#     files_and_sizes = [{"path": path, "size":  humanize.naturalsize(os.path.getsize(path)), "modified": modification_date(path), "created": creation_date(path)} for path in all_files]
+#     return response.json(
+#         {
+#             "error": False,
+#             "success": True, 
+#             "data": files_and_sizes,
+#             "message": None
+#         }
 
-    )
+#     )
 
 
 
@@ -116,7 +122,8 @@ async def aws_temp_creds(config, id_token, username):
 
 async def backup_upload(config, id_token):
     # Method to handle the new backup and sync with s3 
-    update_datasources_status(config.DATASOURCES_TBL , "BACKUP", "backup" , config.DATASOURCES_CODE["BACKUP"], "Backup in Progress", "PROGRESS")
+ 
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "PROGRESS",  dest_path, request.json["path"])
 
     archival_object = datetime.datetime.utcnow()
     archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
@@ -127,20 +134,20 @@ async def backup_upload(config, id_token):
     
     instance = await S3Backup(config, id_token)
     await instance.sync_backup()
-    update_datasources_status(config.DATASOURCES_TBL , "BACKUP", "backup" , config.DATASOURCES_CODE["BACKUP"], "Backup Completed", "COMPLETED")
+
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "COMPLETED",  dest_path, request.json["path"])
+
     await backup_instance.send_sse_message("COMPLETED")
 
     return 
 
 
-@BACKUP_BP.get('/make_backup')
-@id_token_validity()
-async def make_backup(request):
+async def start_fresh_backup(request):
     """
     ##TODO ADD entries to BACKUP_TBL
     """
     ##This has a rare chance of happening, that users reach here and doesnt have mnemonic in the database but have mnemonic in the cloud
-    creds = get_credentials(request.app.config.CREDENTIALS_TBL)
+    creds = (request.app.config.CREDENTIALS_TBL)
     if not creds.get("mnemonic"):
         raise APIBadRequest("User Mnemonic is not present", 403)
 

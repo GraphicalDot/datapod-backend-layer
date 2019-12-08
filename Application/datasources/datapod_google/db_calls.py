@@ -153,6 +153,8 @@ def store_email(**data):
                         email_id_raw= data["email_id_raw"],
                         message_type = data["message_type"],
                         attachments = data["attachments"],
+                        category=data["category"],
+                        categories = data["categories"],
                        date=data["date"], path=data["path"]).execute()
 
         #logger.success(f"Success on insert email_id --{data['email_id']}-- path --{data['path']}--")

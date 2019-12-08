@@ -213,3 +213,44 @@ DATASOURCE_NAME = "Facebook"
 DEFAULT_SYNC_TYPE = "manual"
 DEFAULT_SYNC_FREQUENCY = "weekly"
 ```
+
+
+
+```
+r = requests.post("http://localhost:8000/datasources/users/forgot_password", data=json.dumps({"username": "graphicaldote"}))                                                                                                                        r.json()                                                                                                                                                                                                                                            
+    {'message': 'Username doesnt exists',
+    'error': True,
+    'success': False,
+    'Data': None}
+
+r = requests.post("http://localhost:8000/datasources/users/forgot_password", data=json.dumps({"username": "graphicaldot"}))                                                                                                                         r.json()                                                                                                                                                                                                                                            
+        {'error': False,
+        'success': True,
+        'message': 'Please check your Registered email id for validation code',
+        'data': None}
+
+r = requests.post("http://localhost:8000/datasources/users/confirm_forgot_password", data=json.dumps({"username": "graphicaldot"}))                                                                                                                                             
+r = requests.post("http://localhost:8000/datasources/users/confirm_forgot_password", data=json.dumps({"username": "graphicaldot", "newpassword": "GHDYYDEddd98@#"}))                                                                                                            
+        {'message': 'validation_code is required',
+        'error': True,
+        'success': False,
+        'Data': None}
+
+In [26]: r = requests.post("http://localhost:8000/datasources/users/confirm_forgot_password", data=json.dumps({"username": "graphicaldot", "password": "BIGwedding98@#", "code": "32324444" }))                                                                                          
+
+In [27]: r.json()                                                                                                                                                                                                                                                                        
+Out[27]: 
+    {'message': 'Invalid Verification code',
+    'error': True,
+    'success': False,
+    'Data': None}
+
+In [28]: r = requests.post("http://localhost:8000/datasources/users/confirm_forgot_password", data=json.dumps({"username": "graphicaldot", "password": "BIGwedding98@#", "code": "390747" }))                                                                                            
+
+In [29]: r.json()                                                                                                                                                                                                                                                                        
+Out[29]: 
+    {'error': False,
+    'success': True,
+    'message': 'Password has been changed successfully',
+    'data': None}
+```

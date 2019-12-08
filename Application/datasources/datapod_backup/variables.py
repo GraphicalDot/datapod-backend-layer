@@ -1,5 +1,5 @@
 
 
-DATASOURCE_NAME = "backup"
-DEFAULT_SYNC_TYPE = "manual"
+DATASOURCE_NAME = "Backup"
+DEFAULT_SYNC_TYPE = "auto"
 DEFAULT_SYNC_FREQUENCY = "weekly"

@@ -39,15 +39,15 @@ def initialize(db):
 
     class Backups(BaseModel):
         timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-        Level = peewee.SmallIntegerField()
+        level = peewee.SmallIntegerField()
         success = peewee.BooleanField()
+        path = peewee.TextField(null=False)
 
 
     class Status(BaseModel):
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
         path = peewee.TextField(null=True)
-        original_path = peewee.TextField(null=True)
         checksum = peewee.TextField(index=True, null=True)
         percentage = peewee.IntegerField(null=True)
 

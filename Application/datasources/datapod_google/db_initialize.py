@@ -68,6 +68,9 @@ def initialize(db):
         date = peewee.DateTimeField(index=True)
         path = peewee.TextField()
         attachments = peewee.BooleanField()
+        category = peewee.TextField(null=True)
+        categories = peewee.TextField(null=True)
+        
         
         class Meta:
             indexes = (

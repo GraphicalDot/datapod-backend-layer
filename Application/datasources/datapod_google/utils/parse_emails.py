@@ -80,8 +80,8 @@ def split_inbox_mbox(mbox_dir):
         for mbox_file_name in os.listdir(mbox_dir):
             file_name = mbox_file_name.replace(".mbox", '')
             logger.debug(f"Mbox file name is {file_name}")
-            if file_name ==  "All mail Including Spam and Trash":
-                os.rename("All mail Including Spam and Trash.mbox", "Inbox.mbox")
+            if file_name.startswith("All mail Including Spam and Trash"):
+                os.rename(mbox_file_name, "Inbox.mbox")
                 file_name = "Inbox"
                 mbox_file_name = "Inbox.mbox"
                 
@@ -233,9 +233,6 @@ class EmailParse(object):
             timestart = time.time()
             # mbox_type = mbox_file_name.replace(".mbox", "")
             mbox_type = re.sub("_\d+.mbox", "", mbox_file_name)
-
-            if mbox_file_name == "All mail Including Spam and Trash.mbox":
-                mbox_type = "Inbox"
 
             mbox_path = os.path.join(self.email_path, mbox_file_name)
             mbox_object = await self.read_mbox(mbox_path)
@@ -520,7 +517,7 @@ class Emails(object):
 
         self.__add_to_addr_address(email_to)
 
-        #message_type = email_message.get("X-Gmail-Labels")
+        message_type = email_message.get("X-Gmail-Labels")
 
         
         sender_dir_name, sender_sub_dir_name = self.extract_email_from(
@@ -663,19 +660,40 @@ class Emails(object):
 
         raw_id, message_id = self.__message_id(email_message)
 
+
+        _message_type = self.mbox_type
+        categories = None
+        category = None
+        if message_type:
+            categories = "|".join([e.replace("Category ", "" ) for e in message_type.split(",")])
+            message_type = message_type.split(",")[0]
+            if message_type == self.mbox_type:
+                _message_type = self.mbox_type
+                
+            else:
+                if message_type in  ["Inbox", "Archived", "Sent", "Drafts", "Spam"]:
+                    logger.debug(f"Message type is {self.mbox_type} and from email headers {message_type}")
+                    _message_type = message_type
+                    category = None
+                else:
+                    _message_type = "Inbox"
+                    category = message_type.replace("Category ", "")
+
+        logger.debug(f"Categories {categories}, category {category} , _message_type {_message_type} Mbox_type {self.mbox_type} ")
         data = {"email_id": message_id, 
-                "email_id_raw": raw_id,
-                "from_addr" : email_from,
-                "subject": subject,
-                "to_addr": email_to,
-                "content": email_text,
-                "date": datetime.datetime.utcfromtimestamp(epoch),
-                "path": file_path_html,
-                "username": self.username,
-                "checksum": self.checksum,
-                "attachments": False,
-                "message_type": self.mbox_type}
-        
+                    "email_id_raw": raw_id,
+                    "from_addr" : email_from,
+                    "subject": subject,
+                    "to_addr": email_to,
+                    "content": email_text,
+                    "date": datetime.datetime.utcfromtimestamp(epoch),
+                    "path": file_path_html,
+                    "category": category,
+                    "categories": categories,
+                    "username": self.username,
+                    "checksum": self.checksum,
+                    "attachments": False,
+                    "message_type": _message_type}
 
         if attachments:
             data.update({"attachments": True})

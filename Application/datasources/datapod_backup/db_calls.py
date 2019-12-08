@@ -9,12 +9,53 @@ from loguru import logger
 import aiomisc
 #@retry(stop=stop_
 
+
+
+
+
+
+
+
 @aiomisc.threaded
-def update_percentage(status_table, datasource_name, username, percentage):
+def update_status(status_table,status, checksum=None, path=None, percentage=None):
+    try:
+        status_table.insert(status=status,
+                                    path = path,
+                                    checksum=checksum,
+                                    percentage=percentage
+                                    ).execute()
+                                    
+
+    except IntegrityError as e:
+        logger.error(f"Couldnt insert {checksum} because of {e} so updating it")
+
+        logger.error(f"Couldnt insert {checksum} because of {e} so updating it")
+
+        if path:
+            status_table.update(
+                status=status, 
+                path = path,
+                ).\
+            where(status_table.checksum==checksum).\
+            execute()
+      
+        else:
+            status_table.update(
+                            status=status).\
+                        where(status_table.checksum==checksum).\
+                        execute()
+
+
+    except Exception as e:
+        logger.error(f"Couldnt Backup {checksum} updated because of {e}")
+    return 
+
+@aiomisc.threaded
+def update_percentage(status_table, checksum, percentage):
     status_table.update(
                 percentage=percentage, 
                 last_updated=datetime.datetime.now()).\
-            where(status_table.username==username).\
+            where(status_table.checksum==checksum).\
             execute()
     return 
 
@@ -41,14 +82,12 @@ def delete_archive(archives_table, checksum):
     return 
 
 @aiomisc.threaded
-def update_stats(stats_table, datasource_name, username, data_items, size, sync_frequency, sync_type, next_sync):
+def update_stats(stats_table, data_items, size, sync_frequency, sync_type, next_sync):
     """
 
     """
     try:
         stats_table.insert(
-                source = datasource_name,
-                username = username,
                 data_items = data_items,
                 disk_space_used = size,
                 sync_frequency = sync_frequency,

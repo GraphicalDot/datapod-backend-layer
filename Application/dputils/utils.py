@@ -20,7 +20,10 @@ import asyncio
 from loguru import logger
 
 
-
+def creation_date(filename):
+    time_format = "%Y-%m-%d %H:%M:%S"
+    t = os.path.getctime(filename)
+    return datetime.datetime.fromtimestamp(t).strftime(time_format)
 
 def async_wrap(func):
     @wraps(func)
@@ -30,6 +33,12 @@ def async_wrap(func):
         pfunc = partial(func, *args, **kwargs)
         return await loop.run_in_executor(executor, pfunc)
     return run
+
+
+def modification_date(filename):
+    time_format = "%Y-%m-%d %H:%M:%S"
+    t = os.path.getmtime(filename)
+    return datetime.datetime.fromtimestamp(t).strftime(time_format)
 
     
 async def send_sse_message(config, channel_id, msg):

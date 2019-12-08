@@ -12,9 +12,7 @@ import aiohttp
 from asyncinit import asyncinit
 from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
-from database_calls.credentials import get_credentials
 from loguru import logger
-from utils.utils import async_wrap
 
 class cd:
     """Context manager for changing the current working directory"""
