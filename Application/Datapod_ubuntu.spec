@@ -1,5 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+
+__VERSION__ = "0.3.3"
+
+APPNAME = f"datapod-ubuntu-{__VERSION__}"
+
+
+
 block_cipher = None
 from PyInstaller.utils.hooks import collect_data_files, eval_statement, collect_submodules
 
@@ -30,7 +37,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='backendbinary',
+          name=APPNAME,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

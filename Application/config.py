@@ -6,7 +6,9 @@ from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from loguru import logger
 
-__VERSION__ = "0.3.2"
+__VERSION__ = "0.3.3"
+
+APPNAME = f"datapod-{__VERSION__}"
 
 home = os.path.expanduser("~")
 MAIN_DIR = os.path.join(home, ".datapod")

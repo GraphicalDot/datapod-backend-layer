@@ -76,9 +76,10 @@ async def __parse(config, path, username, checksum):
 
 
     json_files= [(os.path.join(facebook_images, file)) for file in os.listdir(facebook_images)]
+    logger.debug(f"These are the facebook files at {facebook_images} are {json_files}")
+
 
     images = []
-
     for _file in json_files:
         with open(_file, "r") as json_file:   
             data = json.load(json_file)

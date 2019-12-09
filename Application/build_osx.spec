@@ -3,6 +3,10 @@
 block_cipher = None
 
 
+__VERSION__ = "0.3.3"
+
+APPNAME = f"datapod-osx-{__VERSION__}"
+
 import distutils
 if distutils.distutils_path.endswith('__init__.py'):
     distutils.distutils_path = os.path.dirname(distutils.distutils_path)
@@ -40,7 +44,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='backendbinary',
+          name=APP,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
