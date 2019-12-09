@@ -127,13 +127,11 @@ async def aws_temp_creds(config, id_token, username):
 async def backup_upload(config, id_token):
     # Method to handle the new backup and sync with s3 
  
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "PROGRESS",  dest_path, request.json["path"])
+    #await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "PROGRESS",  dest_path, request.json["path"])
 
-    archival_object = datetime.datetime.utcnow()
-    archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
 
     backup_instance = Backup(config)
-    await backup_instance.create(archival_name)
+    await backup_instance.make_backup()
 
     
     instance = await S3Backup(config, id_token)
@@ -146,18 +144,51 @@ async def backup_upload(config, id_token):
     return 
 
 
+async def login(config):
+
+    creds = await get_credentials(config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+
+
+    if not creds:
+        raise APIBadRequest("User is not logged in")
+    
+    creds = list(creds)[0]
+    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+
+    if creds["mnemonic"]:
+        raise APIBadRequest("The mnemonic is already present")
+    ##renew tokens 
+    r = requests.post(config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+    login_result = r.json()
+    return login_result["data"]
+
+
+
 async def start_fresh_backup(request):
     """
     ##TODO ADD entries to BACKUP_TBL
     """
     ##This has a rare chance of happening, that users reach here and doesnt have mnemonic in the database but have mnemonic in the cloud
-    creds = (request.app.config.CREDENTIALS_TBL)
-    if not creds.get("mnemonic"):
-        raise APIBadRequest("User Mnemonic is not present", 403)
+    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+
+
+    if not creds:
+        raise APIBadRequest("User is not logged in")
+    
+    creds = list(creds)[0]
+    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+
+    ##renew tokens 
+    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+    login_result = r.json()["data"]
 
     try:
             
-        request.app.add_task(backup_upload(request.app.config, request["user_data"]["id_token"]))
+        request.app.add_task(backup_upload(request.app.config, login_result["id_token"]))
 
         # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         # new_log_entry.save()
@@ -199,24 +230,7 @@ async def check_mnemonic(request):
     """
     request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
 
-
-    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
-
-
-    if not creds:
-        raise APIBadRequest("User is not logged in")
-    
-    creds = list(creds)[0]
-    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-   
-
-    if creds["mnemonic"]:
-        raise APIBadRequest("The mnemonic is already present")
-    ##renew tokens 
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-   
-    login_result = r.json()
-    logger.debug(login_result)
+    login_result = await login(request.app.config)
 
     ##converting mnemonic list of words into a string of 24 words of mnemonic
     mnemonic = " ".join(mnemonic)
@@ -225,9 +239,9 @@ async def check_mnemonic(request):
 
     logger.debug(f"Sha 256 of mnemonic is {sha3_256}")
     r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
-                "username":creds["username"], 
+                "username":login_result["username"], 
                 "sha3_256": sha3_256,
-                }), headers={"Authorization": login_result["data"]["id_token"]})
+                }), headers={"Authorization": login_result["id_token"]})
 
     check_mnemonic_result = r.json()
     if check_mnemonic_result["error"]:
@@ -236,7 +250,7 @@ async def check_mnemonic(request):
     ##TODO Store mnemonic in the local db
     mnemonic_keys = child_keys(mnemonic, 0)
     await update_mnemonic_n_address(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"], 
-                creds["username"], 
+                login_result["username"], 
                 mnemonic, 
                 mnemonic_keys["address"],   mnemonic_keys["private_key"])
 
@@ -267,21 +281,10 @@ async def store_mnemonic(request):
         raise APIBadRequest("Please enter a mnemonic of length 24, Invalid Mnemonic")
 
 
-    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+    login_result = await login(request.app.config)
 
 
-    if not creds:
-        raise APIBadRequest("User is not logged in")
-    
-    creds = list(creds)[0]
-    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-    logger.debug(creds)
 
-    if creds["mnemonic"]:
-        raise APIBadRequest("The mnemonic is already present")
-
-
-    ##converting mnemonic list of words into a string of 24 words of mnemonic
     mnemonic = " ".join(mnemonic)
     logger.info(f"Mnemonic as a list {mnemonic}")
 
@@ -293,16 +296,12 @@ async def store_mnemonic(request):
     ##check mnemonic hash stored against user on the dynamodb
     sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
 
-    ##renew tokens 
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-   
-    login_result = r.json()
-    logger.debug(login_result)
+
 
 
     r = requests.post(request.app.config.GET_USER, data=json.dumps({
-                "username":creds["username"], 
-                }), headers={"Authorization": login_result["data"]["id_token"]})
+                "username":login_result["username"], 
+                }), headers={"Authorization": login_result["id_token"]})
 
     get_user_result = r.json()
     logger.debug(f"Get user result {get_user_result}")
@@ -330,11 +329,11 @@ async def store_mnemonic(request):
     ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
     r = requests.post(request.app.config.UPDATE_MNEOMONIC, data=json.dumps({
                 "public_key": mnemonic_keys["public_key"], 
-                "username": creds["username"], 
+                "username": login_result["username"], 
                 "sha3_256": sha3_256,
                 "sha3_512": sha3_512,
                 "address": mnemonic_keys["address"]
-                }), headers={"Authorization": login_result["data"]["id_token"]})
+                }), headers={"Authorization": login_result["id_token"]})
 
     update_result = r.json()
     logger.info(update_result)
@@ -347,7 +346,7 @@ async def store_mnemonic(request):
 
 
     await update_mnemonic_n_address(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"], 
-                creds["username"], 
+                login_result["username"], 
                 mnemonic, 
                 mnemonic_keys["address"],   mnemonic_keys["private_key"])
 

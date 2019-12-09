@@ -13,7 +13,7 @@ from asyncinit import asyncinit
 from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
 from loguru import logger
-
+from .variables import DATASOURCE_NAME
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -32,7 +32,6 @@ class cd:
 
 
 class Backup(object):
-    __channel_id__ = "BACKUP_PROGRESS"
     def __init__(self, config):
         # self.datapod_dir = datapod_dir
         # self.user_index = f""
@@ -64,25 +63,28 @@ class Backup(object):
         self.db_path = self.config.DB_PATH
         self.backup_path = self.config.BACKUP_PATH
 
+        self.num = 1
 
     async def send_sse_message(self, message):
-        url = f"http://{self.config.HOST}:{self.config.PORT}/send"
-        logger.info(f"Sending sse message {message} at url {url}")
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=json.dumps({"message": message, "channel_id": self.__channel_id__})) as response:
-                result =  await response.json()
+        res = {"message": message, "percentage": self.num}
+        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        # url = f"http://{self.config.HOST}:{self.config.PORT}/send"
+        # logger.info(f"Sending sse message {message} at url {url}")
+        # async with aiohttp.ClientSession() as session:
+        #     async with session.post(url, data=json.dumps({"message": message, "channel_id": self.__channel_id__})) as response:
+        #         result =  await response.json()
         
-        #r = requests.post(url, )
+        # #r = requests.post(url, )
 
 
-        if result["error"]:
-            logger.error(result["message"])
-            return 
+        # if result["error"]:
+        #     logger.error(result["message"])
+        #     return 
 
-        logger.success(result["message"])
+        # logger.success(result["message"])
         return 
 
-    async def create(self, archival_name):
+    async def make_backup(self):
         """
         --level=0, for fullbackup
         --level=1, for incremental backup
@@ -96,26 +98,35 @@ class Backup(object):
         if not os.listdir(self.raw_data_path):
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
+        archival_object = datetime.datetime.utcnow()
+        archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
+        for datasource_name in os.listdir(self.raw_data_path):
+            dst_path = os.path.join(self.backup_path, archival_name, datasource_name) 
+            src_path = os.path.join(self.raw_data_path, datasource_name )
+            if not os.path.exists(dst_path):
+                os.makedirs(dst_path)
+            await self.create(src_path, dst_path)
+
+
+    async def create(self, src_path, dst_path): 
+
         #temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
         temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz', delete=False)
         #temp = tempfile.TemporaryFile()
-        backup_path_dir = f"{self.backup_path}/{archival_name}"
-        if not os.path.exists(backup_path_dir):
-            os.makedirs(backup_path_dir)
+
         
         # backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
 
             
-        logger.info(f"The dir whose backup will be made {self.raw_data_path}")
-        # logger.info(f"The dir where backup will be made {backup_path}")
-        logger.error(f"Temporary file location is {temp.name}")
+        logger.debug(f"The dir whose backup will be made {src_path}")
+        logger.debug(f"Temporary file location is {temp.name}")
 
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {src_path}"                                                                                                                                                                                                                                            
             #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
 
         elif platform.system() == "Darwin":
-            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"
+            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {src_path}"
         else:
             raise APIBadRequest("The platform is not available for this os distribution")
 
@@ -128,7 +139,7 @@ class Backup(object):
                 await self.send_sse_message(f"Archiving {out.split('/')[-1]}")
                 next_time += 10
 
-        async for msg in self.split(backup_path_dir, temp.name):
+        async for msg in self.split(dst_path, temp.name):
             await self.send_sse_message(msg)
         
         await self.send_sse_message(f"Removing Temporary file {temp.name}")
@@ -148,12 +159,12 @@ class Backup(object):
             logger.info(f"couldnt remove temporary archive file {file_name} with error {e}")
         return 
 
-    async def split(self, backup_path_dir, file_path):
+    async def split(self, dst_path, file_path):
         ##TODO: filename in split command is fixed but it may change on the type of compression being used
         dir_name, file_name = os.path.split(file_path)
 
-        with cd(backup_path_dir):
-            logger.info(f"THe directory where split is taking place {backup_path_dir}")
+        with cd(dst_path):
+            logger.info(f"THe directory where split is taking place {dst_path}")
             if platform.system() == "Linux":
                 #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.config.TAR_SPLIT_SIZE, dir_name, file_name)
                 command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.config.TAR_SPLIT_SIZE, file_path)
@@ -188,7 +199,7 @@ class S3Backup(object):
     async def __init__(self, config, id_token):
         self.config = config
         self.id_token = id_token
-        self.credentials = get_credentials(config.CREDENTIALS_TBL)
+        #self.credentials = get_credentials(config.CREDENTIALS_TBL)
         self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt', delete=False)
         logger.error(self.encryption_key_file.name)
 
