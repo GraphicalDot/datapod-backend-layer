@@ -12,6 +12,11 @@ import aiomisc
 
 
 
+@aiomisc.threaded
+def get_credentials(credential_table):
+    logger.info("Get credentials called")
+    return credential_table.select().dicts()
+
 
 
 
@@ -123,3 +128,18 @@ def get_status(facebook_status_table, username=None):
 def get_stats(stats_table):
     return stats_table.select().dicts()
         
+
+@aiomisc.threaded
+def update_mnemonic_n_address(user_table, username, mnemonic, address, private_key):
+    try:
+        user_table.update(
+            mnemonic=mnemonic,  
+            address= address,
+            encryption_key=private_key).\
+        where(user_table.username==username).\
+        execute()
+
+        logger.debug(f"Credentials user table updated with mnemonic and address")
+    except Exception as e:
+        logger.error(f"Credentials user table coudlnt be updated with mnemonic and address because of {e}")
+    return 

@@ -70,7 +70,7 @@ def validate_fields(required_fields, request_json):
             if request_json.get(field) is None:
                 raise APIBadRequest("{} is required".format(field))
     except (ValueError, AttributeError):
-        raise Exception("Improper JSON format")
+        raise APIBadRequest(f"{' '.join(required_fields)} is/are required")
 
 
 
@@ -135,12 +135,11 @@ class DevelopmentConfig(Config):
     RENEW_REFRESH_TOKEN = f"https://{URL}/{STAGE}/user/renew_refresh_token"
     RESEND_CODE = f"https://{URL}/{STAGE}/user/resend_registration_code"
     TEMPORARY_S3_CREDS = f"https://{URL}/{STAGE}/user/temporary_s3_creds"
-
+    UPDATE_MNEOMONIC = f"https://{URL}/{STAGE}/user/update-mnemonic"
+    CHECK_MNEMONIC = f"https://{URL}/{STAGE}/user/check-mnemonic"
+    GET_USER = f"https://{URL}/{STAGE}/user/get-user"
 
     TIMEZONE  = 'Asia/Kolkata' #TODO: THis should be selected by users to findout Timezone and must be saved in sqlite3
-    MNEMONIC_KEYS = f"{URL}Production/mnemonics/get-keys"
-    CHECK_MNEMONIC = f"{URL}Production/mnemonics/check-mnemonic"
-    UPDATE_USER = f"{URL}Production/users/update-user"
     AWS_S3 = {"bucket_name": "datapod-backups","default_region": "ap-south-1"}
     HOST = "localhost"
     PORT = 8000

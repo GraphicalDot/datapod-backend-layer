@@ -247,7 +247,6 @@ async def confirm_signup(request):
 
     
 
-@id_token_validity()
 async def change_password(request):
     request.app.config.VALIDATE_FIELDS(["password", "newpassword"], request.json)
     
@@ -483,10 +482,30 @@ async def delete_user(request):
     })
 
 
+async def new_mnemonic(request):
+
+    mnemonic =  generate_mnemonic(request.app.config.LANGUAGE)
+    result = {}
+    for (index, word) in enumerate(mnemonic.split(" ")):
+        result.update({f"mnemonic_phrase_{index}": word})
+
+    return response.json({
+        "error": True, 
+        "success": False,
+        "message": None,
+        "data": result
+    })
 
 
+async def check_mnemonic(request):
+    """
+    API to be used when user has reinstalled datapod
+    since he/she already has menmonic intialized somewhere in the past ,
+    this mnemonic has to be checked against the hash of the Mnemonic  
+    """
+    pass
 
-async def update_user(request):
+async def store_mnemonic(request):
     """
     When the user is trying to access the feature of backup, 
     THe user has to finalize a mnemonic, whose hash will then be upload 
@@ -498,22 +517,25 @@ async def update_user(request):
     will be used to encrypt the user mnemonic
     """
 
-    request.app.config.VALIDATE_FIELDS(["mnemonic", "password"], request.json)
+    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
+
     mnemonic: list = request.json["mnemonic"]
     logger.info(f"This is the mnemonic {mnemonic}")
     if len(list(filter(None, mnemonic))) != 24:
         raise APIBadRequest("Please enter a mnemonic of length 24, Invalid Mnemonic")
 
 
-    ###check if the stored pass_hash is same as the password_hash of the password 
-    ##given by the user
-    password_hash = hashlib.sha3_256(request.json["password"].encode()).hexdigest()
-    if password_hash != request["user_data"]["password_hash"]:
-        raise APIBadRequest("Password do not match with the stored password")
+    creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
 
 
+    if not creds:
+        raise APIBadRequest("User is not logged in")
+    
+    creds = list(creds)[0]
+    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
 
-    if request["user_data"].get("mnemonic"):
+    if creds["mnemonic"]:
         raise APIBadRequest("The mnemonic is already present")
 
 
@@ -528,26 +550,41 @@ async def update_user(request):
 
     ##check mnemonic hash stored against user on the dynamodb
     mnemonic_sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
-    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
-                "username": request["user_data"]["username"], 
-                "mnemonic_sha_256": mnemonic_sha3_256,
-                }), headers={"Authorization": request["user_data"]["id_token"]})
 
-    logger.info(r.json())
-    if r.json()["status_code"] == 200:
-        raise APIBadRequest("Mnemonic is already present, You cant update your mnemonic")
+    ##renew tokens 
+    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+    login_result = r.json()
+    logger.debug(login_result)
+
+
+
+
+
+
+
+
+    logger.debug(f"Shae 256 of mnemonic is {mnemonic_sha3_256}")
+    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
+                "username":creds["username"], 
+                "mnemonic_sha_256": mnemonic_sha3_256,
+                }), headers={"Authorization": login_result["data"]["id_token"]})
+
+    check_mnemonic_result = r.json()
+    if check_mnemonic_result["success"]:
+        raise APIBadRequest(check_mnemonic_result["message"])
 
 
     ##Encrypting user mnemonic with the scrypt key generated from the users password
-    hex_salt, encrypted_mnemonic = encrypt_mnemonic(request.json["password"], mnemonic)
+    # hex_salt, encrypted_mnemonic = encrypt_mnemonic(request.json["password"], mnemonic)
 
-    logger.info(f"Hex salt for Mnemonic Encryption {hex_salt}")
-    logger.info(f"Encrypted Mnemonic {encrypted_mnemonic}")
+    # logger.info(f"Hex salt for Mnemonic Encryption {hex_salt}")
+    # logger.info(f"Encrypted Mnemonic {encrypted_mnemonic}")
     mnemonic_sha3_512 = hashlib.sha3_512(mnemonic.encode()).hexdigest()
     logger.info(f"mnemonic_sha3_512 {mnemonic_sha3_512}")
 
     
-    logger.info("Saving user mnemonic hash on the dynamodb")
+    # logger.info("Saving user mnemonic hash on the dynamodb")
 
     ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
     r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
@@ -558,14 +595,14 @@ async def update_user(request):
                 "address": mnemonic_keys["address"]
                 }), headers={"Authorization": request["user_data"]["id_token"]})
 
-    result = r.json()
-    logger.info(result)
+    update_result = r.json()
+    logger.info(update_result)
     logger.info(r.status_code)
 
 
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+    if update_result.get("error"):
+        logger.error(update_result["message"])
+        raise APIBadRequest(update_result["message"])
 
 
     update_mnemonic(request.app.config.CREDENTIALS_TBL, 
