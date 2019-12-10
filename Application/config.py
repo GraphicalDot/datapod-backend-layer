@@ -140,7 +140,7 @@ class DevelopmentConfig(Config):
     GET_USER = f"https://{URL}/{STAGE}/user/get-user"
 
     TIMEZONE  = 'Asia/Kolkata' #TODO: THis should be selected by users to findout Timezone and must be saved in sqlite3
-    AWS_S3 = {"bucket_name": "datapod-backups","default_region": "ap-south-1"}
+    AWS_S3 = {"bucket_name": "datapod-backups-beta","default_region": "ap-south-1"}
     HOST = "localhost"
     PORT = 8000
     DEBUG = True

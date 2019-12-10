@@ -6,8 +6,7 @@ import sqlite3
 
 from .db_initialize import initialize
 from .api import login, signup, confirm_signup, change_password, forgot_password,\
-             confirm_forgot_password, is_logged_in, user_logout, temp_credentials,\
-                 new_mnemonic, store_mnemonic
+             confirm_forgot_password, is_logged_in, user_logout
 import os
 from .variables import DATASOURCE_NAME
 
@@ -32,7 +31,7 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [ ("logout", user_logout),("is_logged_in", is_logged_in), ("temporary_credentials", temp_credentials)], 
+        self.routes = {"GET": [ ("logout", user_logout),("is_logged_in", is_logged_in)], 
                     "POST": [("login", login), 
                             ("signup", signup),
                            

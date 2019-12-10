@@ -22,41 +22,41 @@ from .variables import DATASOURCE_NAME
 
 
 
-async def temp_credentials(request):
-    """
-    session is the session which you will get after enabling MFA and calling login api
-    code is the code generated from the MFA device
-    username is the username of the user
-    """
-    creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
+# async def temp_credentials(request):
+#     """
+#     session is the session which you will get after enabling MFA and calling login api
+#     code is the code generated from the MFA device
+#     username is the username of the user
+#     """
+#     creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
 
 
-    if not creds:
-        raise APIBadRequest("User is not logged in")
+#     if not creds:
+#         raise APIBadRequest("User is not logged in")
     
-    creds = list(creds)[0]
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+#     creds = list(creds)[0]
+#     r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
    
-    result = r.json()
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+#     result = r.json()
+#     if result.get("error"):
+#         logger.error(result["message"])
+#         raise APIBadRequest(result["message"])
     
-    logger.debug(result)
-    r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
+#     logger.debug(result)
+#     r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
 
-    result = r.json()
-    logger.debug(result)
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+#     result = r.json()
+#     logger.debug(result)
+#     if result.get("error"):
+#         logger.error(result["message"])
+#         raise APIBadRequest(result["message"])
     
 
-    return response.json({
-        'error': False,
-        'success': True,
-        "data": result["data"]
-       })
+#     return response.json({
+#         'error': False,
+#         'success': True,
+#         "data": result["data"]
+#        })
 
 
 async def is_logged_in(request):
@@ -441,19 +441,7 @@ async def post_login_mfa(request):
 
 
 
-async def new_mnemonic(request):
 
-    mnemonic =  generate_mnemonic(request.app.config.LANGUAGE)
-    result = {}
-    for (index, word) in enumerate(mnemonic.split(" ")):
-        result.update({f"mnemonic_phrase_{index}": word})
-
-    return response.json({
-        "error": True, 
-        "success": False,
-        "message": None,
-        "data": result
-    })
 
  
 
@@ -497,65 +485,65 @@ async def new_mnemonic(request):
     })
 
 
-async def check_mnemonic(request):
-    """
-    API to be used when user has reinstalled datapod
-    since he/she already has menmonic intialized somewhere in the past ,
-    this mnemonic has to be checked against the hash of the Mnemonic  
-    """
-    pass
+# async def check_mnemonic(request):
+#     """
+#     API to be used when user has reinstalled datapod
+#     since he/she already has menmonic intialized somewhere in the past ,
+#     this mnemonic has to be checked against the hash of the Mnemonic  
+#     """
+#     pass
 
-async def store_mnemonic(request):
-    """
-    When the user is trying to access the feature of backup, 
-    THe user has to finalize a mnemonic, whose hash will then be upload 
-    on the remote API, 
+# async def store_mnemonic(request):
+#     """
+#     When the user is trying to access the feature of backup, 
+#     THe user has to finalize a mnemonic, whose hash will then be upload 
+#     on the remote API, 
 
-    The password hash must be checked with the one stored in the credential tbl
+#     The password hash must be checked with the one stored in the credential tbl
 
-    Simulateneously, A scrypt password will be genrated from the user password and 
-    will be used to encrypt the user mnemonic
-    """
+#     Simulateneously, A scrypt password will be genrated from the user password and 
+#     will be used to encrypt the user mnemonic
+#     """
 
-    request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
+#     request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
 
-    mnemonic: list = request.json["mnemonic"]
-    logger.info(f"This is the mnemonic {mnemonic}")
-    if len(list(filter(None, mnemonic))) != 24:
-        raise APIBadRequest("Please enter a mnemonic of length 24, Invalid Mnemonic")
-
-
-    creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
+#     mnemonic: list = request.json["mnemonic"]
+#     logger.info(f"This is the mnemonic {mnemonic}")
+#     if len(list(filter(None, mnemonic))) != 24:
+#         raise APIBadRequest("Please enter a mnemonic of length 24, Invalid Mnemonic")
 
 
-    if not creds:
-        raise APIBadRequest("User is not logged in")
+#     creds = await get_credentials(request.app.config[DATASOURCE_NAME]["tables"]["creds_table"])
+
+
+#     if not creds:
+#         raise APIBadRequest("User is not logged in")
     
-    creds = list(creds)[0]
-    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+#     creds = list(creds)[0]
+#     #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
    
 
-    if creds["mnemonic"]:
-        raise APIBadRequest("The mnemonic is already present")
+#     if creds["mnemonic"]:
+#         raise APIBadRequest("The mnemonic is already present")
 
 
-    ##converting mnemonic list of words into a string of 24 words of mnemonic
-    mnemonic = " ".join(mnemonic)
-    logger.info(f"Mnemonic as a list {mnemonic}")
+#     ##converting mnemonic list of words into a string of 24 words of mnemonic
+#     mnemonic = " ".join(mnemonic)
+#     logger.info(f"Mnemonic as a list {mnemonic}")
 
 
-    ##this will return  {"private_key", "public_key", "address"
-    mnemonic_keys = child_keys(mnemonic, 0)
-    logger.info(mnemonic_keys)
+#     ##this will return  {"private_key", "public_key", "address"
+#     mnemonic_keys = child_keys(mnemonic, 0)
+#     logger.info(mnemonic_keys)
 
-    ##check mnemonic hash stored against user on the dynamodb
-    mnemonic_sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
+#     ##check mnemonic hash stored against user on the dynamodb
+#     mnemonic_sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
 
-    ##renew tokens 
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+#     ##renew tokens 
+#     r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
    
-    login_result = r.json()
-    logger.debug(login_result)
+#     login_result = r.json()
+#     logger.debug(login_result)
 
 
 
@@ -564,62 +552,62 @@ async def store_mnemonic(request):
 
 
 
-    logger.debug(f"Shae 256 of mnemonic is {mnemonic_sha3_256}")
-    r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
-                "username":creds["username"], 
-                "mnemonic_sha_256": mnemonic_sha3_256,
-                }), headers={"Authorization": login_result["data"]["id_token"]})
+#     logger.debug(f"Shae 256 of mnemonic is {mnemonic_sha3_256}")
+#     r = requests.post(request.app.config.CHECK_MNEMONIC, data=json.dumps({
+#                 "username":creds["username"], 
+#                 "mnemonic_sha_256": mnemonic_sha3_256,
+#                 }), headers={"Authorization": login_result["data"]["id_token"]})
 
-    check_mnemonic_result = r.json()
-    if check_mnemonic_result["success"]:
-        raise APIBadRequest(check_mnemonic_result["message"])
+#     check_mnemonic_result = r.json()
+#     if check_mnemonic_result["success"]:
+#         raise APIBadRequest(check_mnemonic_result["message"])
 
 
-    ##Encrypting user mnemonic with the scrypt key generated from the users password
-    # hex_salt, encrypted_mnemonic = encrypt_mnemonic(request.json["password"], mnemonic)
+#     ##Encrypting user mnemonic with the scrypt key generated from the users password
+#     # hex_salt, encrypted_mnemonic = encrypt_mnemonic(request.json["password"], mnemonic)
 
-    # logger.info(f"Hex salt for Mnemonic Encryption {hex_salt}")
-    # logger.info(f"Encrypted Mnemonic {encrypted_mnemonic}")
-    mnemonic_sha3_512 = hashlib.sha3_512(mnemonic.encode()).hexdigest()
-    logger.info(f"mnemonic_sha3_512 {mnemonic_sha3_512}")
+#     # logger.info(f"Hex salt for Mnemonic Encryption {hex_salt}")
+#     # logger.info(f"Encrypted Mnemonic {encrypted_mnemonic}")
+#     mnemonic_sha3_512 = hashlib.sha3_512(mnemonic.encode()).hexdigest()
+#     logger.info(f"mnemonic_sha3_512 {mnemonic_sha3_512}")
 
     
-    # logger.info("Saving user mnemonic hash on the dynamodb")
+#     # logger.info("Saving user mnemonic hash on the dynamodb")
 
-    ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
-    r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
-                "public_key": mnemonic_keys["public_key"], 
-                "username": request["user_data"]["username"], 
-                "sha3_256": mnemonic_sha3_256,
-                "sha3_512": mnemonic_sha3_512,
-                "address": mnemonic_keys["address"]
-                }), headers={"Authorization": request["user_data"]["id_token"]})
+#     ##updateing user details on the remote api with mnemonic sha3_256 and sha3_512 hash
+#     r = requests.post(request.app.config.UPDATE_USER, data=json.dumps({
+#                 "public_key": mnemonic_keys["public_key"], 
+#                 "username": request["user_data"]["username"], 
+#                 "sha3_256": mnemonic_sha3_256,
+#                 "sha3_512": mnemonic_sha3_512,
+#                 "address": mnemonic_keys["address"]
+#                 }), headers={"Authorization": request["user_data"]["id_token"]})
 
-    update_result = r.json()
-    logger.info(update_result)
-    logger.info(r.status_code)
-
-
-    if update_result.get("error"):
-        logger.error(update_result["message"])
-        raise APIBadRequest(update_result["message"])
+#     update_result = r.json()
+#     logger.info(update_result)
+#     logger.info(r.status_code)
 
 
-    update_mnemonic(request.app.config.CREDENTIALS_TBL, 
-                request["user_data"]["username"], 
-                encrypted_mnemonic, 
-                hex_salt,  mnemonic_keys["address"], mnemonic_keys["private_key"])
+#     if update_result.get("error"):
+#         logger.error(update_result["message"])
+#         raise APIBadRequest(update_result["message"])
 
-    ##UPDATE the local datasource status table,
-    ##with a flag that SETUP_COMPLETED for the backup
-    update_datasources_status(request.app.config.DATASOURCES_TBL , "BACKUP", "backup" , request.app.config.DATASOURCES_CODE["BACKUP"], "Setup completed for backup", "SETUP_COMPLETED")
 
-    return response.json({
-        "error": True, 
-        "success": False,
-        "message": "Mnemonic has been saved and updated",
-        "data": None
-    })
+#     update_mnemonic(request.app.config.CREDENTIALS_TBL, 
+#                 request["user_data"]["username"], 
+#                 encrypted_mnemonic, 
+#                 hex_salt,  mnemonic_keys["address"], mnemonic_keys["private_key"])
+
+#     ##UPDATE the local datasource status table,
+#     ##with a flag that SETUP_COMPLETED for the backup
+#     update_datasources_status(request.app.config.DATASOURCES_TBL , "BACKUP", "backup" , request.app.config.DATASOURCES_CODE["BACKUP"], "Setup completed for backup", "SETUP_COMPLETED")
+
+#     return response.json({
+#         "error": True, 
+#         "success": False,
+#         "message": "Mnemonic has been saved and updated",
+#         "data": None
+#     })
 
 
 async def decrypt_user_mnemonic(request):

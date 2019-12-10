@@ -106,35 +106,56 @@ def backup_list_info(config):
 #     )
 
 
+async def temp_credentials(request):
+    """
+    session is the session which you will get after enabling MFA and calling login api
+    code is the code generated from the MFA device
+    username is the username of the user
+    """
+    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
 
-#@id_token_validity()
-async def aws_temp_creds(config, id_token, username):
 
-    r = requests.post(config.AWS_CREDS, data=json.dumps({
-                    "id_token": id_token}))
+    if not creds:
+        raise APIBadRequest("User is not logged in")
     
+    creds = list(creds)[0]
+    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
     result = r.json()
     if result.get("error"):
         logger.error(result["message"])
         raise APIBadRequest(result["message"])
     
-    return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
+    logger.debug(result)
+    r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
 
+    result = r.json()
+    logger.debug(result)
+    if result.get("error"):
+        logger.error(result["message"])
+        raise APIBadRequest(result["message"])
     
 
+    return response.json({
+        'error': False,
+        'success': True,
+        "data": result["data"]
+       })
 
 
+
+@logger.catch
 async def backup_upload(config, id_token):
     # Method to handle the new backup and sync with s3 
  
     #await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "PROGRESS",  dest_path, request.json["path"])
 
 
-    backup_instance = Backup(config)
-    await backup_instance.make_backup()
+    # backup_instance = Backup(config)
+    # await backup_instance.make_backup()
 
-    
-    instance = await S3Backup(config, id_token)
+    logger.success("Backups has been created, Now trying to sync with s3")
+    instance = await S3Backup(config)
     await instance.sync_backup()
 
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "COMPLETED",  dest_path, request.json["path"])
@@ -233,7 +254,7 @@ async def check_mnemonic(request):
     login_result = await login(request.app.config)
 
     ##converting mnemonic list of words into a string of 24 words of mnemonic
-    mnemonic = " ".join(mnemonic)
+    mnemonic = " ".join(request.json["mnemonic"])
 
     sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
 

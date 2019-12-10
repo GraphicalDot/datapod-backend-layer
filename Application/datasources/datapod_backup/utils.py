@@ -14,6 +14,11 @@ from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
 from loguru import logger
 from .variables import DATASOURCE_NAME
+from .db_calls import get_credentials
+
+##imported from another major module
+from ..datapod_users.variables import DATASOURCE_NAME as USER_DATASOURCE_NAME
+
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -33,18 +38,7 @@ class cd:
 
 class Backup(object):
     def __init__(self, config):
-        # self.datapod_dir = datapod_dir
-        # self.user_index = f""
 
-        # ##the directory inside the datapod_dir with all the backups
-        # self.backup_dir = os.path.join(datapod_dir, "backup")
-
-        # ##the directory which will have all the data, parsed or unparsed
-        # self.data_dir = os.path.join(datapod_dir, "userdata")
-
-        # ##the file inside the datapod_dir which will have the encryption keys of 
-        # ##the user
-        # self.encryption_file_name = os.path.join(datapod_dir, "keys/encryption.key")
         self.config = config
         self.userdata_path = self.config.USERDATA_PATH
         
@@ -67,7 +61,9 @@ class Backup(object):
 
     async def send_sse_message(self, message):
         res = {"message": message, "percentage": self.num}
-        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        if self.num < 80:
+            await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+            self.num += 1
         # url = f"http://{self.config.HOST}:{self.config.PORT}/send"
         # logger.info(f"Sending sse message {message} at url {url}")
         # async with aiohttp.ClientSession() as session:
@@ -95,20 +91,22 @@ class Backup(object):
         With --newer you're simply updating/creating the archive with the files that have changed since the date you pass it.
         tar  --create --lzma --verbose  --file=MyArchive raw/facebook/facebook-sauravverma14473426
         """
-        if not os.listdir(self.raw_data_path):
+        datasources = os.listdir(self.raw_data_path)
+        logger.debug(datasources)
+        if not datasources:
             raise APIBadRequest("The directory whose backup needs to be made is empty")
         
         archival_object = datetime.datetime.utcnow()
         archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
-        for datasource_name in os.listdir(self.raw_data_path):
+        for datasource_name in datasources:
             dst_path = os.path.join(self.backup_path, archival_name, datasource_name) 
             src_path = os.path.join(self.raw_data_path, datasource_name )
             if not os.path.exists(dst_path):
                 os.makedirs(dst_path)
-            await self.create(src_path, dst_path)
+            await self.create(src_path, dst_path, datasource_name)
+        return 
 
-
-    async def create(self, src_path, dst_path): 
+    async def create(self, src_path, dst_path, datasource_name): 
 
         #temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
         temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz', delete=False)
@@ -136,7 +134,7 @@ class Backup(object):
 
         for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
             if int(time.time()) >= next_time:
-                await self.send_sse_message(f"Archiving {out.split('/')[-1]}")
+                await self.send_sse_message(f"Archiving {out.split('/')[-1]} for {datasource_name}")
                 next_time += 10
 
         async for msg in self.split(dst_path, temp.name):
@@ -196,13 +194,16 @@ class Backup(object):
 class S3Backup(object):
 
 
-    async def __init__(self, config, id_token):
+    async def __init__(self, config):
         self.config = config
-        self.id_token = id_token
         #self.credentials = get_credentials(config.CREDENTIALS_TBL)
         self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt', delete=False)
         logger.error(self.encryption_key_file.name)
-
+        self.credentials = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+        if not self.credentials:
+            raise APIBadRequest("User is not logged in")
+        
+        self.credentials = list(self.credentials)[0]
         ##in this temporary file, private key is now written
         logger.info(self.credentials)
 
@@ -250,45 +251,53 @@ class S3Backup(object):
 
         sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
         print (sync_command)
+
+        num = 0
         for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            await send_sse_message(self.config, "BACKUP_PROGRESS", f"Upload to Cloud {out}")
-        
-        await send_sse_message(self.config, "BACKUP_PROGRESS", "Backup upload completed")
+            res = {"message": "BACKUP_PROGRESS", "percentage": num}
+            await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+            num += 1
+
 
         return
 
 
     async def aws_temp_creds(self):
 
-        r = requests.post(self.config.AWS_CREDS, data=json.dumps({
-                        "id_token": self.id_token}))
+        # r = requests.post(self.config.AWS_CREDS, data=json.dumps({
+        #                 "id_token": self.id_token}))
         
+        # result = r.json()
+        # if result.get("error"):
+        #     logger.error(result["message"])
+        #     raise APIBadRequest(result["message"])
+        
+        # return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
+
+        creds = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+
+
+        if not creds:
+            raise APIBadRequest("User is not logged in")
+        
+        creds = list(creds)[0]
+        r = requests.post(self.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+    
         result = r.json()
         if result.get("error"):
             logger.error(result["message"])
             raise APIBadRequest(result["message"])
         
+        logger.debug(result)
+        r = requests.post(self.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
+
+        result = r.json()
+        logger.debug(result)
+        if result.get("error"):
+            logger.error(result["message"])
+            raise APIBadRequest(result["message"])
         return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
 
 
-
-
-async def send_sse_message(config, channel_id, message):
-    url = f"http://{config.HOST}:{config.PORT}/send"
-    logger.info(f"Sending sse message {message} at url {url}")
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=json.dumps({"message": message, "channel_id": channel_id})) as response:
-            result =  await response.json()
-    
-    #r = requests.post(url, )
-
-    logger.info(f"Result sse message {result}")
-
-    if result["error"]:
-        logger.error(result["message"])
-        return 
-
-    logger.success(result["message"])
-    return 
 
 
