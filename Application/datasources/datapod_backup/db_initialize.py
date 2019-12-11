@@ -45,9 +45,12 @@ def initialize(db):
 
 
     class Status(BaseModel):
+        source = peewee.TextField(index=True)
+        username = peewee.TextField(null=True, unique=True)
         status = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
         path = peewee.TextField(null=True)
+        original_path = peewee.TextField(null=True)
         checksum = peewee.TextField(index=True, null=True)
         percentage = peewee.IntegerField(null=True)
 
@@ -61,12 +64,21 @@ def initialize(db):
         next_sync = peewee.DateTimeField(default=datetime.datetime.now)
 
 
+    class BackupList(BaseModel):
+        disk_space_used = peewee.TextField(null=True)
+        status = peewee.TextField(null=True) #completed or failed
+        type = peewee.TextField(null=True) #full backup or differential
+        time  = peewee.DateTimeField(default=datetime.datetime.now)
+        name = peewee.TextField(null=True)
+
+
 
 
     result = db.create_tables([
         Backups,
         Status,
-        Stats
+        Stats, 
+        BackupList
         ])
 
-    return Backups, Status, Stats
+    return Backups, Status, Stats,BackupList

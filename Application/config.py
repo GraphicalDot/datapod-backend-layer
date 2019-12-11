@@ -18,7 +18,7 @@ logger.add(LOGFILE, retention="2 days", level="ERROR",  enqueue=True, backtrace=
 
 
 
-USER_INDEX = f"{MAIN_DIR}/user.index" #this file be creating when making backup and keeps record of all the files who are indexed for backup i.e changed or not
+USER_INDEX_DIR = f"{MAIN_DIR}/user_indexes" #this file be creating when making backup and keeps record of all the files who are indexed for backup i.e changed or not
 KEYS_DIR = os.path.join(MAIN_DIR, "keys")
 USERDATA_PATH = os.path.join(MAIN_DIR, "userdata")
 PARSED_DATA_PATH = os.path.join(USERDATA_PATH, "parsed")
@@ -29,7 +29,7 @@ DB_PATH = os.path.join(USERDATA_PATH, "database")
 #db_dir_path = "/home/feynman/Desktop/database"
 BACKUP_PATH = os.path.join(MAIN_DIR, "backup")
 
-for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH, DB_PATH, BACKUP_PATH]:
+for path in [MAIN_DIR, KEYS_DIR, USERDATA_PATH, PARSED_DATA_PATH, RAW_DATA_PATH, DB_PATH, BACKUP_PATH, USER_INDEX_DIR]:
     if not os.path.exists(path):
         logger.warning(f"Creating {path} Directory")
         os.makedirs(path)
@@ -82,7 +82,7 @@ def validate_fields(required_fields, request_json):
 class Config:
     VERSION = __VERSION__
     MAIN_DIR = MAIN_DIR
-    USER_INDEX = USER_INDEX
+    USER_INDEX_DIR = USER_INDEX_DIR
     KEYS_DIR = KEYS_DIR
     BACKUP_KEY_ENCRYPTION_FILE = os.path.join(KEYS_DIR, "encryption.key")
     USERDATA_PATH = USERDATA_PATH

@@ -7,7 +7,8 @@ import datetime
 import humanize
 from .utils import Backup, S3Backup
 from loguru import logger
-from .db_calls import get_stats, get_status,  delete_status, update_status, get_credentials, update_mnemonic_n_address
+from .db_calls import get_stats, get_status,  delete_status, update_status, get_credentials, \
+                update_mnemonic_n_address, insert_backup_entry, get_backup_list
 
 from EncryptionModule.gen_mnemonic import generate_entropy, generate_mnemonic, child_keys 
 
@@ -47,7 +48,7 @@ async def status(request):
 #async def make_backup(request, ws):
 async def backup_list(request):
 
-    result = await backup_list_info(request.app.config)
+    result = await get_backup_list(request.app.config[DATASOURCE_NAME]["tables"]["backup_list_table"])
 
     return response.json({
             "error": False,
@@ -57,29 +58,6 @@ async def backup_list(request):
         })
 
 
-@aiomisc.threaded_separate
-def backup_list_info(config):
-    result = []
-    def get_dir_size(dirpath):
-        all_files = [os.path.join(basedir, filename) for basedir, dirs, files in os.walk(dirpath) for filename in files]
-        if len(all_files) >0:
-            _date = creation_date(all_files[0])
-        else:
-            _date = None
-        files_and_sizes = [os.path.getsize(path) for path in all_files]
-        return  humanize.naturalsize(sum(files_and_sizes)), _date
-
-
-    for (path, dirs, files) in os.walk(config.BACKUP_PATH):
-        if len(dirs) != 0:
-            for _dir in dirs:
-                dirpath = os.path.join(path, _dir)
-                size, date = get_dir_size(dirpath)
-                result.append({"name": _dir, "size": size, "date": date})
-
-
-    return result
-    
 
 
 
@@ -145,21 +123,45 @@ async def temp_credentials(request):
 
 
 @logger.catch
-async def backup_upload(config, id_token):
+async def backup_upload(config, backup_type):
+    ##Backup type 0 full, type 1 partial
     # Method to handle the new backup and sync with s3 
  
     #await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "PROGRESS",  dest_path, request.json["path"])
+    # creds = await get_credentials(config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+    # await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "PROGRESS")
 
 
-    # backup_instance = Backup(config)
-    # await backup_instance.make_backup()
+    # if not creds:
+    #     raise APIBadRequest("User is not logged in")
+    
+    # creds = list(creds)[0]
+    # #r = requests.post(config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
 
-    logger.success("Backups has been created, Now trying to sync with s3")
-    instance = await S3Backup(config)
-    await instance.sync_backup()
+    # ##renew tokens 
+    # r = requests.post(config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+    # login_result = r.json()["data"]
 
-    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "COMPLETED",  dest_path, request.json["path"])
 
+
+    try:
+        backup_instance = Backup(config)
+        destination_path, folder_name = await backup_instance.make_backup()
+
+        logger.success("Backups has been created, Now trying to sync with s3")
+        instance = await S3Backup(config, backup_instance.num)
+        size = await instance.sync_backup(destination_path, folder_name)
+    except Exception as e:
+        logger.error(e)
+        await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "fail", None, backup_type, None)
+        await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "COMPLETED")    
+        return 
+
+
+    await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "success", size, backup_type, folder_name)
+    await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "COMPLETED")
     await backup_instance.send_sse_message("COMPLETED")
 
     return 
@@ -192,24 +194,11 @@ async def start_fresh_backup(request):
     ##TODO ADD entries to BACKUP_TBL
     """
     ##This has a rare chance of happening, that users reach here and doesnt have mnemonic in the database but have mnemonic in the cloud
-    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
-
-
-    if not creds:
-        raise APIBadRequest("User is not logged in")
-    
-    creds = list(creds)[0]
-    #r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-   
-
-    ##renew tokens 
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
-   
-    login_result = r.json()["data"]
+    await update_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "PROGRESS")
 
     try:
             
-        request.app.add_task(backup_upload(request.app.config, login_result["id_token"]))
+        request.app.add_task(backup_upload(request.app.config, 0))
 
         # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         # new_log_entry.save()

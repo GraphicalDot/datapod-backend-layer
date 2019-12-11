@@ -22,48 +22,59 @@ def get_credentials(credential_table):
 
 
 @aiomisc.threaded
-def update_status(status_table,status, checksum=None, path=None, percentage=None):
+def insert_backup_entry(backup_list_table, disk_space_used, status, type, name):
     try:
-        status_table.insert(status=status,
-                                    path = path,
-                                    checksum=checksum,
-                                    percentage=percentage
+        backup_list_table.insert(status=status,
+                                    disk_space_used = disk_space_used,
+                                    type=type,
+                                    name=name
+                                    ).execute()
+                                    
+
+    except Exception as e:
+        logger.error(f"Couldnt insert backup entry {name} updated because of {e}")
+    return 
+
+@aiomisc.threaded
+def update_status(status_table, datasource_name, username, status):
+    try:
+        status_table.insert(source=datasource_name,  
+                                    username=username,
+                                    status=status,
                                     ).execute()
                                     
 
     except IntegrityError as e:
-        logger.error(f"Couldnt insert {checksum} because of {e} so updating it")
-
-        logger.error(f"Couldnt insert {checksum} because of {e} so updating it")
-
-        if path:
-            status_table.update(
-                status=status, 
-                path = path,
-                ).\
-            where(status_table.checksum==checksum).\
-            execute()
-      
-        else:
-            status_table.update(
-                            status=status).\
-                        where(status_table.checksum==checksum).\
-                        execute()
+        logger.error(f"Couldnt insert {datasource_name} because of {e} so updating it")
+        status_table.update(
+                        status=status).\
+                    where(status_table.username==username).\
+                    execute()
 
 
     except Exception as e:
-        logger.error(f"Couldnt Backup {checksum} updated because of {e}")
+        logger.error(f"Couldnt {datasource_name} updated because of {e}")
     return 
 
+
 @aiomisc.threaded
-def update_percentage(status_table, checksum, percentage):
+def update_percentage(status_table, username, percentage):
     status_table.update(
                 percentage=percentage, 
                 last_updated=datetime.datetime.now()).\
-            where(status_table.checksum==checksum).\
+            where(status_table.username==username).\
             execute()
     return 
 
+
+@aiomisc.threaded
+def get_backup_list(tbl_object):
+
+    result = tbl_object\
+            .select()\
+                
+    
+    return result
 
 @aiomisc.threaded
 def delete_status(status_table, datasource_name, username):

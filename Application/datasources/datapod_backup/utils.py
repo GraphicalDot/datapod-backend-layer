@@ -14,7 +14,8 @@ from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
 from loguru import logger
 from .variables import DATASOURCE_NAME
-from .db_calls import get_credentials
+from .db_calls import get_credentials, update_percentage
+import subprocess
 
 ##imported from another major module
 from ..datapod_users.variables import DATASOURCE_NAME as USER_DATASOURCE_NAME
@@ -32,7 +33,8 @@ class cd:
         os.chdir(self.savedPath)
 
 
-
+def dir_size(dirpath):
+    return subprocess.check_output(['du','-sh', dirpath]).split()[0].decode('utf-8')
 
 
 
@@ -43,7 +45,7 @@ class Backup(object):
         self.userdata_path = self.config.USERDATA_PATH
         
         ##file which keeps tracks of the data that has been backup last time
-        self.user_index = self.config.USER_INDEX
+        self.user_index_dir = self.config.USER_INDEX_DIR
 
 
         ##subdirectories in userdata path which deals with raw, parsed and database path 
@@ -61,9 +63,11 @@ class Backup(object):
 
     async def send_sse_message(self, message):
         res = {"message": message, "percentage": self.num}
-        if self.num < 80:
+        if self.num < 70:
             await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
             self.num += 1
+            await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.num)
+
         # url = f"http://{self.config.HOST}:{self.config.PORT}/send"
         # logger.info(f"Sending sse message {message} at url {url}")
         # async with aiohttp.ClientSession() as session:
@@ -80,6 +84,8 @@ class Backup(object):
         # logger.success(result["message"])
         return 
 
+
+
     async def make_backup(self):
         """
         --level=0, for fullbackup
@@ -95,16 +101,23 @@ class Backup(object):
         logger.debug(datasources)
         if not datasources:
             raise APIBadRequest("The directory whose backup needs to be made is empty")
-        
+
+
+
         archival_object = datetime.datetime.utcnow()
         archival_name = archival_object.strftime("%B-%d-%Y_%H-%M-%S")
+
+
+
+        parent_destination_path = os.path.join(self.backup_path, archival_name) 
+
         for datasource_name in datasources:
             dst_path = os.path.join(self.backup_path, archival_name, datasource_name) 
             src_path = os.path.join(self.raw_data_path, datasource_name )
             if not os.path.exists(dst_path):
                 os.makedirs(dst_path)
             await self.create(src_path, dst_path, datasource_name)
-        return 
+        return parent_destination_path, archival_name
 
     async def create(self, src_path, dst_path, datasource_name): 
 
@@ -119,18 +132,27 @@ class Backup(object):
         logger.debug(f"The dir whose backup will be made {src_path}")
         logger.debug(f"Temporary file location is {temp.name}")
 
+        ##this is the file under ~/.datapod/user_indexes for a corresponding datasource 
+        ## which wil keep track of all the files which have been backed up previously
+        user_index_file = os.path.join(self.user_index_dir, f"{datasource_name.lower()}.index")
+        logger.debug(f"This is the user_index_file {user_index_file}")
+        
+        
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {src_path}"                                                                                                                                                                                                                                            
-            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"                                                                                                                                                                                                                                            
+            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
 
         elif platform.system() == "Darwin":
-            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={self.user_index} -f {temp.name} {src_path}"
+            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"
         else:
             raise APIBadRequest("The platform is not available for this os distribution")
 
-        #backup_command = f"tar --create  --verbose --listed-incremental={self.user_index} --lzma {backup_path} {self.raw_data_path}"
+        #backup_command = f"tar --create  --verbose --listed-incremental={user_index_file} --lzma {backup_path} {self.raw_data_path}"
         initial_time = int(time.time())
         next_time = initial_time+15
+        logger.debug(f"{backup_command}")
+        time.sleep(3)
+
 
         for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
             if int(time.time()) >= next_time:
@@ -144,8 +166,6 @@ class Backup(object):
         
         self.remove_temporary_archive(temp.name)
         await self.send_sse_message(f"Temporary file {temp.name} Removed")
-
-    
 
         return 
 
@@ -194,8 +214,14 @@ class Backup(object):
 class S3Backup(object):
 
 
-    async def __init__(self, config):
+    async def __init__(self, config, number):
+        """
+        number is the percentage number which will be sent in sse message, 
+        Then number has already been incremented by the backup scripts above, 
+
+        """
         self.config = config
+        self.number = number
         #self.credentials = get_credentials(config.CREDENTIALS_TBL)
         self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt', delete=False)
         logger.error(self.encryption_key_file.name)
@@ -237,29 +263,38 @@ class S3Backup(object):
         return
 
 
-    async def sync_backup(self):
+    async def sync_backup(self, destination_path, folder_name):
 
-
+        size = dir_size(destination_path)
         # _key = generate_aes_key(32)
 
         # key = "".join(map(chr, _key))
         # print (key)
         # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
+
+
+
         configure_command = "aws configure set default.s3.max_bandwidth 15MB/s"
         for out in self.config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
             logger.info (out)
 
-        sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
+        #sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
+        sync_command = f"aws s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {destination_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
         print (sync_command)
 
-        num = 0
         for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            res = {"message": "BACKUP_PROGRESS", "percentage": num}
-            await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-            num += 1
+            if self.number < 98:
+                res = {"message": "BACKUP_PROGRESS", "percentage": self.number}
+                await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+                self.number += 1
+                await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.number)
 
 
-        return
+        res = {"message": "BACKUP_PROGRESS", "percentage": 100}
+        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", 100)
+        
+        return size
 
 
     async def aws_temp_creds(self):
