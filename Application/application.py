@@ -209,6 +209,13 @@ def add_permissions(app):
             logger.debug(f"{route_name} {handler_function}")
             app.add_route(handler_function, f'/permission/{route_name}', methods=[http_method])
 
+
+def register_plugins(app):
+    ##TODO register plugins
+    app.config.plugins = ["uber"]
+    return 
+
+
 def add_routes(app):
     registered_modules = []
     # logger.info(f"Modules to be registered {list(pkgutil.iter_modules(datasources.__path__))}")
@@ -335,7 +342,8 @@ def main():
 
     add_permissions(app)
     add_routes(app)
-    
+    register_plugins(app)
+
     for _, (rule, _) in app.router.routes_names.items():
         logger.info(rule)    
 

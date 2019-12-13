@@ -7,7 +7,7 @@ from sanic.request import RequestParameters
 from sanic import response
 from errors_module.errors import APIBadRequest
 
-from .db_calls import store_table_names, get_table_names
+from .db_calls import store_table_names, get_table_names, store_permission
 from loguru import logger
 import os
 from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
@@ -93,7 +93,7 @@ async def get_tables(request):
 
 
 
-def store_permissions(permissions_dict):
+async def store_permissions(request):
     """
     {'backup': ['stats_table', 'status_table', 'backup_table', 'backup_list_table'], 
     'coderepos': ['creds_table', 'stats_table', 'status_table', 'archives_table', 'repos_table'], 
@@ -107,17 +107,25 @@ def store_permissions(permissions_dict):
 
     """
 
-    for (key, value) in permissions_dict.items(): 
-        for table_name in value:
-            try:
-                data = {"datasource_name": key, "table_name": table_name, 
-                        "display_name" : table_name.replace("_table", "").replace("_", " ").capitalize(),
-                        "tbl_object": tables_name_table} 
-                store_table_names(**data)
-            except Exception as e:
-                logger.error(e)
-                pass
+    request.app.config.VALIDATE_FIELDS(["plugin_name", "permissions"], request.json)
 
-    return
+    logger.debug(request.json["permissions"])
+    if not isinstance(request.json['permissions'], list):
+        raise APIBadRequest("Permissions should be instance of list")
+
+
+    if not request.json["plugin_name"]  in request.app.config.plugins:
+        raise APIBadRequest("Plugin is unknown")
+
+
+    for permission in request.json["permissions"]:
+        permission.update({"tbl_object": permission_table, "plugin_name": request.json["plugin_name"] })
+        await store_permission(**permission)
+
+    return response.json({
+        'error': False,
+        'success': True,
+        "message": None,
+        "data": None})
 
 

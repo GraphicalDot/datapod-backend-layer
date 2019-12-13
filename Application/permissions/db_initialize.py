@@ -26,7 +26,7 @@ def initialize(db):
 
         class Meta:
             indexes = (
-                        (('plugin_name', 'datasource_name'), True),
+                        (('plugin_name', 'datasource_name', 'table_name'), True),
                     )
 
     class Tablenames(BaseModel):
@@ -48,14 +48,6 @@ def initialize(db):
         ])
 
     db.drop_tables([  
-            # Creds,
-            # Archives, 
-            # Images,
-            # YourPosts,
-            # OtherPosts,
-            # Content,
-            # Status
-
         ])
 
 
