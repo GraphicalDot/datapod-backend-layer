@@ -147,12 +147,14 @@ async def backup_upload(config, backup_type):
 
 
     try:
-        backup_instance = Backup(config)
-        destination_path, folder_name = await backup_instance.make_backup()
+        # backup_instance = Backup(config)
+        # destination_path, folder_name = await backup_instance.make_backup()
 
-        logger.success("Backups has been created, Now trying to sync with s3")
-        instance = await S3Backup(config, backup_instance.num)
-        size = await instance.sync_backup(destination_path, folder_name)
+        # logger.success("Backups has been created, Now trying to sync with s3")
+        #instance = await S3Backup(config, backup_instance.num)
+        instance = await S3Backup(config, 10)
+        await instance.check_size()
+        # size = await instance.sync_backup(destination_path, folder_name)
     except Exception as e:
         logger.error(e)
         await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "fail", None, backup_type, None)
@@ -162,7 +164,6 @@ async def backup_upload(config, backup_type):
 
     await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "success", size, backup_type, folder_name)
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "COMPLETED")
-    await backup_instance.send_sse_message("COMPLETED")
 
     return 
 

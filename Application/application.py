@@ -45,6 +45,8 @@ import pkgutil
 from pathlib import Path
 import datasources
 
+from  permissions.api import store_tables  
+
 app = Sanic(__name__)
 
 # app.config['CORS_AUTOMATIC_OPTIONS'] = True
@@ -191,6 +193,22 @@ async def datasource_archives(request):
 
 
 
+def add_permissions(app):
+    import permissions
+    #directory = os.path.join(Path().absolute(), "datasources")
+    # directory = os.path.join(os.path.dirname(__file__), "datasources")
+    # logger.info(directory)
+
+    
+    # for finder, name, ispkg in pkgutil.iter_modules(permissions.__path__):
+    #     ##reading every module vairables.py file to find out the DATASOURCE_NAME
+    module_variable_name = f"permissions.settings"
+    m = importlib.import_module(module_variable_name)
+    for (http_method, route_list) in m.routes.items():
+        for (route_name, handler_function) in route_list:
+            logger.debug(f"{route_name} {handler_function}")
+            app.add_route(handler_function, f'/permission/{route_name}', methods=[http_method])
+
 def add_routes(app):
     registered_modules = []
     # logger.info(f"Modules to be registered {list(pkgutil.iter_modules(datasources.__path__))}")
@@ -199,7 +217,8 @@ def add_routes(app):
     # directory = os.path.join(os.path.dirname(__file__), "datasources")
     # logger.info(directory)
 
-    app.config["tables"] = {}
+    tables = {}
+    
     for finder, name, ispkg in pkgutil.iter_modules(datasources.__path__):
     # for filename in os.listdir(directory):
     #     filepath = os.path.join(directory, filename)
@@ -247,9 +266,10 @@ def add_routes(app):
             ##adding table names to app.config
 
             # if inst.datasource_name != "Users":
-            #     datasource_tables = inst.config['tables']
+            datasource_tables = inst.config['tables']
+            logger.debug(datasource_tables)
             #     [datasource_tables.pop(table_name) for table_name in ["creds_table", "archives_table", "status_table", "stats_table"]]
-            #     app.config["tables"].update({inst.datasource_name.lower(): list(datasource_tables.keys())})
+            tables.update({inst.datasource_name.lower(): list(datasource_tables.keys())})
             
 
     # app.add_route(datasource_stats, '/datasources/stats', methods=["GET"])
@@ -258,9 +278,7 @@ def add_routes(app):
     app.add_route(datasource_status_stats, '/datasources/stats_status', methods=["GET"])
     app.config["registered_modules"] = registered_modules
 
-    logger.info(app.config['tables'])
-    logger.info(app.config['Google'])
-    
+    store_tables(tables)
     return 
 
 
@@ -314,9 +332,10 @@ def main():
     # app.config.db_dir_path = config.db_dir_path
     # app.config.archive_path = config.archive_path
     app.config.from_object(config.config_object)
-    
-    add_routes(app)
 
+    add_permissions(app)
+    add_routes(app)
+    
     for _, (rule, _) in app.router.routes_names.items():
         logger.info(rule)    
 

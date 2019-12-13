@@ -26,4 +26,6 @@ Requirements:
     5. Read plugins from the top level plugin directory, check if the exported classs is instance of abstract class PluginConfiguration,
         if not dont integrate this plugin, if any condition fails dont integrate this plugin 
 
+    6. Permission module will have permissions corresponding to every Plugins.
+        For all the 
     
