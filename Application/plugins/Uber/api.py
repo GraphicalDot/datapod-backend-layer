@@ -7,7 +7,7 @@ from sanic.request import RequestParameters
 from sanic import response
 
 
-def sample_get(request):
+def sample_get(request, tables):
     return response.json(
         {
         'error': False,
@@ -19,7 +19,7 @@ def sample_get(request):
 
 
 
-def sample_post(request):
+def sample_post(request, tables):
     return response.json(
         {
         'error': False,

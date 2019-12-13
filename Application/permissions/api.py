@@ -7,7 +7,7 @@ from sanic.request import RequestParameters
 from sanic import response
 from errors_module.errors import APIBadRequest
 
-from .db_calls import store_table_names, get_table_names, store_permission
+from .db_calls import store_table_names, get_table_names, store_permission, get_permissions
 from loguru import logger
 import os
 from playhouse.sqlite_ext import SqliteExtDatabase, FTSModel
@@ -127,5 +127,21 @@ async def store_permissions(request):
         'success': True,
         "message": None,
         "data": None})
+
+
+
+
+
+
+
+
+
+async def return_permissions(plugin_name):
+
+
+    result = get_permissions(plugin_name)
+    if result:
+        return result
+    return None
 
 

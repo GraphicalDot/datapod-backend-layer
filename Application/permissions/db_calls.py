@@ -82,3 +82,6 @@ def store_table_names(**data):
     except Exception as e:
         logger.error(f"Error on inserting permission for {data['table_name']} {data['datasource_name']} with error {e}")
     return
+
+
+
