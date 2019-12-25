@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 
-__VERSION__ = "0.3.3"
+__VERSION__ = "0.3.5"
 
 APPNAME = f"datapod-ubuntu-{__VERSION__}"
 
@@ -19,8 +19,9 @@ a = Analysis(['application.py'],
              datas=[
                  ('/home/feynman/Programs/datapod-backend-layer/Application/datasources/', './datasources/'),
                  ('/home/feynman/Programs/datapod-backend-layer/Application/EncryptionModule/', './EncryptionModule/'),
+                  ('/home/feynman/Programs/datapod-backend-layer/Application/permissions/', './permissions/'),
              ],
-             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent', 'humanize', 'PIL.Image', 'dateparser', 'paramiko',
+             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent', 'humanize', 'PIL.Image', 'dateparser', 'paramiko', 'boto3',
               'pyparsing', 'github', 'csv', 'mnemonic', 'bip32utils', 'lxml.html.clean', 'bleach', 'mailbox', 'imaplib', 'geopy', 'playhouse.sqlite_ext', 'asyncinit']  + datas,
              hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],

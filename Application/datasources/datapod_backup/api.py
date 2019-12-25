@@ -52,6 +52,7 @@ async def backup_list(request):
     instance = await S3Backup(request.app.config)
     result = instance.list_s3_archives(request.app.config.AWS_S3['bucket_name'])
 
+
     return response.json({
             "error": False,
             "success": True, 
@@ -164,6 +165,11 @@ async def backup_upload(config, backup_type):
         return 
 
 
+
+    instance = await S3Backup(config)
+    size = instance.get_size(config.AWS_S3['bucket_name'], instance.identity_id)
+
+    logger.debug(f"Size of the {size}")
     await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "success", size, backup_type, folder_name)
     await update_status(config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "COMPLETED")
 

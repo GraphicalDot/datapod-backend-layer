@@ -247,7 +247,7 @@ class S3Backup(object):
         self.config = config
         #self.credentials = get_credentials(config.CREDENTIALS_TBL)
         self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt')
-        logger.error(self.encryption_key_file.name)
+        logger.error(f"Encryption file name {self.encryption_key_file.name}")
         self.credentials = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
         if not self.credentials:
             raise APIBadRequest("User is not logged in")
@@ -265,9 +265,9 @@ class S3Backup(object):
 
         self.identity_id, self.access_key, self.secret_key, self.session_token =  await self.aws_temp_creds()
         
-        logger.info(f"Access key for AWS <<{self.access_key}>>")
-        logger.info(f"Secret key for AWS <<{self.secret_key}>>")
-        logger.info(f"Session Token  for AWS <<{self.session_token}>>")
+        # logger.info(f"Access key for AWS <<{self.access_key}>>")
+        # logger.info(f"Secret key for AWS <<{self.secret_key}>>")
+        # logger.info(f"Session Token  for AWS <<{self.session_token}>>")
         # async for msg in S3Backup.sync_backup(request.app.config, identity_id, access_key, secret_key, session_token):
         #     logger.info(msg)
 
@@ -335,7 +335,7 @@ class S3Backup(object):
                     "size": self.get_size(bucket_name, self.identity_id+"/"+name)
                     } 
                 for (name, last_modified) in backup_folders]
-                
+
         # for (name, last_modified) in backup_folders:
         #     logger.debug(f"Name of archival {name} and last_modified {last_modified} ")
         #     size = self.get_size(bucket_name, self.identity_id+"/"+name)
