@@ -48,7 +48,9 @@ async def status(request):
 #async def make_backup(request, ws):
 async def backup_list(request):
 
-    result = await get_backup_list(request.app.config[DATASOURCE_NAME]["tables"]["backup_list_table"])
+
+    instance = await S3Backup(request.app.config)
+    result = await instance.get_size(request.app.config.AWS_S3['bucket_name'])
 
     return response.json({
             "error": False,
@@ -147,13 +149,13 @@ async def backup_upload(config, backup_type):
 
 
     try:
-        # backup_instance = Backup(config)
-        # destination_path, folder_name = await backup_instance.make_backup()
+        backup_instance = Backup(config)
+        destination_path, folder_name = await backup_instance.make_backup()
 
         # logger.success("Backups has been created, Now trying to sync with s3")
         #instance = await S3Backup(config, backup_instance.num)
-        instance = await S3Backup(config, 10)
-        await instance.check_size()
+        # instance = await S3Backup(config, 10)
+        # await instance.check_size()
         # size = await instance.sync_backup(destination_path, folder_name)
     except Exception as e:
         logger.error(e)
@@ -239,13 +241,27 @@ async def check_mnemonic(request):
     since he/she already has menmonic intialized somewhere in the past ,
     this mnemonic has to be checked against the hash of the Mnemonic  
     """
+
+
+
     request.app.config.VALIDATE_FIELDS(["mnemonic"], request.json)
 
-    login_result = await login(request.app.config)
+
+
+    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+
+    if not creds:
+        raise APIBadRequest("User is not logged in")
+    
+    creds = list(creds)[0]
+    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+   
+    login_result = r.json()["data"]
 
     ##converting mnemonic list of words into a string of 24 words of mnemonic
     mnemonic = " ".join(request.json["mnemonic"])
 
+    logger.debug(f"The mnemonic is {mnemonic}")
     sha3_256=hashlib.sha3_256(mnemonic.encode()).hexdigest()
 
     logger.debug(f"Sha 256 of mnemonic is {sha3_256}")
@@ -255,6 +271,7 @@ async def check_mnemonic(request):
                 }), headers={"Authorization": login_result["id_token"]})
 
     check_mnemonic_result = r.json()
+
     if check_mnemonic_result["error"]:
         raise APIBadRequest(check_mnemonic_result["message"])
 

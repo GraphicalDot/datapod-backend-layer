@@ -59,7 +59,7 @@ def store_permission(**data):
 
 
     except Exception as e:
-        logger.error(f"Error on inserting permission for {data['plugin_name']} {data['datasource_name']} with error {e}")
+        logger.warning(f"Error on inserting permission for {data['plugin_name']} {data['datasource_name']} with error {e}")
     return
 
 
@@ -80,7 +80,7 @@ def store_table_names(**data):
 
 
     except Exception as e:
-        logger.error(f"Error on inserting permission for {data['table_name']} {data['datasource_name']} with error {e}")
+        logger.warning(f"Already exists Table names for {data['table_name']} {data['datasource_name']} with error {e}")
     return
 
 

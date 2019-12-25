@@ -397,8 +397,6 @@ class Emails(object):
                     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
                     await update_percentage(self.status_table, DATASOURCE_NAME, self.username, int(percentage))
     
-            if i == 100:
-                break
 
 
 
@@ -679,7 +677,7 @@ class Emails(object):
                     _message_type = "Inbox"
                     category = message_type.replace("Category ", "")
 
-        logger.debug(f"Categories {categories}, category {category} , _message_type {_message_type} Mbox_type {self.mbox_type} ")
+        #logger.debug(f"Categories {categories}, category {category} , _message_type {_message_type} Mbox_type {self.mbox_type} ")
         data = {"email_id": message_id, 
                     "email_id_raw": raw_id,
                     "from_addr" : email_from,

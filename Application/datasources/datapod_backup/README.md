@@ -44,6 +44,8 @@ Out[82]:
 
 
 ```
+mnemonic = ['friend', 'hour', 'piano', 'captain', 'advice', 'buddy', 'skull', 'omit', 'athlete', 'praise', 'dumb', 'humble', 'feel', 'rely', 'cat', 'prize', 'range', 'garage', 'aim', 'average', 'mansion', 'vapor', 'verify', 'evidence']
+
 In [144]: r = requests.post("http://localhost:8000/datasources/backup/store_mnemonic", data=json.dumps({"mnemonic": mnemonic}))                                                                                                                                                          
 
 In [145]: r.json()                                                                                                                                                                                                                                                                       
@@ -72,11 +74,12 @@ Out[149]:
  'data': None}
 ```
 
+API to be used when user has reinstalled datapod since he/she already has menmonic intialized somewhere in the past ,
+this mnemonic has to be checked against the hash of the Mnemonic  
 
 ```
-In [153]: r = requests.post("http://localhost:8000/datasources/backup/check_mnemonic", data=json.dumps({"mnemonic": mnemonic}))                                                                                                                                                          
-
-In [154]: r.json()                                                                                                                                                                                                                                                                       
+r = requests.post("http://localhost:8000/datasources/backup/check_mnemonic", data=json.dumps({"mnemonic": mnemonic}))                                                                                                                                                          
+r.json()                                                                                                                                                                                                                                                                       
 Out[154]: 
 {'message': 'The mnemonic is already present',
  'error': True,

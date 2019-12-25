@@ -38,16 +38,11 @@ def initialize(db):
         class Meta:
             database = db
 
-
-
     class Permission(BaseModel):
         plugin_name = peewee.TextField(index=True)
         plugin_dir = peewee.TextField(null=True, unique=True)
         tables = peewee.TextField(null=True)
         last_updated =  peewee.DateTimeField(default=datetime.datetime.now)
-
-
-
 
     result = db.create_tables([
         Permission

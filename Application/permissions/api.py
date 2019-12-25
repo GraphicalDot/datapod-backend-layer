@@ -65,12 +65,10 @@ def store_tables(permissions_dict):
                         "tbl_object": tables_name_table} 
                 store_table_names(**data)
             except Exception as e:
-                logger.error(e)
+                logger.warning(e)
                 pass
 
     return
-
-
 
 
 async def get_tables(request):
@@ -84,13 +82,6 @@ async def get_tables(request):
         'success': True,
         "message": None,
         "data": data})
-
-
-
-
-
-
-
 
 
 async def store_permissions(request):

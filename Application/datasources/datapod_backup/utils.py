@@ -16,9 +16,21 @@ from loguru import logger
 from .variables import DATASOURCE_NAME
 from .db_calls import get_credentials, update_percentage
 import subprocess
-
+import shutil
+import humanize
 ##imported from another major module
 from ..datapod_users.variables import DATASOURCE_NAME as USER_DATASOURCE_NAME
+import boto3
+
+def get_size(bucket, path):
+    s3 = boto3.resource('s3')
+    my_bucket = s3.Bucket(bucket)
+    total_size = 0
+
+    for obj in my_bucket.objects.filter(Prefix=path):
+        total_size = total_size + obj.size
+
+    return total_size
 
 class cd:
     """Context manager for changing the current working directory"""
@@ -59,29 +71,12 @@ class Backup(object):
         self.db_path = self.config.DB_PATH
         self.backup_path = self.config.BACKUP_PATH
 
-        self.num = 1
+        self.percentage = 1
 
     async def send_sse_message(self, message):
-        res = {"message": message, "percentage": self.num}
-        if self.num < 70:
-            await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-            self.num += 1
-            await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.num)
-
-        # url = f"http://{self.config.HOST}:{self.config.PORT}/send"
-        # logger.info(f"Sending sse message {message} at url {url}")
-        # async with aiohttp.ClientSession() as session:
-        #     async with session.post(url, data=json.dumps({"message": message, "channel_id": self.__channel_id__})) as response:
-        #         result =  await response.json()
-        
-        # #r = requests.post(url, )
-
-
-        # if result["error"]:
-        #     logger.error(result["message"])
-        #     return 
-
-        # logger.success(result["message"])
+        res = {"message": message, "percentage": self.percentage}
+        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.percentage)
         return 
 
 
@@ -111,18 +106,37 @@ class Backup(object):
 
         parent_destination_path = os.path.join(self.backup_path, archival_name) 
 
+
+        s3_backup_instance = await S3Backup(self.config)
+            
+        step = int(90/len(datasources))
+
         for datasource_name in datasources:
+            s3_folder_name = archival_name + "/" + datasource_name
             dst_path = os.path.join(self.backup_path, archival_name, datasource_name) 
-            src_path = os.path.join(self.raw_data_path, datasource_name )
-            if not os.path.exists(dst_path):
-                os.makedirs(dst_path)
-            await self.create(src_path, dst_path, datasource_name)
+            src_path = os.path.join(self.raw_data_path, datasource_name)
+            # if not os.path.exists(dst_path):
+            #     os.makedirs(dst_path)
+            backup_archival_temporary_path = await self.create(src_path, dst_path, datasource_name)
+            # # res = {"message": "Progress", "percentage": int(i*step)}
+            # # await self.config["send_sse_message"](config, DATASOURCE_NAME, res)
+            
+
+            await s3_backup_instance.sync_backup(backup_archival_temporary_path, s3_folder_name)
+            logger.debug(f"Datasource name <<{datasource_name}>>  dst_path <<{dst_path}>> and src_path <<{src_path}>>")
+
+            self.remove_split_archival_dir(backup_archival_temporary_path)
+            self.percentage = (self.percentage +1)*step
+            
+            await self.send_sse_message(f"Archiving of {datasource_name} completed")
+        
+
         return parent_destination_path, archival_name
 
     async def create(self, src_path, dst_path, datasource_name): 
 
         #temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
-        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz', delete=False)
+        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz')
         #temp = tempfile.TemporaryFile()
 
         
@@ -130,7 +144,7 @@ class Backup(object):
 
             
         logger.debug(f"The dir whose backup will be made {src_path}")
-        logger.debug(f"Temporary file location is {temp.name}")
+        logger.debug(f"Temporary file location is {temp.name} for {datasource_name}")
 
         ##this is the file under ~/.datapod/user_indexes for a corresponding datasource 
         ## which wil keep track of all the files which have been backed up previously
@@ -151,22 +165,32 @@ class Backup(object):
         initial_time = int(time.time())
         next_time = initial_time+15
         logger.debug(f"{backup_command}")
-        time.sleep(3)
 
 
         for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
             if int(time.time()) >= next_time:
-                await self.send_sse_message(f"Archiving {out.split('/')[-1]} for {datasource_name}")
+                # await self.send_sse_message(f"Archiving {out.split('/')[-1]} for {datasource_name}")
+                logger.debug(f"Archiving {out.split('/')[-1]} for {datasource_name}")
                 next_time += 10
 
-        async for msg in self.split(dst_path, temp.name):
-            await self.send_sse_message(msg)
         
-        await self.send_sse_message(f"Removing Temporary file {temp.name}")
-        
-        self.remove_temporary_archive(temp.name)
-        await self.send_sse_message(f"Temporary file {temp.name} Removed")
+        split_backup_dir = tempfile.mkdtemp()
 
+        logger.debug(f"dir where split will happen {split_backup_dir}")
+        
+        async for msg in self.split(split_backup_dir, temp.name):
+            # await self.send_sse_message(msg)
+            logger.debug(msg)
+        
+        
+
+        self.remove_temporary_archive(temp.name)
+
+        return split_backup_dir
+
+
+    def remove_split_archival_dir(self, dirpath):
+        shutil.rmtree(dirpath)
         return 
 
     def remove_temporary_archive(self, file_name):
@@ -174,7 +198,7 @@ class Backup(object):
         try:
             os.remove(file_name)
         except Exception as e:
-            logger.info(f"couldnt remove temporary archive file {file_name} with error {e}")
+            logger.error(f"couldnt remove temporary archive file {file_name} with error {e}")
         return 
 
     async def split(self, dst_path, file_path):
@@ -182,7 +206,7 @@ class Backup(object):
         dir_name, file_name = os.path.split(file_path)
 
         with cd(dst_path):
-            logger.info(f"THe directory where split is taking place {dst_path}")
+            logger.debug(f"The directory where split is taking place {dst_path}")
             if platform.system() == "Linux":
                 #command = "tar --tape-length=%s -cMv  --file=tar_archive.{tar,tar-{2..1000}}  -C %s %s"%(self.config.TAR_SPLIT_SIZE, dir_name, file_name)
                 command = "split --bytes=%sMB %s backup.tar.gz.1"%(self.config.TAR_SPLIT_SIZE, file_path)
@@ -193,7 +217,7 @@ class Backup(object):
             else:
                 raise APIBadRequest("The platform is not available for this os distribution")
 
-            logger.warning(f"Splitting command is {command}")
+            logger.debug(f"Splitting command is {command}")
             for out in self.config.OS_COMMAND_OUTPUT(command, "Split"):
                 yield (f"Archiving {out[-70:]}")
 
@@ -214,16 +238,15 @@ class Backup(object):
 class S3Backup(object):
 
 
-    async def __init__(self, config, number):
+    async def __init__(self, config):
         """
         number is the percentage number which will be sent in sse message, 
         Then number has already been incremented by the backup scripts above, 
 
         """
         self.config = config
-        self.number = number
         #self.credentials = get_credentials(config.CREDENTIALS_TBL)
-        self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt', delete=False)
+        self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt')
         logger.error(self.encryption_key_file.name)
         self.credentials = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
         if not self.credentials:
@@ -231,7 +254,6 @@ class S3Backup(object):
         
         self.credentials = list(self.credentials)[0]
         ##in this temporary file, private key is now written
-        logger.info(self.credentials)
 
         if not self.credentials["encryption_key"]:
             raise MnemonicRequiredError()
@@ -262,10 +284,53 @@ class S3Backup(object):
             logger.info(out)
         return
 
+    def get_size(self, bucket, path=None):
 
-    async def sync_backup(self, destination_path, folder_name):
+        ##if path is None
+        ##then get the whole size of the users directory at s3 i.e the identity_id
+        if not path:
+            path = self.identity_id            
 
-        size = dir_size(destination_path)
+        logger.debug(f"bucker is <<{bucket}>> and path is <<{path}>>")
+        s3 = boto3.resource('s3')
+        my_bucket = s3.Bucket(bucket)
+        total_size = 0
+
+        for obj in my_bucket.objects.filter(Prefix=path):
+            total_size = total_size + obj.size
+
+        return humanize.naturalsize(total_size)
+
+
+    def list_s3_archives(self, bucket_name=None):
+        if not bucket_name:
+            bucket_name = self.config.AWS_S3['bucket_name']
+
+
+        s3 = boto3.resource('s3')
+        my_bucket = s3.Bucket(bucket_name)
+        
+        ##this will have backup folders name i.e archievalname of the forms December-25-2019_12-55-17
+        backup_folders = set()
+        for obj in my_bucket.objects.filter(Prefix=self.identity_id): 
+            s3_key = obj.key 
+            filename = os.path.basename(s3_key)  
+            foldername = os.path.dirname(os.path.dirname(s3_key)).split("/")[-1]     
+            backup_folders.add((foldername, obj.last_modified.strftime("%d-%m-%Y")))
+        
+        backup_folders = list(backup_folders)
+        result = map(lambda x: {"name": bucket_name + "/" + x[0], "lastmodified": x[1]}, backup_folders)
+
+        return [ {"archive_name": name, "last_modified": last_modified, 
+                    "size": self.get_size(bucket_name, self.identity_id+"/"+name)
+                    } for (name, last_modified) in result]
+
+
+
+
+    async def sync_backup(self, src_path, folder_name):
+
+        size = dir_size(src_path)
         # _key = generate_aes_key(32)
 
         # key = "".join(map(chr, _key))
@@ -279,20 +344,20 @@ class S3Backup(object):
             logger.info (out)
 
         #sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
-        sync_command = f"aws s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {destination_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
+        sync_command = f"aws s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {src_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
         print (sync_command)
 
         for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            if self.number < 98:
-                res = {"message": "BACKUP_PROGRESS", "percentage": self.number}
-                await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-                self.number += 1
-                await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.number)
+            # if self.number < 98:
+            #     res = {"message": "BACKUP_PROGRESS", "percentage": self.number}
+            #     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+            #     self.number += 1
+            #     await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.number)
+            logger.debug(f"Syncing on cloud  {out}")
 
-
-        res = {"message": "BACKUP_PROGRESS", "percentage": 100}
-        await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-        await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", 100)
+        # res = {"message": "BACKUP_PROGRESS", "percentage": 100}
+        # await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        # await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", 100)
         
         return size
 
@@ -323,11 +388,9 @@ class S3Backup(object):
             logger.error(result["message"])
             raise APIBadRequest(result["message"])
         
-        logger.debug(result)
         r = requests.post(self.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
 
         result = r.json()
-        logger.debug(result)
         if result.get("error"):
             logger.error(result["message"])
             raise APIBadRequest(result["message"])
