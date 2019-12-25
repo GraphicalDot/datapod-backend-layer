@@ -37,12 +37,6 @@ Out[82]:
 
 
 
-
-
-
-
-
-
 ```
 mnemonic = ['friend', 'hour', 'piano', 'captain', 'advice', 'buddy', 'skull', 'omit', 'athlete', 'praise', 'dumb', 'humble', 'feel', 'rely', 'cat', 'prize', 'range', 'garage', 'aim', 'average', 'mansion', 'vapor', 'verify', 'evidence']
 
@@ -97,26 +91,18 @@ r = requests.get("http://localhost:8000/datasources/backup/start_fresh_backup")
 List of all backups which have been made 
 
 ```
-r = requests.get("http://localhost:8000/datasources/backup/backup_list")
+In [22]: r = requests.get("http://localhost:8000/datasources/backup/backup_list")                                                                                                                                                                                                        
 
-output is 
-
+In [23]: r.json()                                                                                                                                                                                                                                                                        
+Out[23]: 
 {'error': False,
  'success': True,
- 'data': [{'dirty_fields': [],
-   'disk_space_used': 'success',
-   'id': 1,
-   'name': 'December-11-2019_19-53-31',
-   'status': '6.1G',
-   'time': 1576114719,
-   'type': '0'},
-  {'dirty_fields': [],
-   'disk_space_used': 'success',
-   'id': 2,
-   'name': 'December-11-2019_20-11-05',
-   'status': '968K',
-   'time': 1576114890,
-   'type': '0'}],
+ 'data': [{'archive_name': 'December-25-2019_13-59-08',
+   'last_modified': '25-12-2019',
+   'size': '945.7 kB'},
+  {'archive_name': 'December-25-2019_12-55-17',
+   'last_modified': '25-12-2019',
+   'size': '12.6 GB'}],
  'message': None}
 
 

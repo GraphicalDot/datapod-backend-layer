@@ -50,7 +50,7 @@ async def backup_list(request):
 
 
     instance = await S3Backup(request.app.config)
-    result = await instance.get_size(request.app.config.AWS_S3['bucket_name'])
+    result = instance.list_s3_archives(request.app.config.AWS_S3['bucket_name'])
 
     return response.json({
             "error": False,

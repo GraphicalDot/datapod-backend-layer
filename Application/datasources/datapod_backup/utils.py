@@ -291,13 +291,22 @@ class S3Backup(object):
         if not path:
             path = self.identity_id            
 
-        logger.debug(f"bucker is <<{bucket}>> and path is <<{path}>>")
-        s3 = boto3.resource('s3')
-        my_bucket = s3.Bucket(bucket)
-        total_size = 0
+        # logger.debug(f"bucker is <<{bucket}>> and path is <<{path}>>")
+        # s3 = boto3.resource('s3')
+        # my_bucket = s3.Bucket(bucket)
+        # total_size = 0
 
-        for obj in my_bucket.objects.filter(Prefix=path):
-            total_size = total_size + obj.size
+
+
+        # for obj in my_bucket.objects.filter(Prefix=path):
+        #     total_size = total_size + obj.size
+
+        s3 = boto3.resource('s3')
+        total_size = 0
+        bucket = s3.Bucket(bucket)
+        for key in bucket.objects.filter(Prefix=f'{path}/'): 
+            total_size = total_size + key.size
+
 
         return humanize.naturalsize(total_size)
 
@@ -312,19 +321,25 @@ class S3Backup(object):
         
         ##this will have backup folders name i.e archievalname of the forms December-25-2019_12-55-17
         backup_folders = set()
-        for obj in my_bucket.objects.filter(Prefix=self.identity_id): 
+        for obj in my_bucket.objects.filter(Prefix=f"{self.identity_id}/"): 
             s3_key = obj.key 
             filename = os.path.basename(s3_key)  
             foldername = os.path.dirname(os.path.dirname(s3_key)).split("/")[-1]     
             backup_folders.add((foldername, obj.last_modified.strftime("%d-%m-%Y")))
         
         backup_folders = list(backup_folders)
-        result = map(lambda x: {"name": bucket_name + "/" + x[0], "lastmodified": x[1]}, backup_folders)
+        logger.info(backup_folders)
+        # result = map(lambda x: {"name": bucket_name + "/" + x[0], "last_modified": x[1]}, backup_folders)
 
         return [ {"archive_name": name, "last_modified": last_modified, 
                     "size": self.get_size(bucket_name, self.identity_id+"/"+name)
-                    } for (name, last_modified) in result]
-
+                    } 
+                for (name, last_modified) in backup_folders]
+                
+        # for (name, last_modified) in backup_folders:
+        #     logger.debug(f"Name of archival {name} and last_modified {last_modified} ")
+        #     size = self.get_size(bucket_name, self.identity_id+"/"+name)
+        #     logger.debug(f"Size archival {size} ")
 
 
 
