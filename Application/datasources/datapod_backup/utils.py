@@ -111,7 +111,7 @@ class Backup(object):
             
         step = int(90/len(datasources))
 
-        for datasource_name in datasources:
+        for (index, datasource_name) in enumerate(datasources):
             s3_folder_name = archival_name + "/" + datasource_name
             dst_path = os.path.join(self.backup_path, archival_name, datasource_name) 
             src_path = os.path.join(self.raw_data_path, datasource_name)
@@ -126,11 +126,13 @@ class Backup(object):
             logger.debug(f"Datasource name <<{datasource_name}>>  dst_path <<{dst_path}>> and src_path <<{src_path}>>")
 
             self.remove_split_archival_dir(backup_archival_temporary_path)
-            self.percentage = (self.percentage +1)*step
+            self.percentage = (index +1)*step
             
             await self.send_sse_message(f"Archiving of {datasource_name} completed")
         
-
+        self.percentage = 100
+        
+        await self.send_sse_message(f"Upload on cloud completed")
         return parent_destination_path, archival_name
 
     async def create(self, src_path, dst_path, datasource_name): 
@@ -183,8 +185,8 @@ class Backup(object):
             logger.debug(msg)
         
         
-
-        self.remove_temporary_archive(temp.name)
+        ##because temp.name will automatically be removed
+        #self.remove_temporary_archive(temp.name)
 
         return split_backup_dir
 

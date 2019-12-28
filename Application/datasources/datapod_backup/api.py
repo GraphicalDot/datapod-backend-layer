@@ -389,8 +389,8 @@ async def store_mnemonic(request):
     # update_datasources_status(request.app.config.DATASOURCES_TBL , "BACKUP", "backup" , request.app.config.DATASOURCES_CODE["BACKUP"], "Setup completed for backup", "SETUP_COMPLETED")
 
     return response.json({
-        "error": True, 
-        "success": False,
+        "error": False, 
+        "success": True,
         "message": "Mnemonic has been saved and updated",
         "data": None
     })
