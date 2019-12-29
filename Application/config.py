@@ -5,8 +5,33 @@ import subprocess
 from EncryptionModule.symmetric import generate_aes_key
 from errors_module.errors import APIBadRequest
 from loguru import logger
+import sys
 
-__VERSION__ = "0.3.5"
+
+
+dirname = os.path.dirname(os.path.abspath(__file__))
+
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    logger.debug('running in a PyInstaller bundle')
+    aws_cli_path = os.path.join(dirname, "bin/aws")
+
+
+else:
+    logger.debug('running in a normal Python process')
+    aws_cli_path = os.path.join(os.path.dirname(dirname), "bin/aws")
+
+
+logger.debug(f"ABS path {os.path.abspath(__file__)}")
+logger.debug(f"DIRNAME ABS path {os.path.dirname(os.path.abspath(__file__))}")
+
+
+
+# bin_folder_path = os.path.dirname(os.path.dirname(__file__))
+# logger.debug(os.listdir(bin_folder_path))
+
+logger.debug(f"AWS cli path {aws_cli_path}")
+
+__VERSION__ = "0.3.6"
 
 APPNAME = f"datapod-{__VERSION__}"
 
@@ -86,7 +111,7 @@ class Config:
     KEYS_DIR = KEYS_DIR
     BACKUP_KEY_ENCRYPTION_FILE = os.path.join(KEYS_DIR, "encryption.key")
     USERDATA_PATH = USERDATA_PATH
-
+    AWS_CLI_PATH = aws_cli_path
     PARSED_DATA_PATH = PARSED_DATA_PATH
     RAW_DATA_PATH = RAW_DATA_PATH
 

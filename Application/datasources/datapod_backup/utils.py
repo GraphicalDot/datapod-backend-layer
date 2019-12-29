@@ -356,12 +356,12 @@ class S3Backup(object):
 
 
 
-        configure_command = "aws configure set default.s3.max_bandwidth 15MB/s"
+        configure_command = f"{self.config.AWS_CLI_PATH} configure set default.s3.max_bandwidth 15MB/s"
         for out in self.config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
             logger.info (out)
 
         #sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
-        sync_command = f"aws s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {src_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
+        sync_command = f"{self.config.AWS_CLI_PATH} s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {src_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
         print (sync_command)
 
         for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):

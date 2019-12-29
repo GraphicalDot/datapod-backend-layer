@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 
-__VERSION__ = "0.3.6"
+__VERSION__ = "0.3.6-bugfree"
 
 APPNAME = f"datapod-ubuntu-{__VERSION__}"
 
@@ -21,7 +21,7 @@ a = Analysis(['application.py'],
                  ('/home/feynman/Programs/datapod-backend-layer/Application/EncryptionModule/', './EncryptionModule/'),
                   ('/home/feynman/Programs/datapod-backend-layer/Application/permissions/', './permissions/'),
                   ('/home/feynman/Programs/datapod-backend-layer/lib/python3.7/site-packages/mnemonic/', './mnemonic/'),
-
+                  ('/home/feynman/Programs/datapod-backend-layer/bin/aws', "./bin")
              ],
              hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent', 'humanize', 'PIL.Image', 'dateparser', 'paramiko', 'boto3', "awscli",
               'pyparsing', 'github', 'csv', 'mnemonic', 'bip32utils', 'lxml.html.clean', 'bleach', 'mailbox', "mnemonic", 'imaplib', 'geopy', 'playhouse.sqlite_ext', 'asyncinit']  + datas,
