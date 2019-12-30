@@ -126,7 +126,7 @@ async def temp_credentials(request):
 
 
 @logger.catch
-async def backup_upload(config, backup_type):
+async def backup_upload(config, full_backup):
     ##Backup type 0 full, type 1 partial
     # Method to handle the new backup and sync with s3 
  
@@ -147,10 +147,13 @@ async def backup_upload(config, backup_type):
    
     # login_result = r.json()["data"]
 
-
-
+    if full_backup:
+        backup_type="full_backup"
+    else:
+        backup_type="incremental_backup"
+   
     try:
-        backup_instance = Backup(config)
+        backup_instance = Backup(config, full_backup)
         destination_path, folder_name = await backup_instance.make_backup()
 
         # logger.success("Backups has been created, Now trying to sync with s3")
@@ -203,11 +206,28 @@ async def start_fresh_backup(request):
     ##TODO ADD entries to BACKUP_TBL
     """
     ##This has a rare chance of happening, that users reach here and doesnt have mnemonic in the database but have mnemonic in the cloud
+    def str2bool(v):
+        return v.lower() in ("yes", "true", "t", "1")
+    
+    full_backup = request.args.get("full_backup") 
+
+    if not full_backup:
+        raise APIBadRequest("Please specify which kind of backup is required, for full backup send True, for incremental_backup send False")
+
+    full_backup = str2bool(full_backup)
+
+    logger.debug(full_backup)
+    logger.debug(type(full_backup))
+    logger.debug(bool(full_backup))
+    if not isinstance(full_backup, bool):
+        raise APIBadRequest("full_backup  should only be a bool type")
+
+
     await update_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "PROGRESS")
 
     try:
             
-        request.app.add_task(backup_upload(request.app.config, 0))
+        request.app.add_task(backup_upload(request.app.config, full_backup))
 
         # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         # new_log_entry.save()

@@ -18,9 +18,13 @@ from .db_calls import get_credentials, update_percentage
 import subprocess
 import shutil
 import humanize
+import aiomisc
 ##imported from another major module
 from ..datapod_users.variables import DATASOURCE_NAME as USER_DATASOURCE_NAME
 import boto3
+from Crypto.Cipher import AES # pycryptodome
+from Crypto import Random
+import struct
 
 def get_size(bucket, path):
     s3 = boto3.resource('s3')
@@ -51,9 +55,10 @@ def dir_size(dirpath):
 
 
 class Backup(object):
-    def __init__(self, config):
+    def __init__(self, config, full_backup):
 
         self.config = config
+        self.full_backup = full_backup
         self.userdata_path = self.config.USERDATA_PATH
         
         ##file which keeps tracks of the data that has been backup last time
@@ -107,7 +112,7 @@ class Backup(object):
         parent_destination_path = os.path.join(self.backup_path, archival_name) 
 
 
-        s3_backup_instance = await S3Backup(self.config)
+        s3_backup_instance = await BotoBackup(self.config)
             
         step = int(90/len(datasources))
 
@@ -121,52 +126,55 @@ class Backup(object):
             # # res = {"message": "Progress", "percentage": int(i*step)}
             # # await self.config["send_sse_message"](config, DATASOURCE_NAME, res)
             
-
-            await s3_backup_instance.sync_backup(backup_archival_temporary_path, s3_folder_name)
-            logger.debug(f"Datasource name <<{datasource_name}>>  dst_path <<{dst_path}>> and src_path <<{src_path}>>")
-
+            await s3_backup_instance.sync_backup(datasource_name, backup_archival_temporary_path, archival_name)
+        
+            ##the split archival for a datasource in a temporary folder hasnt been removed yet, removing it now
             self.remove_split_archival_dir(backup_archival_temporary_path)
+            logger.debug(f"Now removing the split files present {backup_archival_temporary_path} ")
             self.percentage = (index +1)*step
             
             await self.send_sse_message(f"Archiving of {datasource_name} completed")
         
         self.percentage = 100
+        await self.send_sse_message(f"Backup completed")
         
-        await self.send_sse_message(f"Upload on cloud completed")
         return parent_destination_path, archival_name
 
     async def create(self, src_path, dst_path, datasource_name): 
 
         #temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.lzma', delete=False)
-        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz')
+        temp = tempfile.NamedTemporaryFile('wb', suffix='.tar.gz', delete=False)
         #temp = tempfile.TemporaryFile()
 
         
         # backup_path = f"{self.backup_path}/{archival_name}/backup.tar.lzma"
 
             
-        logger.debug(f"The dir whose backup will be made {src_path}")
-        logger.debug(f"Temporary file location is {temp.name} for {datasource_name}")
 
         ##this is the file under ~/.datapod/user_indexes for a corresponding datasource 
         ## which wil keep track of all the files which have been backed up previously
         user_index_file = os.path.join(self.user_index_dir, f"{datasource_name.lower()}.index")
-        logger.debug(f"This is the user_index_file {user_index_file}")
+        logger.debug(f"{datasource_name} This is the user_index_file {user_index_file}, used to create a compressed file at {temp.name} from a directory at {src_path} ")
         
         
         if platform.system() == "Linux":
-            backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"                                                                                                                                                                                                                                            
-            #backup_command = f"tar  --create  --lzma --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {self.raw_data_path}"                                                                                                                                                                                                                                            
+            if self.full_backup:
+                backup_command = f"tar  --create  --gzip --no-check-device --verbose  -f {temp.name} {src_path}"                                        
+            else:
+                backup_command = f"tar  --create  --gzip --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"
 
         elif platform.system() == "Darwin":
-            backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"
+            if self.full_backup:
+                backup_command = f"gtar  --create  --lzma --no-check-device --verbose  -f {temp.name} {src_path}"
+            else:
+                backup_command = f"gtar  --create  --lzma --no-check-device --verbose --listed-incremental={user_index_file} -f {temp.name} {src_path}"
+
         else:
             raise APIBadRequest("The platform is not available for this os distribution")
 
         #backup_command = f"tar --create  --verbose --listed-incremental={user_index_file} --lzma {backup_path} {self.raw_data_path}"
         initial_time = int(time.time())
         next_time = initial_time+15
-        logger.debug(f"{backup_command}")
 
 
         for out in self.config.OS_COMMAND_OUTPUT(backup_command, "Backup"):
@@ -178,15 +186,15 @@ class Backup(object):
         
         split_backup_dir = tempfile.mkdtemp()
 
-        logger.debug(f"dir where split will happen {split_backup_dir}")
+        logger.debug(f"Now, splitting the single compressed file {temp.name} in a temporary directory {split_backup_dir}")
         
         async for msg in self.split(split_backup_dir, temp.name):
             # await self.send_sse_message(msg)
             logger.debug(msg)
         
-        
         ##because temp.name will automatically be removed
-        #self.remove_temporary_archive(temp.name)
+        logger.debug(f"Now removing single comporessed file at {temp.name}")
+        self.remove_temporary_archive(temp.name)
 
         return split_backup_dir
 
@@ -219,9 +227,8 @@ class Backup(object):
             else:
                 raise APIBadRequest("The platform is not available for this os distribution")
 
-            logger.debug(f"Splitting command is {command}")
             for out in self.config.OS_COMMAND_OUTPUT(command, "Split"):
-                yield (f"Archiving {out[-70:]}")
+                yield (f"SPLIT in progress {out[-70:]}")
 
             for name in os.listdir("."):
                 logger.info(f"Creating sha checksum for backup split file {name}")
@@ -236,6 +243,8 @@ class Backup(object):
 
 
 
+
+
 @asyncinit
 class S3Backup(object):
 
@@ -247,9 +256,9 @@ class S3Backup(object):
 
         """
         self.config = config
+        self.bucket_name = config.AWS_S3['bucket_name']
+
         #self.credentials = get_credentials(config.CREDENTIALS_TBL)
-        self.encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt')
-        logger.error(f"Encryption file name {self.encryption_key_file.name}")
         self.credentials = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
         if not self.credentials:
             raise APIBadRequest("User is not logged in")
@@ -260,57 +269,32 @@ class S3Backup(object):
         if not self.credentials["encryption_key"]:
             raise MnemonicRequiredError()
 
-        with open(self.encryption_key_file.name, "wb") as f:
-            f.write(binascii.unhexlify(self.credentials["encryption_key"].encode()))
 
+
+
+        self.encryption_key = binascii.unhexlify(self.credentials["encryption_key"].encode())
 
 
         self.identity_id, self.access_key, self.secret_key, self.session_token =  await self.aws_temp_creds()
         
-        # logger.info(f"Access key for AWS <<{self.access_key}>>")
-        # logger.info(f"Secret key for AWS <<{self.secret_key}>>")
-        # logger.info(f"Session Token  for AWS <<{self.session_token}>>")
-        # async for msg in S3Backup.sync_backup(request.app.config, identity_id, access_key, secret_key, session_token):
-        #     logger.info(msg)
+     
 
         os.environ['AWS_ACCESS_KEY_ID'] = self.access_key # visible in this process + all children
         os.environ['AWS_SECRET_ACCESS_KEY'] = self.secret_key # visible in this process + all children
         os.environ['AWS_SESSION_TOKEN'] = self.session_token # visible in this process + all children
         os.environ["AWS_DEFAULT_REGION"] = self.config.AWS_S3["default_region"]
 
-    async def check_size(self):
-        size_command = f"aws s3 ls --recursive --human-readable --summarize s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
-        logger.info(size_command)
 
-        for out in self.config.OS_COMMAND_OUTPUT(size_command, "Files are in Sync"):
-            logger.info(out)
-        return
+    def remove_temporary_dir(self, dirpath):
+        shutil.rmtree(dirpath)
+        return 
 
-    def get_size(self, bucket, path=None):
-
-        ##if path is None
-        ##then get the whole size of the users directory at s3 i.e the identity_id
-        if not path:
-            path = self.identity_id            
-
-        # logger.debug(f"bucker is <<{bucket}>> and path is <<{path}>>")
-        # s3 = boto3.resource('s3')
-        # my_bucket = s3.Bucket(bucket)
-        # total_size = 0
-
-
-
-        # for obj in my_bucket.objects.filter(Prefix=path):
-        #     total_size = total_size + obj.size
-
-        s3 = boto3.resource('s3')
-        total_size = 0
-        bucket = s3.Bucket(bucket)
-        for key in bucket.objects.filter(Prefix=f'{path}/'): 
-            total_size = total_size + key.size
-
-
-        return humanize.naturalsize(total_size)
+    def remove_temporary_file(self, file_name):
+        try:
+            os.remove(file_name)
+        except Exception as e:
+            logger.error(f"couldnt remove temporary  file {file_name} with error {e}")
+        return 
 
 
     def list_s3_archives(self, bucket_name=None):
@@ -338,59 +322,35 @@ class S3Backup(object):
                     } 
                 for (name, last_modified) in backup_folders]
 
-        # for (name, last_modified) in backup_folders:
-        #     logger.debug(f"Name of archival {name} and last_modified {last_modified} ")
-        #     size = self.get_size(bucket_name, self.identity_id+"/"+name)
-        #     logger.debug(f"Size archival {size} ")
+
+
+    def get_size(self, bucket, path=None):
+    
+        ##if path is None
+        ##then get the whole size of the users directory at s3 i.e the identity_id
+        if not path:
+            path = self.identity_id            
+
+        # logger.debug(f"bucker is <<{bucket}>> and path is <<{path}>>")
+        # s3 = boto3.resource('s3')
+        # my_bucket = s3.Bucket(bucket)
+        # total_size = 0
 
 
 
-    async def sync_backup(self, src_path, folder_name):
+        # for obj in my_bucket.objects.filter(Prefix=path):
+        #     total_size = total_size + obj.size
 
-        size = dir_size(src_path)
-        # _key = generate_aes_key(32)
-
-        # key = "".join(map(chr, _key))
-        # print (key)
-        # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
-
+        s3 = boto3.resource('s3')
+        total_size = 0
+        bucket = s3.Bucket(bucket)
+        for key in bucket.objects.filter(Prefix=f'{path}/'): 
+            total_size = total_size + key.size
 
 
-        configure_command = f"{self.config.AWS_CLI_PATH} configure set default.s3.max_bandwidth 15MB/s"
-        for out in self.config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
-            logger.info (out)
-
-        #sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
-        sync_command = f"{self.config.AWS_CLI_PATH} s3  mv --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {src_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{folder_name} --recursive"
-        print (sync_command)
-
-        for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
-            # if self.number < 98:
-            #     res = {"message": "BACKUP_PROGRESS", "percentage": self.number}
-            #     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-            #     self.number += 1
-            #     await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.number)
-            logger.debug(f"Syncing on cloud  {out}")
-
-        # res = {"message": "BACKUP_PROGRESS", "percentage": 100}
-        # await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
-        # await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", 100)
-        
-        return size
-
+        return humanize.naturalsize(total_size)
 
     async def aws_temp_creds(self):
-
-        # r = requests.post(self.config.AWS_CREDS, data=json.dumps({
-        #                 "id_token": self.id_token}))
-        
-        # result = r.json()
-        # if result.get("error"):
-        #     logger.error(result["message"])
-        #     raise APIBadRequest(result["message"])
-        
-        # return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
-
         creds = await get_credentials(self.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
 
 
@@ -414,5 +374,210 @@ class S3Backup(object):
         return result["data"]["identity_id"], result["data"]["access_key"], result["data"]["secret_key"], result["data"]["session_token"]
 
 
+    async def sync_backup(self, datasource_name, src_path, backup_name):
+        raise Exception("Please subclass and overide this method")
 
 
+
+
+
+
+class BotoBackup(S3Backup):
+
+
+    async def sync_backup(self, datasource_name, src_path, backup_name):
+        
+
+        iv = Random.new().read(AES.block_size)
+        target_directory = tempfile.mkdtemp() #    Caller is responsible for deleting the directory when done with it.
+        for in_filename in os.listdir(src_path): ##list allfilenames in the input_directory
+            in_filename_path = os.path.join(src_path, in_filename)##making the filename as the full path
+            original_size = os.stat(in_filename_path).st_size # unencrypted length of the input filename
+            
+            """
+            There are two types of files in this temporary archival directory for a particular datasource
+            one ends with in just .sha512, these shouldnt be encrypted and shall be uploaded as it is
+            The other ones needs encryption
+            """
+            
+            if os.path.splitext(in_filename)[-1] != ".sha512": ##filter out files whose extension is 
+                out_filename_path = os.path.join(target_directory, in_filename.replace(".tar", ".encrypted.tar")) ##making the output file name and inserting encrypted
+
+                logger.debug(f"input filename is {in_filename} output dir is {out_filename_path}")
+                
+                logger.debug(f"iv <<{iv}>>")
+                logger.debug(f"Original size <<{original_size}>>")
+                await self.encrypt_file(in_filename_path, out_filename_path, iv, original_size, target_directory)
+                ##Delete temporary files here to optimize storage , and then finally dlete the empty temporary directory
+                await self.put_file(iv, out_filename_path, original_size,  backup_name, datasource_name)
+            else:
+                out_filename_path = os.path.join(target_directory, in_filename)
+                await self.put_file(iv, in_filename_path, original_size,  backup_name, datasource_name)
+            
+            self.remove_temporary_file(out_filename_path)
+    
+
+        self.remove_temporary_dir(target_directory)
+        logger.debug(f"Upload on s3 bucket for {datasource_name} is completed")
+        return 
+
+
+
+    @aiomisc.threaded_separate
+    def encrypt_file(self, in_filename_path, out_filename_path, iv, original_size, target_directory, chunksize=16*1024):
+                
+        with open(in_filename_path, 'rb') as infile:
+            cipher = AES.new(self.encryption_key, AES.MODE_CBC, iv)
+
+            # 3 cases here for padding at the end of file:
+            # - we get a full chunk of 16. pass it through.
+            # - we get a partial chunk at EOF. we pad it up to 16. generally speaking each byte is the byte number, so if we have 7 bytes, the following nine are "07 07 07 07 07 07 07 07 07".
+            # - we get a zero-byte chunk at EOF. This means the file was a perfect multiple of 16, but padding means the end of the file should be padded because IDK why but that's how it's done. See url below:
+            #
+            # the extra padding at zero-byte EOF: http://security.stackexchange.com/a/29997
+            #   "The above problem is solved by knowing that you always pad your data, no matter the length."
+            with open(out_filename_path, 'wb') as outfile:
+                last_chunk_length = 0
+                while True:
+                    chunk = infile.read(chunksize)
+                    last_chunk_length = len(chunk)
+                    if last_chunk_length == 0 or last_chunk_length < chunksize:
+                        break
+                    outfile.write(cipher.encrypt(chunk))
+
+                # write the final padding
+                length_to_pad = 16 - (last_chunk_length % 16)
+                # not py2 compatible
+                # chunk += bytes([length])*length
+                chunk += struct.pack('B', length_to_pad) * length_to_pad
+                outfile.write(cipher.encrypt(chunk))
+
+        return 
+
+    @aiomisc.threaded_separate
+    def put_file(self,  iv, upload_filename_path, unencrypted_file_size, backup_name, datasource_name):
+        """
+        client = boto3.client('s3', 'us-west-2')
+        transfer = S3Transfer(client)
+        # Upload /tmp/myfile to s3://bucket/key
+        transfer.upload_file('/tmp/myfile', 'bucket', 'key')
+
+        # Download s3://bucket/key to /tmp/myfile
+        transfer.download_file('bucket', 'key', '/tmp/myfile')
+
+        More examples could be found here 
+        https://boto3.amazonaws.com/v1/documentation/api/latest/_modules/boto3/s3/transfer.html
+        """
+
+        #'x-amz-key-v2': base64.b64encode(ciphertext_blob).decode('utf-8'),
+
+        filename = os.path.basename(upload_filename_path)
+        key_name = f"{self.identity_id}/{backup_name}/{datasource_name}/{filename}"
+
+        metadata = {
+            'x-amz-iv':  binascii.hexlify(iv).decode(),
+            'x-amz-cek-alg': 'AES/CBC/PKCS5Padding',
+            'x-amz-unencrypted-content-length': str(unencrypted_file_size)
+        }
+
+        s3client = boto3.client('s3')
+        s3transfer = boto3.s3.transfer.S3Transfer(s3client)
+        s3transfer.upload_file(upload_filename_path, self.bucket_name, key_name, extra_args={'Metadata': metadata})
+        return 
+
+
+
+        # for (name, last_modified) in backup_folders:
+        #     logger.debug(f"Name of archival {name} and last_modified {last_modified} ")
+        #     size = self.get_size(bucket_name, self.identity_id+"/"+name)
+        #     logger.debug(f"Size archival {size} ")
+
+    def decrypt_file(self, key, in_filename, iv, original_size, out_filename, chunksize=16*1024):
+        with open(in_filename, 'rb') as infile:
+            decryptor = AES.new(key, AES.MODE_CBC, iv)
+
+            with open(out_filename, 'wb') as outfile:
+                while True:
+                    chunk = infile.read(chunksize)
+                    if len(chunk) == 0:
+                        break
+                    outfile.write(decryptor.decrypt(chunk))
+                outfile.truncate(original_size)
+
+
+
+
+class AWSCliBackup(S3Backup):
+
+
+
+    def encryption_key_file(self):
+        encryption_key_file = tempfile.NamedTemporaryFile('wb', suffix='.txt')
+        with open(encryption_key_file.name, "wb") as f:
+            f.write(binascii.unhexlify(self.credentials["encryption_key"].encode()))
+        return encryption_key_file
+
+
+
+    def remove_temporary_file(self, file_name):
+        try:
+            os.remove(file_name)
+        except Exception as e:
+            logger.error(f"couldnt remove temporary archive file {file_name} with error {e}")
+        return 
+
+
+    async def sync_backup(self, src_path, backup_name):
+
+        size = dir_size(src_path)
+        # _key = generate_aes_key(32)
+
+        # key = "".join(map(chr, _key))
+        # print (key)
+        # encryption_key_path = "/home/feynman/.Datapod/Keys/encryption.key"
+
+        encryption_key_file = self.encryption_key_file()
+
+        configure_command = f"aws configure set default.s3.max_bandwidth 15MB/s"
+        for out in self.config.OS_COMMAND_OUTPUT(configure_command, "Limit upload speed"):
+            logger.info (out)
+
+        #sync_command = f"aws s3 sync --sse-c AES256 --sse-c-key fileb://{self.encryption_key_file.name} {self.config.BACKUP_PATH} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}"
+        sync_command = f"aws s3  mv --sse-c AES256 --sse-c-key fileb://{encryption_key_file.name} {src_path} s3://{self.config.AWS_S3['bucket_name']}/{self.identity_id}/{backup_name} --recursive"
+        print (sync_command)
+
+        for out in self.config.OS_COMMAND_OUTPUT(sync_command, "Files are in Sync"):
+            # if self.number < 98:
+            #     res = {"message": "BACKUP_PROGRESS", "percentage": self.number}
+            #     await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+            #     self.number += 1
+            #     await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", self.number)
+            logger.debug(f"Syncing on cloud  {out}")
+
+        # res = {"message": "BACKUP_PROGRESS", "percentage": 100}
+        # await self.config["send_sse_message"](self.config, DATASOURCE_NAME, res)
+        # await update_percentage(self.config[DATASOURCE_NAME]["tables"]["status_table"], "backup", 100)
+        
+        return size
+
+
+
+
+
+
+
+# if __name__ == "__main__":
+#     s3 = boto3.client('s3')
+#     location_info = s3.get_bucket_location(Bucket="datapod-backups-beta")
+#     bucket_region = location_info['LocationConstraint']
+
+#     # kms = boto3.client('kms')
+#     # encrypt_ctx = {"kms_cmk_id":kms_arn}
+
+#     # key_data = kms.generate_data_key(KeyId=kms_arn, EncryptionContext=encrypt_ctx, KeySpec="AES_256")
+#     new_iv = Random.new().read(AES.block_size)
+#     size_infile = os.stat(infile).st_size # unencrypted length
+#     outfile = infile + '.enc'
+
+#     encrypt_file(key_data['Plaintext'], infile, new_iv, size_infile, outfile, chunksize=16*1024)
+#     put_file(key_data['CiphertextBlob'], new_iv, encrypt_ctx, outfile, size_infile, bucket_name, key_name)

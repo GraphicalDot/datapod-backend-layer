@@ -13,7 +13,7 @@ dirname = os.path.dirname(os.path.abspath(__file__))
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     logger.debug('running in a PyInstaller bundle')
-    aws_cli_path = os.path.join(dirname, "bin/aws")
+    aws_cli_path = os.path.join(dirname, "aws")
 
 
 else:
@@ -24,7 +24,7 @@ else:
 logger.debug(f"ABS path {os.path.abspath(__file__)}")
 logger.debug(f"DIRNAME ABS path {os.path.dirname(os.path.abspath(__file__))}")
 
-
+os.environ["aws"] = aws_cli_path
 
 # bin_folder_path = os.path.dirname(os.path.dirname(__file__))
 # logger.debug(os.listdir(bin_folder_path))

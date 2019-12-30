@@ -12,6 +12,7 @@ from PyInstaller.utils.hooks import collect_data_files, eval_statement, collect_
 
 datas = collect_submodules('sentry_sdk')
 
+
 a = Analysis(['application.py'],
              pathex=[
                '/home/feynman/Programs/datapod-backend-layer/Application'],
@@ -21,9 +22,8 @@ a = Analysis(['application.py'],
                  ('/home/feynman/Programs/datapod-backend-layer/Application/EncryptionModule/', './EncryptionModule/'),
                   ('/home/feynman/Programs/datapod-backend-layer/Application/permissions/', './permissions/'),
                   ('/home/feynman/Programs/datapod-backend-layer/lib/python3.7/site-packages/mnemonic/', './mnemonic/'),
-                  ('/home/feynman/Programs/datapod-backend-layer/bin/aws', "./bin")
              ],
-             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent', 'humanize', 'PIL.Image', 'dateparser', 'paramiko', 'boto3', "awscli",
+             hiddenimports=['engineio.async_eventlet', '_striptime', 'engineio.async_gevent', 'humanize', 'PIL.Image', 'dateparser', 'paramiko', 'boto3', 
               'pyparsing', 'github', 'csv', 'mnemonic', 'bip32utils', 'lxml.html.clean', 'bleach', 'mailbox', "mnemonic", 'imaplib', 'geopy', 'playhouse.sqlite_ext', 'asyncinit']  + datas,
              hookspath=['pyinstaller_hooks'],
              runtime_hooks=[],
