@@ -62,10 +62,6 @@ async def backup_list(request):
 
 
 
-
-
-
-
 # #async def make_backup(request, ws):
 # async def backups_list(request):
 #     request.app.config.VALIDATE_FIELDS(["dirpath"], request.json)
@@ -309,8 +305,8 @@ async def check_mnemonic(request):
                 mnemonic_keys["address"],   mnemonic_keys["private_key"])
 
     return response.json({
-        "error": True, 
-        "success": False,
+        "error": False, 
+        "success": True,
         "message": "Mnemonic has been saved on your machine",
         "data": None
     })

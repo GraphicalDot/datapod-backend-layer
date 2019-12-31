@@ -210,11 +210,6 @@ def add_permissions(app):
             app.add_route(handler_function, f'/permission/{route_name}', methods=[http_method])
 
 
-def register_plugins(app):
-    ##TODO register plugins
-    app.config.plugins = ["uber"]
-    return 
-
 
 def add_routes(app):
     registered_modules = []
@@ -264,17 +259,18 @@ def add_routes(app):
             for (http_method, route_list) in inst.routes.items():
                 datasource = inst.datasource_name
                 for (route_name, handler_function) in route_list:
-                    logger.info(f"Registering {http_method} for {route_name} for datasource {inst.datasource_name}")
+                    logger.debug(f"Registering HTTP_METHOD={http_method.ljust(10)} for API_NAME={route_name.ljust(25)} for DATASOURCE_NAME=[{inst.datasource_name}]")
+
                     app.add_route(handler_function, f'/datasources/{datasource.lower()}/{route_name}', methods=[http_method])
 
-            logger.info(f"Updating Appication config with {inst.datasource_name} configurations ")
+            logger.success(f"Updating Appication config with {inst.datasource_name} configurations ")
             app.config.update({inst.datasource_name: inst.config})
             
             ##adding table names to app.config
 
             # if inst.datasource_name != "Users":
             datasource_tables = inst.config['tables']
-            logger.debug(datasource_tables)
+            #logger.debug(datasource_tables)
             #     [datasource_tables.pop(table_name) for table_name in ["creds_table", "archives_table", "status_table", "stats_table"]]
             tables.update({inst.datasource_name.lower(): list(datasource_tables.keys())})
             
@@ -288,6 +284,34 @@ def add_routes(app):
     store_tables(tables)
     return 
 
+
+def register_plugins(app):
+    registered_plugins = []
+    import plugins
+    logger.debug("Registering plugins ")
+    for finder, name, ispkg in pkgutil.iter_modules(plugins.__path__):
+        logger.success(f"Reading Plugin {name}")
+        module_name = f"plugins.{name}.settings"
+        registered_plugins.append(name.replace('datapod_', ""))
+
+
+
+
+        m = importlib.import_module(module_name)
+
+        inst = m.Plugin(app.config["RAW_DATA_PATH"]) ##instantiate the plugin class with db_path as RAW_DATA_PATH
+        #inst.config.update({"code": hash(inst.plugin_name)%10000})
+                
+        
+        for (http_method, route_list) in inst.routes.items():
+            plugin_name = inst.plugin_name
+            for (route_name, handler_function) in route_list:
+                logger.debug(f"Registering HTTP_METHOD=[{http_method}] for API_NAME=[{route_name}] for PLUGIN_NAME=[{inst.plugin_name}]")
+                app.add_route(handler_function, f'/plugins/{plugin_name.lower()}/{route_name}', methods=[http_method])
+
+    app.config["registered_plugins"] = registered_plugins
+
+    return 
 
 
 @app.listener('before_server_start')
@@ -341,8 +365,8 @@ def main():
     app.config.from_object(config.config_object)
 
     add_permissions(app)
-    add_routes(app)
     register_plugins(app)
+    add_routes(app)
 
     for _, (rule, _) in app.router.routes_names.items():
         logger.info(rule)    
