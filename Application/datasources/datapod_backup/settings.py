@@ -5,7 +5,7 @@ import sqlite3
 
 from .db_initialize import initialize
 from .api import  stats, status,  start_fresh_backup, new_mnemonic,\
-         store_mnemonic, check_mnemonic, temp_credentials, backup_list
+         store_mnemonic, check_mnemonic,  backup_list
 import os
 from .variables import DATASOURCE_NAME
 
@@ -35,7 +35,7 @@ class Routes:
             }
         }
         
-        self.routes = {"GET": [ ("stats", stats), ("status", status), ("backup_list", backup_list), ("temporary_credentials", temp_credentials),\
+        self.routes = {"GET": [ ("stats", stats), ("status", status), ("backup_list", backup_list),\
                     ("start_fresh_backup", start_fresh_backup),  ("generate_mnemonic", new_mnemonic)], 
                     "POST": [ ("store_mnemonic", store_mnemonic), ("check_mnemonic", check_mnemonic)]} 
         

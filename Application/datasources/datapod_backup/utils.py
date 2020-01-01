@@ -9,6 +9,8 @@ import tempfile
 import requests
 import json
 import aiohttp
+from sanic import response
+
 from asyncinit import asyncinit
 from errors_module.errors import MnemonicRequiredError
 from errors_module.errors import APIBadRequest, PathDoesntExists
@@ -358,16 +360,21 @@ class S3Backup(object):
             raise APIBadRequest("User is not logged in")
         
         creds = list(creds)[0]
-        r = requests.post(self.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+        # r = requests.post(self.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
     
-        result = r.json()
-        if result.get("error"):
-            logger.error(result["message"])
-            raise APIBadRequest(result["message"])
+        # result = r.json()
+        # if result.get("error"):
+        #     logger.error(result["message"])
+        #     raise APIBadRequest(result["message"])
         
-        r = requests.post(self.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
+        r = requests.post(self.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": creds["id_token"].decode()}), headers={"Authorization": creds["id_token"].decode()})
+        
 
         result = r.json()
+        
+        if result.get("message") == 'The incoming token has expired':
+            return response.json({"error": True, "sucess": False, "message": "The id token has expired, Please login again", "data": None}, status=401)
+
         if result.get("error"):
             logger.error(result["message"])
             raise APIBadRequest(result["message"])

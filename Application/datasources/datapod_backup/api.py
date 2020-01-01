@@ -83,46 +83,46 @@ async def backup_list(request):
 #     )
 
 
-async def temp_credentials(request):
-    """
-    session is the session which you will get after enabling MFA and calling login api
-    code is the code generated from the MFA device
-    username is the username of the user
-    """
-    creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
+# async def temp_credentials(request):
+#     """
+#     session is the session which you will get after enabling MFA and calling login api
+#     code is the code generated from the MFA device
+#     username is the username of the user
+#     """
+#     creds = await get_credentials(request.app.config[USER_DATASOURCE_NAME]["tables"]["creds_table"])
 
 
-    if not creds:
-        raise APIBadRequest("User is not logged in")
+#     if not creds:
+#         raise APIBadRequest("User is not logged in")
     
-    creds = list(creds)[0]
-    r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
+#     creds = list(creds)[0]
+#     r = requests.post(request.app.config.LOGIN, data=json.dumps({"username": creds["username"], "password": creds["password"]}))
    
-    result = r.json()
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+#     result = r.json()
+#     if result.get("error"):
+#         logger.error(result["message"])
+#         raise APIBadRequest(result["message"])
     
-    logger.debug(result)
-    r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
+#     logger.debug(result)
+#     r = requests.post(request.app.config.TEMPORARY_S3_CREDS, data=json.dumps({"id_token": result["data"]["id_token"]}), headers={"Authorization": result["data"]["id_token"]})
 
-    result = r.json()
-    logger.debug(result)
-    if result.get("error"):
-        logger.error(result["message"])
-        raise APIBadRequest(result["message"])
+#     result = r.json()
+#     logger.debug(result)
+#     if result.get("error"):
+#         logger.error(result["message"])
+#         raise APIBadRequest(result["message"])
     
 
-    return response.json({
-        'error': False,
-        'success': True,
-        "data": result["data"]
-       })
+#     return response.json({
+#         'error': False,
+#         'success': True,
+#         "data": result["data"]
+#        })
 
 
 
 @logger.catch
-async def backup_upload(config, full_backup):
+async def backup_upload(config, full_backup, cloud_backup_instance):
     ##Backup type 0 full, type 1 partial
     # Method to handle the new backup and sync with s3 
  
@@ -165,8 +165,7 @@ async def backup_upload(config, full_backup):
 
 
 
-    instance = await S3Backup(config)
-    size = instance.get_size(config.AWS_S3['bucket_name'], instance.identity_id)
+    size = cloud_backup_instance.get_size(config.AWS_S3['bucket_name'], cloud_backup_instance.identity_id)
 
     logger.debug(f"Size of the {size}")
     await insert_backup_entry(config[DATASOURCE_NAME]["tables"]["backup_list_table"], "success", size, backup_type, folder_name)
@@ -212,18 +211,20 @@ async def start_fresh_backup(request):
 
     full_backup = str2bool(full_backup)
 
-    logger.debug(full_backup)
-    logger.debug(type(full_backup))
-    logger.debug(bool(full_backup))
     if not isinstance(full_backup, bool):
         raise APIBadRequest("full_backup  should only be a bool type")
 
 
     await update_status(request.app.config[DATASOURCE_NAME]["tables"]["status_table"], DATASOURCE_NAME,  "backup", "PROGRESS")
+    
+    ##this is being called here, because this will try to fetch temporary creds from AWS from the id_token stored in the creds user 
+    ##table, if they are stale, it will send an error to the user directly to login again, 
+    ##TODO, find a better way to to this
+    backup_instance = await S3Backup(request.app.config)
 
     try:
             
-        request.app.add_task(backup_upload(request.app.config, full_backup))
+        request.app.add_task(backup_upload(request.app.config, full_backup, backup_instance))
 
         # new_log_entry = request.app.config.LOGS_TBL.create(timestamp=archival_object, message=f"Archival was successful on {archival_name}", error=0, success=1)
         # new_log_entry.save()

@@ -2,7 +2,7 @@
 
 #-*- coding: utf-8 -*-
 
-from .api import if_user_exists 
+from .api import if_user_exists, upload_objects 
 import os
 from .variables import PLUGIN_NAME
 
@@ -13,6 +13,6 @@ class Plugin:
         self.db_path = db_path
         self.plugin_name = PLUGIN_NAME
         self.routes = {"GET": [], 
-                    "POST": [("user", if_user_exists)] } 
+                    "POST": [("user", if_user_exists), ("upload_objects", upload_objects)] } 
         
         
